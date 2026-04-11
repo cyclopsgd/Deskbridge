@@ -32,12 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A test event published on the event bus is received by a subscriber without memory leaks (weak reference verified)
   4. The connection pipeline runner accepts stages and executes them in order, returning success/failure results
   5. The connection query interface returns results from an in-memory test dataset using fuzzy search
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md -- Solution scaffold, build config, Central Package Management, Velopack entry point, WPF-UI dark theme, DI skeleton
+- [ ] 01-02-PLAN.md -- Core interfaces, models, events, service implementations (event bus, pipelines, notification, query)
+- [ ] 01-03-PLAN.md -- Comprehensive unit tests for all core services (event bus, pipelines, query, notifications, DI composition)
 
 ### Phase 2: Application Shell
 **Goal**: Users see a complete, polished dark Fluent UI shell with all layout regions (title bar, icon rail, slide-out panel, tab bar, status bar, viewport) that is airspace-safe and ready to host RDP controls
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 0/3 | Planning complete | - |
 | 2. Application Shell | 0/3 | Not started | - |
 | 3. Connection Management | 0/3 | Not started | - |
 | 4. RDP Integration | 0/3 | Not started | - |
