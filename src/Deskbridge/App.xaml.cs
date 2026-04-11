@@ -64,6 +64,7 @@ public partial class App : Application
         services.AddTransient<ViewModels.ConnectionTreeViewModel>();
 
         // Views
+        services.AddTransient<Views.ConnectionTreeControl>();
         services.AddTransient<MainWindow>();
     }
 
