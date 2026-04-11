@@ -2,23 +2,299 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:models="clr-namespace:Deskbridge.Models"
     Title="{Binding Title}"
     Width="1100" Height="700"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica"
     WindowCornerPreference="Round"
     WindowStartupLocation="CenterScreen">
+
+    <!-- Keyboard shortcuts -->
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseTabCommand}" CommandParameter="{Binding ActiveTab}" />
+        <!-- NOTE: Ctrl+Tab and Ctrl+Shift+Tab cannot be reliably bound via XAML KeyBinding
+             (WPF intercepts them for tab navigation). These will be wired in Phase 5
+             via code-behind PreviewKeyDown handling when tabs are functional. -->
+    </ui:FluentWindow.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />  <!-- Row 0: TitleBar (32px) -->
+            <RowDefinition Height="*" />     <!-- Row 1: Main content area -->
+            <RowDefinition Height="22" />    <!-- Row 2: Status bar -->
         </Grid.RowDefinitions>
+
+        <!-- Title Bar -->
         <ui:TitleBar Grid.Row="0" Title="Deskbridge" Height="32" />
-        <TextBlock Grid.Row="1"
-            Text="Deskbridge Foundation"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-            FontSize="20" />
+
+        <!-- Main content area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="36" />    <!-- Column 0: Icon rail -->
+                <ColumnDefinition Width="Auto" />  <!-- Column 1: Slide-out panel -->
+                <ColumnDefinition Width="*" />     <!-- Column 2: Editor area -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Icon Rail (Column 0) -->
+            <Border Grid.Column="0"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <!-- Settings button pinned to bottom (VS Code convention, D-05) -->
+                    <ui:Button DockPanel.Dock="Bottom"
+                        Appearance="Transparent"
+                        Icon="{ui:SymbolIcon Settings24}"
+                        Width="36" Height="36"
+                        Padding="0"
+                        Command="{Binding TogglePanelCommand}"
+                        CommandParameter="{x:Static models:PanelMode.Settings}"
+                        AutomationProperties.Name="Settings">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
+                                <Setter Property="BorderThickness" Value="2,0,0,0" />
+                                <Setter Property="BorderBrush" Value="Transparent" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+
+                    <!-- Top icons: Connections and Search -->
+                    <StackPanel>
+                        <ui:Button
+                            Appearance="Transparent"
+                            Icon="{ui:SymbolIcon PlugConnected24}"
+                            Width="36" Height="36"
+                            Padding="0"
+                            Command="{Binding TogglePanelCommand}"
+                            CommandParameter="{x:Static models:PanelMode.Connections}"
+                            AutomationProperties.Name="Connections">
+                            <ui:Button.Style>
+                                <Style TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
+                                    <Setter Property="BorderThickness" Value="2,0,0,0" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnectionsActive}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:Button.Style>
+                        </ui:Button>
+
+                        <ui:Button
+                            Appearance="Transparent"
+                            Icon="{ui:SymbolIcon Search24}"
+                            Width="36" Height="36"
+                            Padding="0"
+                            Command="{Binding TogglePanelCommand}"
+                            CommandParameter="{x:Static models:PanelMode.Search}"
+                            AutomationProperties.Name="Search">
+                            <ui:Button.Style>
+                                <Style TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
+                                    <Setter Property="BorderThickness" Value="2,0,0,0" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSearchActive}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:Button.Style>
+                        </ui:Button>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Slide-out Panel (Column 1) -->
+            <Border Grid.Column="1"
+                Width="240"
+                Visibility="{Binding IsPanelVisible, Converter={StaticResource BoolToVisibility}}"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <!-- Panel header -->
+                    <ContentControl DockPanel.Dock="Top">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Setter Property="Content">
+                                    <Setter.Value>
+                                        <TextBlock Text="CONNECTIONS" FontSize="11"
+                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                            Margin="12,8" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Search}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock Text="SEARCH" FontSize="11"
+                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                    Margin="12,8" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Settings}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock Text="SETTINGS" FontSize="11"
+                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                    Margin="12,8" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+
+                    <!-- Panel content area -->
+                    <ContentControl>
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Setter Property="Content">
+                                    <Setter.Value>
+                                        <TextBlock Text="Connection tree will appear here"
+                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Search}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock Text="Search will appear here"
+                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Settings}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock Text="Settings will appear here"
+                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </DockPanel>
+            </Border>
+
+            <!-- Editor Area (Column 2) -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30" />  <!-- Row 0: Tab bar -->
+                    <RowDefinition Height="*" />   <!-- Row 1: Viewport -->
+                </Grid.RowDefinitions>
+
+                <!-- Tab Bar (Editor Row 0, D-06 custom, D-07 always visible) -->
+                <Border Grid.Row="0"
+                    Height="30"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Tabs}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Height="30" Padding="8,0"
+                                        Background="Transparent" Cursor="Hand"
+                                        BorderThickness="0,2,0,0">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="Transparent" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="MiddleClick"
+                                                Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}" />
+                                            <MouseBinding MouseAction="LeftClick"
+                                                Command="{Binding DataContext.SwitchTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}" />
+                                        </Border.InputBindings>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="14">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <ui:Button Appearance="Transparent"
+                                                Icon="{ui:SymbolIcon Dismiss16}"
+                                                Width="16" Height="16" Margin="4,0,0,0"
+                                                Padding="0"
+                                                Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Viewport (Editor Row 1, D-08 empty state, SHEL-07 airspace-safe) -->
+                <Border Grid.Row="1"
+                    Background="{DynamicResource ApplicationBackgroundColor}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding HasNoTabs, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Deskbridge" FontSize="20" FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            HorizontalAlignment="Center" />
+                        <TextBlock Text="Ctrl+N to create a connection" FontSize="14"
+                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                            HorizontalAlignment="Center" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Status Bar (Root Grid Row 2) -->
+        <Border Grid.Row="2"
+            Background="{DynamicResource SystemAccentColorPrimaryBrush}">
+            <DockPanel Margin="8,0">
+                <TextBlock DockPanel.Dock="Right"
+                    Text="{Binding StatusSecondary}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimary}"
+                    VerticalAlignment="Center" FontSize="12"
+                    HorizontalAlignment="Right" />
+                <TextBlock Text="{Binding StatusText}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimary}"
+                    VerticalAlignment="Center" FontSize="12" />
+            </DockPanel>
+        </Border>
+
+        <!-- Overlay hosts (LAST children for correct Z-order per Pitfall 4) -->
+        <ui:SnackbarPresenter x:Name="SnackbarPresenter" Grid.Row="0" Grid.RowSpan="3" />
+        <ui:ContentDialogHost x:Name="RootContentDialog" Grid.Row="0" Grid.RowSpan="3" />
     </Grid>
 </ui:FluentWindow>
