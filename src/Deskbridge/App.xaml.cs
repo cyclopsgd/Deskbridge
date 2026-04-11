@@ -1,6 +1,8 @@
+using System.Windows.Media;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Pipeline;
 using Deskbridge.Core.Services;
+using Wpf.Ui;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
@@ -20,6 +22,12 @@ public partial class App : Application
             updateAccent: true
         );
 
+        // Override system accent with Deskbridge brand colour #007ACC (per SHEL-08)
+        ApplicationAccentColorManager.Apply(
+            Color.FromArgb(0xFF, 0x00, 0x7A, 0xCC),
+            ApplicationTheme.Dark
+        );
+
         var services = new ServiceCollection();
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
@@ -36,6 +44,10 @@ public partial class App : Application
         services.AddSingleton<IConnectionPipeline, ConnectionPipeline>();
         services.AddSingleton<IDisconnectPipeline, DisconnectPipeline>();
         services.AddSingleton<IConnectionQuery, ConnectionQueryService>();
+
+        // WPF-UI services (for Phases 3+ and 6)
+        services.AddSingleton<ISnackbarService, SnackbarService>();
+        services.AddSingleton<IContentDialogService, ContentDialogService>();
 
         // Views
         services.AddTransient<MainWindow>();
