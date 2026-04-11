@@ -58,7 +58,7 @@ This is a greenfield project. No code exists yet. The only pre-existing assets a
 | UI Framework | WPF | (included in SDK) | |
 | UI Library | WPF-UI | Latest stable | Fluent dark theme, modern controls, snap layout support. Check NuGet for .NET 10 compatible version. |
 | Language | C# 14 | (included with .NET 10) | Partial properties supported natively |
-| MVVM | CommunityToolkit.Mvvm | 8.4.2+ | Partial property support works without LangVersion=preview on .NET 10 |
+| MVVM | CommunityToolkit.Mvvm | 8.4.2+ | Requires 8.4.1+ for C# 14 / .NET 10 compatibility |
 | DI Container | Microsoft.Extensions.DependencyInjection | 10.0.x | Standard .NET DI |
 | RDP | AxMSTSCLib | Via aximp.exe | Classic COM interop only |
 | Credentials | AdysTech.CredentialManager | 3.1.0+ | Check NuGet for .NET 10 compatible version |
