@@ -21,6 +21,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
     // Cached full tree for restoring after search filter clears
     private ObservableCollection<TreeItemViewModel> _fullTree = [];
 
+    // Guard against concurrent dialog opens (ShowAsync throws if host is already busy)
+    private bool _isDialogOpen;
+
     public ConnectionTreeViewModel(
         IConnectionStore connectionStore,
         IConnectionQuery connectionQuery,
@@ -262,59 +265,25 @@ public partial class ConnectionTreeViewModel : ObservableObject
     // --- Commands ---
 
     [RelayCommand]
-    private async Task NewConnectionAsync()
+    private async Task NewConnectionAsync(Guid? defaultGroupId = null)
     {
+        if (_isDialogOpen) return;
+
         var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
         vm.Initialize();
 
-        var host = _contentDialogService.GetDialogHostEx();
-        if (host is null) return;
-
-        var dialog = new ConnectionEditorDialog(host, vm);
-        var result = await dialog.ShowAsync();
-
-        if (result == ContentDialogResult.Primary)
+        // Pre-select the group when invoked from a group context menu
+        if (defaultGroupId is not null)
         {
-            vm.Save();
-            RefreshTree();
+            vm.GroupId = defaultGroupId;
         }
-    }
-
-    [RelayCommand]
-    private async Task NewGroupAsync()
-    {
-        var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
-        vm.Initialize();
 
         var host = _contentDialogService.GetDialogHostEx();
         if (host is null) return;
 
-        var dialog = new GroupEditorDialog(host, vm);
-        var result = await dialog.ShowAsync();
-
-        if (result == ContentDialogResult.Primary)
+        _isDialogOpen = true;
+        try
         {
-            vm.Save();
-            RefreshTree();
-        }
-    }
-
-    [RelayCommand]
-    private async Task EditItemAsync(TreeItemViewModel? item)
-    {
-        if (item is null) return;
-
-        var host = _contentDialogService.GetDialogHostEx();
-        if (host is null) return;
-
-        if (item is ConnectionTreeItemViewModel connItem)
-        {
-            var existing = _connectionStore.GetById(connItem.Id);
-            if (existing is null) return;
-
-            var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
-            vm.Initialize(existing);
-
             var dialog = new ConnectionEditorDialog(host, vm);
             var result = await dialog.ShowAsync();
 
@@ -324,14 +293,26 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 RefreshTree();
             }
         }
-        else if (item is GroupTreeItemViewModel groupItem)
+        finally
         {
-            var existing = _connectionStore.GetGroupById(groupItem.Id);
-            if (existing is null) return;
+            _isDialogOpen = false;
+        }
+    }
 
-            var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
-            vm.Initialize(existing);
+    [RelayCommand]
+    private async Task NewGroupAsync()
+    {
+        if (_isDialogOpen) return;
 
+        var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
+        vm.Initialize();
+
+        var host = _contentDialogService.GetDialogHostEx();
+        if (host is null) return;
+
+        _isDialogOpen = true;
+        try
+        {
             var dialog = new GroupEditorDialog(host, vm);
             var result = await dialog.ShowAsync();
 
@@ -341,12 +322,70 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 RefreshTree();
             }
         }
+        finally
+        {
+            _isDialogOpen = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task EditItemAsync(TreeItemViewModel? item)
+    {
+        if (item is null) return;
+        if (_isDialogOpen) return;
+
+        var host = _contentDialogService.GetDialogHostEx();
+        if (host is null) return;
+
+        _isDialogOpen = true;
+        try
+        {
+            if (item is ConnectionTreeItemViewModel connItem)
+            {
+                var existing = _connectionStore.GetById(connItem.Id);
+                if (existing is null) return;
+
+                var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
+                vm.Initialize(existing);
+
+                var dialog = new ConnectionEditorDialog(host, vm);
+                var result = await dialog.ShowAsync();
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    vm.Save();
+                    RefreshTree();
+                }
+            }
+            else if (item is GroupTreeItemViewModel groupItem)
+            {
+                var existing = _connectionStore.GetGroupById(groupItem.Id);
+                if (existing is null) return;
+
+                var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
+                vm.Initialize(existing);
+
+                var dialog = new GroupEditorDialog(host, vm);
+                var result = await dialog.ShowAsync();
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    vm.Save();
+                    RefreshTree();
+                }
+            }
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
     }
 
     [RelayCommand]
     private async Task DeleteSelectedAsync()
     {
         if (SelectedItems.Count == 0) return;
+        if (_isDialogOpen) return;
 
         // Snapshot selected items (Pitfall 7: collection may change during async)
         var itemsToDelete = SelectedItems.ToList();
@@ -377,14 +416,23 @@ public partial class ConnectionTreeViewModel : ObservableObject
         }
 
         // Show confirmation dialog
-        var result = await _contentDialogService.ShowSimpleDialogAsync(
-            new SimpleContentDialogCreateOptions
-            {
-                Title = title,
-                Content = content,
-                PrimaryButtonText = "Delete",
-                CloseButtonText = "Cancel"
-            });
+        ContentDialogResult result;
+        _isDialogOpen = true;
+        try
+        {
+            result = await _contentDialogService.ShowSimpleDialogAsync(
+                new SimpleContentDialogCreateOptions
+                {
+                    Title = title,
+                    Content = content,
+                    PrimaryButtonText = "Delete",
+                    CloseButtonText = "Cancel"
+                });
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
 
         if (result != ContentDialogResult.Primary) return;
 
