@@ -26,8 +26,16 @@ public sealed class WindowsCredentialService : ICredentialService
     public void StoreForConnection(ConnectionModel connection, string username, string? domain, string password)
     {
         var target = $"TERMSRV/{connection.Hostname}";
-        var cred = new NetworkCredential(username, password, domain ?? string.Empty);
-        CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
+        try
+        {
+            var cred = new NetworkCredential(username, password, domain ?? string.Empty);
+            CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to store credentials for target {Target}", target);
+            throw;
+        }
     }
 
     public void DeleteForConnection(ConnectionModel connection)
@@ -60,8 +68,16 @@ public sealed class WindowsCredentialService : ICredentialService
     public void StoreForGroup(Guid groupId, string username, string? domain, string password)
     {
         var target = $"DESKBRIDGE/GROUP/{groupId}";
-        var cred = new NetworkCredential(username, password, domain ?? string.Empty);
-        CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
+        try
+        {
+            var cred = new NetworkCredential(username, password, domain ?? string.Empty);
+            CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to store group credentials for target {Target}", target);
+            throw;
+        }
     }
 
     public void DeleteForGroup(Guid groupId)
