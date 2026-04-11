@@ -1,0 +1,179 @@
+# Requirements: Deskbridge
+
+**Defined:** 2026-04-11
+**Core Value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
+
+## v1 Requirements
+
+Requirements for initial release. Each maps to roadmap phases.
+
+### Project Foundation
+
+- [ ] **PROJ-01**: Solution builds on net10.0-windows with all packages restoring successfully
+- [ ] **PROJ-02**: Directory.Build.props shared config (UseWPF, Nullable, ImplicitUsings) applied to all projects
+- [ ] **PROJ-03**: App manifest declares Windows 10/11 support and PerMonitorV2 DPI awareness
+- [ ] **PROJ-04**: Interop DLLs (MSTSCLib.dll, AxMSTSCLib.dll) positioned in src/Deskbridge.Protocols.Rdp/Interop/
+- [ ] **PROJ-05**: Velopack entry point (custom Main, App.xaml as Page) compiles and runs
+
+### Core Services
+
+- [ ] **CORE-01**: DI container registers all services as interfaces in App.xaml.cs composition root
+- [ ] **CORE-02**: Event bus (WeakReferenceMessenger) publishes and subscribes to typed events without memory leaks
+- [ ] **CORE-03**: Connection pipeline executes ordered stages (resolve credentials, create host, connect, publish event, update recents, audit)
+- [ ] **CORE-04**: Notification service raises events consumed by UI for toast display
+- [ ] **CORE-05**: Connection query interface supports fuzzy search across name, hostname, and tags
+
+### Application Shell
+
+- [ ] **SHEL-01**: FluentWindow with WPF-UI dark theme, Mica backdrop, and snap layout support
+- [ ] **SHEL-02**: 32px custom title bar with min/max/close buttons
+- [ ] **SHEL-03**: 36px left icon rail with Connections, Search, and Settings icons
+- [ ] **SHEL-04**: 240px slide-out panel that pushes viewport (no overlay)
+- [ ] **SHEL-05**: 30px tab bar with connection name, close button, active tab accent, scroll overflow
+- [ ] **SHEL-06**: 22px status bar showing hostname, resolution, and connection quality
+- [ ] **SHEL-07**: Viewport area fills remaining space with no WPF elements overlapping (airspace-safe)
+- [ ] **SHEL-08**: Custom accent colours applied (#007ACC accent, #F44747 error, #89D185 success)
+
+### Connection Management
+
+- [ ] **CONN-01**: Connection model with Id, Name, Hostname, Port, Username, Domain, Protocol, GroupId, Notes, Tags, CredentialMode, DisplaySettings, timestamps
+- [ ] **CONN-02**: Connection groups with Id, Name, ParentGroupId, SortOrder supporting arbitrary nesting
+- [ ] **CONN-03**: JSON persistence at %AppData%/Deskbridge/connections.json with atomic writes
+- [ ] **CONN-04**: Connection tree in slide-out panel with context menu, drag-drop reorder, F2 rename, and search filter
+- [ ] **CONN-05**: Connection editor modal dialog with tabs: General, Credentials, Display, Notes
+- [ ] **CONN-06**: Group editor for setting group-level credentials with inheritance count indicator
+- [ ] **CONN-07**: Credential storage via AdysTech.CredentialManager (TERMSRV/<hostname> for connections, DESKBRIDGE/GROUP/<guid> for groups)
+- [ ] **CONN-08**: Credential inheritance resolves recursively up the group tree (Inherit/Own/Prompt modes)
+- [ ] **CONN-09**: Connection editor shows "inherited from: [group name]" indicator when CredentialMode is Inherit
+- [ ] **CONN-10**: Groups display key icon when they have credentials set
+
+### RDP Integration
+
+- [ ] **RDP-01**: RdpHostControl wraps AxMsRdpClient9NotSafeForScripting in WindowsFormsHost implementing IProtocolHost
+- [ ] **RDP-02**: ActiveX control sited (added to container) before any property configuration
+- [ ] **RDP-03**: Password set via IMsTscNonScriptable cast from GetOcx()
+- [ ] **RDP-04**: Strict disposal sequence: disconnect -> dispose rdp -> null child -> dispose host -> remove from tree
+- [ ] **RDP-05**: Connect/disconnect lifecycle managed through IConnectionPipeline, never called directly from UI
+- [ ] **RDP-06**: Reconnection overlay ("Connection lost -- Reconnect / Close") with exponential backoff (2s, 4s, 8s, max 30s)
+- [ ] **RDP-07**: COM try/catch around all ActiveX calls for per-connection error isolation
+- [ ] **RDP-08**: All lifecycle events published to IEventBus (connected, disconnected, failed, reconnecting)
+- [ ] **RDP-09**: During window drag/resize: bitmap snapshot shown, WindowsFormsHost hidden, resize on drop
+
+### Tab Management
+
+- [ ] **TAB-01**: One connection per tab, active tab only renders live ActiveX control
+- [ ] **TAB-02**: Inactive tabs set BitmapPersistence = 0 to reduce GDI handle usage
+- [ ] **TAB-03**: Ctrl+Tab / Ctrl+Shift+Tab to cycle tabs, Ctrl+W to close, middle-click tab to close
+- [ ] **TAB-04**: Warning shown at 15+ simultaneous connections (GDI handle limit)
+- [ ] **TAB-05**: Tab opened on ConnectionEstablishedEvent, closed on ConnectionClosedEvent via event bus
+
+### Command Palette & Shortcuts
+
+- [ ] **CMD-01**: Ctrl+Shift+P opens floating search box with fuzzy match across connections and commands
+- [ ] **CMD-02**: Commands available: New Connection, Settings, Disconnect All, Quick Connect
+- [ ] **CMD-03**: Connection results consume IConnectionQuery.Search() for consistent matching
+- [ ] **CMD-04**: Ctrl+N new connection, Ctrl+T quick connect, Ctrl+W close tab, F11 fullscreen, Escape exit fullscreen
+
+### Notifications & Status
+
+- [ ] **NOTF-01**: Toast notification stack (bottom-right) for connection events: connected, disconnected, reconnecting, errors
+- [ ] **NOTF-02**: No modal dialogs for non-critical events
+- [ ] **NOTF-03**: Notifications auto-generated from event bus subscriptions (connection failures, updates available)
+- [ ] **NOTF-04**: Window state persistence: position, size, maximised, sidebar state saved to %AppData%/Deskbridge/settings.json
+
+### Logging & Audit
+
+- [ ] **LOG-01**: Serilog rolling file logging at %AppData%/Deskbridge/logs/ with 10MB cap and 5 file rotation
+- [ ] **LOG-02**: Audit log at %AppData%/Deskbridge/audit.jsonl as append-only JSON lines with monthly rotation
+- [ ] **LOG-03**: Audit log records all connection events, credential changes, imports/exports, app lock/unlock
+- [ ] **LOG-04**: Global exception handler with per-connection error isolation
+- [ ] **LOG-05**: Credentials never appear in log files
+
+### App Security
+
+- [ ] **SEC-01**: Master password prompt on first run to set PBKDF2-hashed password (stored in %AppData%/Deskbridge/auth.json)
+- [ ] **SEC-02**: Full-window lock overlay on app launch requiring master password -- no access to connections or settings without it
+- [ ] **SEC-03**: Auto-lock after configurable inactivity timeout (default 15 minutes), timer reset by Deskbridge mouse/keyboard input only
+- [ ] **SEC-04**: Ctrl+L to manually lock, auto-lock on Windows session lock (SystemEvents.SessionSwitch)
+- [ ] **SEC-05**: Option to lock on minimise (configurable in settings)
+
+### Auto-Update
+
+- [ ] **UPD-01**: Velopack checks GitHub Releases via GithubSource silently on startup
+- [ ] **UPD-02**: Status bar notification when update available, with download/apply/restart flow
+- [ ] **UPD-03**: UpdateAvailableEvent published to event bus
+- [ ] **UPD-04**: Self-contained publish with SemVer2 versioning, user data in %AppData% (not alongside exe)
+- [ ] **UPD-05**: GitHub Actions workflow triggered on version tag push: build, vpk pack, upload to release
+
+### Import & Export
+
+- [ ] **MIG-01**: mRemoteNG import parses confCons.xml with field mapping
+- [ ] **MIG-02**: Import wizard: pick file -> preview connections -> confirm import
+- [ ] **MIG-03**: Metadata only -- no password import, users re-enter credentials
+- [ ] **MIG-04**: Imported connections stored with TERMSRV/ credential prefix
+- [ ] **MIG-05**: ConnectionImportedEvent published to event bus, import recorded in audit log
+- [ ] **MIG-06**: Export as JSON (no credentials) and CSV
+
+## v2 Requirements
+
+Deferred to future releases. Tracked but not in current roadmap.
+
+### v1.1 -- Quality of Life
+
+- **QOL-01**: Smart connect -- type hostname in command palette, connect without saving
+- **QOL-02**: Session health monitoring -- latency polling, connection quality indicator
+- **QOL-03**: Quick switch (Ctrl+P) -- fuzzy search, jump to tab or connect
+- **QOL-04**: Connection tagging and smart groups (auto-groups by domain/subnet)
+- **QOL-05**: Session snapshots -- screenshot with hotkey
+
+### v1.2 -- Enterprise
+
+- **ENT-01**: Secure credential sharing -- export with one-time encrypted link
+- **ENT-02**: Connection profiles -- pre-configured display/audio/redirect settings
+- **ENT-03**: Group Policy / managed configuration
+- **ENT-04**: Audit log viewer UI
+
+### v2.0 -- Multi-Protocol & Beyond
+
+- **FUT-01**: SSH tab support (terminal emulator + SSH.NET)
+- **FUT-02**: VNC support
+- **FUT-03**: Light theme
+- **FUT-04**: DPAPI encryption for connections.json at rest
+- **FUT-05**: RDP gateway support
+- **FUT-06**: Multi-monitor spanning
+- **FUT-07**: Session recording
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Multi-protocol in v1 (SSH, VNC, Telnet) | Doing RDP perfectly beats doing many protocols poorly. IProtocolHost supports future expansion. |
+| SQL/cloud database backend | Adds massive complexity. JSON file sufficient for individual/small-team scale. |
+| Built-in password manager/vault | Separate product domain. Windows Credential Manager is clean and OS-secured. |
+| Session recording | Requires video encoding, storage, playback UI. Deferred to v2.0. |
+| Mobile app / cross-platform | WPF is Windows-only by design. Microsoft's Windows App covers mobile RDP. |
+| AI/MCP integration | Premature feature bloat. Command palette is the "smart" interface. |
+| Public plugin/extension API | Internal extensibility via IProtocolHost and pipeline. Not a public API. |
+| Active Directory browser | Scope creep. Import from mRemoteNG handles existing AD-sourced lists. |
+| XML configuration | Source of bugs in mRemoteNG. JSON only by design. |
+| File transfer (SFTP/SCP/FTP) | Separate product domain. Users have WinSCP, FileZilla. |
+| Team sync / shared documents | Multi-user conflict resolution is hard. Export/import for sharing. |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| *(populated by roadmapper)* | | |
+
+**Coverage:**
+- v1 requirements: 60 total
+- Mapped to phases: 0
+- Unmapped: 60
+
+---
+*Requirements defined: 2026-04-11*
+*Last updated: 2026-04-11 after initial definition*
