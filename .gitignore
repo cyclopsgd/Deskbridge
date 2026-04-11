@@ -5,4 +5,3 @@ obj/
 *.suo
 *.DotSettings.user
 .gsd/
-*.db

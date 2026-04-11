@@ -1,0 +1,24 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- UI -->
+    <PackageVersion Include="WPF-UI" Version="4.2.*" />
+    <!-- MVVM -->
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.*" />
+    <!-- DI -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.*" />
+    <!-- Auto-update -->
+    <PackageVersion Include="Velopack" Version="0.0.1298" />
+    <!-- Logging -->
+    <PackageVersion Include="Serilog" Version="4.3.*" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.*" />
+    <!-- Testing -->
+    <PackageVersion Include="xunit.v3" Version="3.2.*" />
+    <PackageVersion Include="FluentAssertions" Version="8.9.*" />
+    <PackageVersion Include="NSubstitute" Version="5.3.*" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+  </ItemGroup>
+</Project>
