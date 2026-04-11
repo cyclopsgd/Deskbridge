@@ -1,0 +1,9 @@
+bin/
+obj/
+*.user
+.vs/
+*.suo
+*.DotSettings.user
+.gsd/
+.planning/
+*.db
