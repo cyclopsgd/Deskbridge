@@ -207,6 +207,43 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _connectionStore.SaveGroup(group);
     }
 
+    // --- Move-to group list for context menu ---
+
+    /// <summary>
+    /// Returns flat list of (Guid id, string displayName, int depth) for the "Move to..." submenu.
+    /// </summary>
+    public List<(Guid Id, string DisplayName, int Depth)> GetAvailableGroupsForMove()
+    {
+        var groups = _connectionStore.GetGroups();
+        var result = new List<(Guid Id, string DisplayName, int Depth)>();
+
+        // Build parent->children lookup
+        var childLookup = new Dictionary<string, List<Core.Models.ConnectionGroup>>();
+        foreach (var g in groups)
+        {
+            var parentKey = g.ParentGroupId?.ToString() ?? string.Empty;
+            if (!childLookup.ContainsKey(parentKey))
+                childLookup[parentKey] = [];
+            childLookup[parentKey].Add(g);
+        }
+
+        void WalkGroups(Guid? parentId, int depth)
+        {
+            var key = parentId?.ToString() ?? string.Empty;
+            if (!childLookup.TryGetValue(key, out var children))
+                return;
+
+            foreach (var child in children.OrderBy(c => c.SortOrder).ThenBy(c => c.Name))
+            {
+                result.Add((child.Id, child.Name, depth));
+                WalkGroups(child.Id, depth + 1);
+            }
+        }
+
+        WalkGroups(null, 0);
+        return result;
+    }
+
     // --- Commands (stubs for Plan 03/04) ---
 
     [RelayCommand]
