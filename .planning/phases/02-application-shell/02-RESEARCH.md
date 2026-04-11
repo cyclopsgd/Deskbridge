@@ -482,22 +482,16 @@ No security-relevant implementation in this phase.
 | A2 | `BasedOn="{StaticResource DefaultUiButtonStyle}"` is the correct style key for WPF-UI 4.2.0 ui:Button | Code Examples, Icon Rail section | Style override would strip Fluent template. Fix: check Gallery app for exact key. MEDIUM risk. [ASSUMED] |
 | A3 | SnackbarPresenter and ContentPresenter can be pre-placed in Phase 2 without services wired, with no runtime errors | Architecture Patterns, Anti-Patterns | Could throw on startup if services expect presenters. LOW risk -- presenters are passive controls. [ASSUMED] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Bool-to-Accent-Brush Converter for Tab Active State**
-   - What we know: Active tab needs 2px top border in accent color; inactive needs transparent. Standard BooleanToVisibilityConverter doesn't handle Brush values.
-   - What's unclear: Best WPF pattern -- custom IValueConverter, DataTrigger in Style, or multi-binding?
-   - Recommendation: Use DataTrigger in the tab item template Style (simplest, no custom converter code). Pattern shown in icon rail code example works for tabs too.
+   - RESOLVED: Use DataTrigger in the tab item template Style (simplest, no custom converter code). Plan 02-02 implements this approach.
 
 2. **Panel Content Switching Implementation**
-   - What we know: Three panel views (Connections, Search, Settings) with placeholder content in Phase 2.
-   - What's unclear: Whether to use ContentControl with Style triggers, or three overlapping elements with Visibility bindings, or a DataTemplateSelector.
-   - Recommendation: ContentControl with DataTriggers (shown in Code Examples) for Phase 2. When real panel content arrives (Phase 3+), migrate to UserControls with DataTemplateSelector.
+   - RESOLVED: ContentControl with DataTriggers for Phase 2 placeholders. Plan 02-02 implements this. Migrate to UserControls with DataTemplateSelector when real content arrives (Phase 3+).
 
 3. **WPF-UI ui:Button Style Key for BasedOn**
-   - What we know: DESIGN.md section 6 says `BasedOn="{StaticResource DefaultUiButtonStyle}"`.
-   - What's unclear: Whether WPF-UI 4.2.0 uses this exact key or a different naming convention.
-   - Recommendation: If `DefaultUiButtonStyle` doesn't resolve, try `{StaticResource {x:Type ui:Button}}` or omit BasedOn and use an implicit style. Test at build time.
+   - RESOLVED: Use `BasedOn="{StaticResource DefaultUiButtonStyle}"`. Plan 02-02 includes fallback to `{StaticResource {x:Type ui:Button}}` if key doesn't resolve at build time.
 
 ## Sources
 
