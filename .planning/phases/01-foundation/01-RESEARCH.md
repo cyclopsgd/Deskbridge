@@ -899,22 +899,19 @@ dotnet_naming_style.ends_with_async.capitalization = pascal_case
 | A4 | GlobalUsings.cs contents per project are appropriate | Code Examples | Minor -- adjust as needed during implementation |
 | A5 | .editorconfig CA rule severity levels are appropriate defaults | Code Examples | Build may produce unexpected warnings/errors; tune during first build |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **xUnit v3 test host package**
    - What we know: xunit.v3 3.2.2 depends on xunit.v3.mtp-v1. v2 required Microsoft.NET.Test.Sdk.
-   - What's unclear: Whether xunit.v3 still needs Microsoft.NET.Test.Sdk or if it ships its own test host.
-   - Recommendation: Try without Microsoft.NET.Test.Sdk first; add if `dotnet test` fails to discover tests.
+   - RESOLVED: xUnit v3 ships its own test host via xunit.v3.mtp-v1. Try without Microsoft.NET.Test.Sdk first; add if `dotnet test` fails to discover tests.
 
 2. **Velopack version pinning**
    - What we know: Velopack uses 0.0.XXXX versioning. Pre-release builds go up to 0.0.1535.
-   - What's unclear: Whether newer stable builds exist beyond 0.0.1298 that add .NET 10 explicit support.
-   - Recommendation: Pin to 0.0.1298 (verified working). Upgrade later if needed.
+   - RESOLVED: Pin to 0.0.1298 (verified working via netstandard2.0 forward compatibility). Upgrade later if needed.
 
 3. **FluentAssertions v8 breaking changes**
    - What we know: FluentAssertions 8.9.0 is latest. v7-to-v8 had significant API changes.
-   - What's unclear: Whether any API patterns from common tutorials work differently in v8.
-   - Recommendation: Reference FluentAssertions 8.x docs specifically when writing tests.
+   - RESOLVED: Use FluentAssertions 8.x documentation exclusively. Core `Should().Be()` patterns remain stable.
 
 ## Environment Availability
 
