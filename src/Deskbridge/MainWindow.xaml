@@ -264,7 +264,7 @@
 
                 <!-- Viewport (Editor Row 1, D-08 empty state, SHEL-07 airspace-safe) -->
                 <Border Grid.Row="1"
-                    Background="{DynamicResource ApplicationBackgroundColor}">
+                    Background="{DynamicResource ApplicationBackgroundBrush}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                         Visibility="{Binding HasNoTabs, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock Text="Deskbridge" FontSize="20" FontWeight="SemiBold"
@@ -284,11 +284,11 @@
             <DockPanel Margin="8,0">
                 <TextBlock DockPanel.Dock="Right"
                     Text="{Binding StatusSecondary}"
-                    Foreground="{DynamicResource TextOnAccentFillColorPrimary}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                     VerticalAlignment="Center" FontSize="12"
                     HorizontalAlignment="Right" />
                 <TextBlock Text="{Binding StatusText}"
-                    Foreground="{DynamicResource TextOnAccentFillColorPrimary}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                     VerticalAlignment="Center" FontSize="12" />
             </DockPanel>
         </Border>
