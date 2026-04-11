@@ -8,6 +8,13 @@
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Custom semantic brushes (per SHEL-08) -->
+            <SolidColorBrush x:Key="DeskbridgeErrorBrush" Color="#F44747" />
+            <SolidColorBrush x:Key="DeskbridgeSuccessBrush" Color="#89D185" />
+
+            <!-- Standard converters -->
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
