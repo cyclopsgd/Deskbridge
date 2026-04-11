@@ -262,7 +262,8 @@
                     </ui:Button>
                 </DockPanel>
 
-                <!-- Properties content area -->
+                <!-- Properties content area (scrollable) -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <Grid Margin="8,4">
                     <!-- Connection properties (when connection selected) -->
                     <Grid Visibility="{Binding IsConnectionSelected, Converter={StaticResource BoolToVisibility}}">
@@ -368,6 +369,7 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </Grid>
+                </ScrollViewer>
             </DockPanel>
         </Border>
     </Grid>
