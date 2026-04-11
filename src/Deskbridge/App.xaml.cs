@@ -62,9 +62,13 @@ public partial class App : Application
         // ViewModels
         services.AddTransient<ViewModels.MainWindowViewModel>();
         services.AddTransient<ViewModels.ConnectionTreeViewModel>();
+        services.AddTransient<ViewModels.ConnectionEditorViewModel>();
+        services.AddTransient<ViewModels.GroupEditorViewModel>();
 
         // Views
         services.AddTransient<Views.ConnectionTreeControl>();
+        services.AddTransient<Dialogs.ConnectionEditorDialog>();
+        services.AddTransient<Dialogs.GroupEditorDialog>();
         services.AddTransient<MainWindow>();
     }
 
