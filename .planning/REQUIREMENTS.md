@@ -167,13 +167,83 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| *(populated by roadmapper)* | | |
+| PROJ-01 | Phase 1 | Pending |
+| PROJ-02 | Phase 1 | Pending |
+| PROJ-03 | Phase 1 | Pending |
+| PROJ-04 | Phase 1 | Pending |
+| PROJ-05 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Pending |
+| SHEL-01 | Phase 2 | Pending |
+| SHEL-02 | Phase 2 | Pending |
+| SHEL-03 | Phase 2 | Pending |
+| SHEL-04 | Phase 2 | Pending |
+| SHEL-05 | Phase 2 | Pending |
+| SHEL-06 | Phase 2 | Pending |
+| SHEL-07 | Phase 2 | Pending |
+| SHEL-08 | Phase 2 | Pending |
+| CONN-01 | Phase 3 | Pending |
+| CONN-02 | Phase 3 | Pending |
+| CONN-03 | Phase 3 | Pending |
+| CONN-04 | Phase 3 | Pending |
+| CONN-05 | Phase 3 | Pending |
+| CONN-06 | Phase 3 | Pending |
+| CONN-07 | Phase 3 | Pending |
+| CONN-08 | Phase 3 | Pending |
+| CONN-09 | Phase 3 | Pending |
+| CONN-10 | Phase 3 | Pending |
+| RDP-01 | Phase 4 | Pending |
+| RDP-02 | Phase 4 | Pending |
+| RDP-03 | Phase 4 | Pending |
+| RDP-04 | Phase 4 | Pending |
+| RDP-05 | Phase 4 | Pending |
+| RDP-06 | Phase 4 | Pending |
+| RDP-07 | Phase 4 | Pending |
+| RDP-08 | Phase 4 | Pending |
+| RDP-09 | Phase 4 | Pending |
+| TAB-01 | Phase 5 | Pending |
+| TAB-02 | Phase 5 | Pending |
+| TAB-03 | Phase 5 | Pending |
+| TAB-04 | Phase 5 | Pending |
+| TAB-05 | Phase 5 | Pending |
+| CMD-01 | Phase 6 | Pending |
+| CMD-02 | Phase 6 | Pending |
+| CMD-03 | Phase 6 | Pending |
+| CMD-04 | Phase 6 | Pending |
+| NOTF-01 | Phase 6 | Pending |
+| NOTF-02 | Phase 6 | Pending |
+| NOTF-03 | Phase 6 | Pending |
+| NOTF-04 | Phase 6 | Pending |
+| LOG-01 | Phase 6 | Pending |
+| LOG-02 | Phase 6 | Pending |
+| LOG-03 | Phase 6 | Pending |
+| LOG-04 | Phase 6 | Pending |
+| LOG-05 | Phase 6 | Pending |
+| SEC-01 | Phase 6 | Pending |
+| SEC-02 | Phase 6 | Pending |
+| SEC-03 | Phase 6 | Pending |
+| SEC-04 | Phase 6 | Pending |
+| SEC-05 | Phase 6 | Pending |
+| UPD-01 | Phase 7 | Pending |
+| UPD-02 | Phase 7 | Pending |
+| UPD-03 | Phase 7 | Pending |
+| UPD-04 | Phase 7 | Pending |
+| UPD-05 | Phase 7 | Pending |
+| MIG-01 | Phase 7 | Pending |
+| MIG-02 | Phase 7 | Pending |
+| MIG-03 | Phase 7 | Pending |
+| MIG-04 | Phase 7 | Pending |
+| MIG-05 | Phase 7 | Pending |
+| MIG-06 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 60 total
-- Mapped to phases: 0
-- Unmapped: 60
+- v1 requirements: 71 total
+- Mapped to phases: 71
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-11*
-*Last updated: 2026-04-11 after initial definition*
+*Last updated: 2026-04-11 after roadmap creation*
