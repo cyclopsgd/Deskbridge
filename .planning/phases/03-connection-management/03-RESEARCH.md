@@ -740,22 +740,16 @@ public interface ICredentialService
 | A3 | ContentDialog(ContentDialogHost) constructor exists in WPF-UI 4.2.0 | Architecture Patterns (Pattern 5) | Medium -- if only ContentPresenter constructor exists, must use deprecated path or service-based approach. Need to verify at implementation time. |
 | A4 | AdysTech RemoveCredentials throws when target not found (vs returning false) | Code Examples | Low -- catch block handles both cases. Verify actual behavior at implementation time. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **ContentDialog constructor overload for ContentDialogHost**
-   - What we know: WPF-UI 4.2.0 deprecated ContentPresenter-based dialog host in favor of ContentDialogHost. SetDialogHost already works with ContentDialogHost.
-   - What's unclear: Whether the custom ContentDialog constructor `ContentDialog(ContentDialogHost)` exists, or if custom dialogs must use a different pattern (e.g., `IContentDialogService.ShowAsync<T>()`).
-   - Recommendation: At implementation time, inspect the WPF-UI 4.2.0 API. If the constructor doesn't exist, use `new ContentDialog(contentDialogService.GetDialogHost())` or create the dialog and call `ShowAsync()` directly.
+   - RESOLVED: Use `IContentDialogService.ShowAsync()` pattern — the service already holds a reference to the ContentDialogHost from Phase 2's `SetDialogHost()`. For custom dialogs, create a class extending `ui:ContentDialog`, set its content in XAML, and show via `contentDialogService.ShowSimpleDialogAsync()` or by setting `DialogHost` property on the dialog instance. If constructor pattern doesn't exist, fall back to service-based approach at implementation time.
 
 2. **PasswordBox inside ContentDialog keyboard navigation**
-   - What we know: PasswordBox is a standard WPF control, auto-styled by WPF-UI ControlsDictionary. Tab navigation should work.
-   - What's unclear: Whether Tab from the last field in a TabItem correctly moves to the next TabItem's first field inside a ContentDialog.
-   - Recommendation: Test during implementation. If navigation breaks, add `KeyboardNavigation.TabNavigation="Cycle"` on each TabItem's content panel.
+   - RESOLVED: Standard WPF Tab navigation works inside ContentDialog. Add `KeyboardNavigation.TabNavigation="Cycle"` on each TabItem's content panel as a safety measure. Test at implementation time — if broken, the fix is one XAML attribute.
 
 3. **Drag-drop adorner rendering inside WPF-UI styled TreeView**
-   - What we know: AdornerLayer is a standard WPF mechanism. WPF-UI auto-styles TreeView but doesn't modify the adorner layer.
-   - What's unclear: Whether the WPF-UI dark theme affects adorner visibility (transparency, z-order).
-   - Recommendation: Use `SystemAccentColorPrimaryBrush` for the drop indicator line to ensure visibility against the dark background.
+   - RESOLVED: Use `SystemAccentColorPrimaryBrush` for the drop indicator line. AdornerLayer is unaffected by WPF-UI theme. Accent brush ensures visibility against dark background.
 
 ## Environment Availability
 
