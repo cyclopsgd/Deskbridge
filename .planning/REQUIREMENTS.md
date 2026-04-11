@@ -27,11 +27,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **SHEL-01**: FluentWindow with WPF-UI dark theme, Mica backdrop, and snap layout support
 - [x] **SHEL-02**: 32px custom title bar with min/max/close buttons
-- [ ] **SHEL-03**: 36px left icon rail with Connections, Search, and Settings icons
-- [ ] **SHEL-04**: 240px slide-out panel that pushes viewport (no overlay)
-- [ ] **SHEL-05**: 30px tab bar with connection name, close button, active tab accent, scroll overflow
-- [ ] **SHEL-06**: 22px status bar showing hostname, resolution, and connection quality
-- [ ] **SHEL-07**: Viewport area fills remaining space with no WPF elements overlapping (airspace-safe)
+- [x] **SHEL-03**: 36px left icon rail with Connections, Search, and Settings icons
+- [x] **SHEL-04**: 240px slide-out panel that pushes viewport (no overlay)
+- [x] **SHEL-05**: 30px tab bar with connection name, close button, active tab accent, scroll overflow
+- [x] **SHEL-06**: 22px status bar showing hostname, resolution, and connection quality
+- [x] **SHEL-07**: Viewport area fills remaining space with no WPF elements overlapping (airspace-safe)
 - [x] **SHEL-08**: Custom accent colours applied (#007ACC accent, #F44747 error, #89D185 success)
 
 ### Connection Management
@@ -179,11 +179,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-05 | Phase 1 | Complete |
 | SHEL-01 | Phase 2 | Complete |
 | SHEL-02 | Phase 2 | Complete |
-| SHEL-03 | Phase 2 | Pending |
-| SHEL-04 | Phase 2 | Pending |
-| SHEL-05 | Phase 2 | Pending |
-| SHEL-06 | Phase 2 | Pending |
-| SHEL-07 | Phase 2 | Pending |
+| SHEL-03 | Phase 2 | Complete |
+| SHEL-04 | Phase 2 | Complete |
+| SHEL-05 | Phase 2 | Complete |
+| SHEL-06 | Phase 2 | Complete |
+| SHEL-07 | Phase 2 | Complete |
 | SHEL-08 | Phase 2 | Complete |
 | CONN-01 | Phase 3 | Pending |
 | CONN-02 | Phase 3 | Pending |
