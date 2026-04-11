@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-04-11T13:27:55.896Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-04-11T13:33:54.702Z"
 last_activity: 2026-04-11
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-11
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-foundation P01 | 9min | 2 tasks | 21 files |
+| Phase 01 P02 | 3min | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - [Phase 01-foundation]: CentralPackageFloatingVersionsEnabled required for major.minor wildcard pins in CPM
 - [Phase 01-foundation]: GlobalUsings trimmed to existing namespaces -- forward refs deferred to Plan 02
 - [Phase 01-foundation]: Classic .sln format used over .slnx default for broad tooling compatibility
+- [Phase 01]: ResolvedPassword XML doc added per T-01-05 threat mitigation -- do not log or serialize
+- [Phase 01]: ConnectionQueryService dual scoring: substring match (100/80/60) with subsequence fallback (40/30)
+- [Phase 01]: NotificationService caps recent list at 50 entries with FIFO eviction
 
 ### Pending Todos
 
@@ -81,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T13:27:55.890Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-04-11T13:33:54.697Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

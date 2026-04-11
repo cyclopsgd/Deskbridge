@@ -18,10 +18,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Core Services
 
 - [x] **CORE-01**: DI container registers all services as interfaces in App.xaml.cs composition root
-- [ ] **CORE-02**: Event bus (WeakReferenceMessenger) publishes and subscribes to typed events without memory leaks
-- [ ] **CORE-03**: Connection pipeline executes ordered stages (resolve credentials, create host, connect, publish event, update recents, audit)
-- [ ] **CORE-04**: Notification service raises events consumed by UI for toast display
-- [ ] **CORE-05**: Connection query interface supports fuzzy search across name, hostname, and tags
+- [x] **CORE-02**: Event bus (WeakReferenceMessenger) publishes and subscribes to typed events without memory leaks
+- [x] **CORE-03**: Connection pipeline executes ordered stages (resolve credentials, create host, connect, publish event, update recents, audit)
+- [x] **CORE-04**: Notification service raises events consumed by UI for toast display
+- [x] **CORE-05**: Connection query interface supports fuzzy search across name, hostname, and tags
 
 ### Application Shell
 
@@ -173,10 +173,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROJ-04 | Phase 1 | Complete |
 | PROJ-05 | Phase 1 | Complete |
 | CORE-01 | Phase 1 | Complete |
-| CORE-02 | Phase 1 | Pending |
-| CORE-03 | Phase 1 | Pending |
-| CORE-04 | Phase 1 | Pending |
-| CORE-05 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Complete |
+| CORE-03 | Phase 1 | Complete |
+| CORE-04 | Phase 1 | Complete |
+| CORE-05 | Phase 1 | Complete |
 | SHEL-01 | Phase 2 | Pending |
 | SHEL-02 | Phase 2 | Pending |
 | SHEL-03 | Phase 2 | Pending |

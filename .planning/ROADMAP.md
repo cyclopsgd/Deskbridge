@@ -36,7 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md -- Solution scaffold, build config, Central Package Management, Velopack entry point, WPF-UI dark theme, DI skeleton
-- [ ] 01-02-PLAN.md -- Core interfaces, models, events, service implementations (event bus, pipelines, notification, query)
+- [x] 01-02-PLAN.md -- Core interfaces, models, events, service implementations (event bus, pipelines, notification, query)
 - [ ] 01-03-PLAN.md -- Comprehensive unit tests for all core services (event bus, pipelines, query, notifications, DI composition)
 
 ### Phase 2: Application Shell
