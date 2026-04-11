@@ -154,40 +154,24 @@
                         </ContentControl.Style>
                     </ContentControl>
 
-                    <!-- Panel content area -->
-                    <ContentControl>
-                        <ContentControl.Style>
-                            <Style TargetType="ContentControl">
-                                <Setter Property="Content">
-                                    <Setter.Value>
-                                        <TextBlock Text="Connection tree will appear here"
-                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Search}">
-                                        <Setter Property="Content">
-                                            <Setter.Value>
-                                                <TextBlock Text="Search will appear here"
-                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Setter.Value>
-                                        </Setter>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Settings}">
-                                        <Setter Property="Content">
-                                            <Setter.Value>
-                                                <TextBlock Text="Settings will appear here"
-                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Setter.Value>
-                                        </Setter>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ContentControl.Style>
-                    </ContentControl>
+                    <!-- Panel content area (Grid with visibility-switched children) -->
+                    <Grid>
+                        <!-- Connections panel: ConnectionTreeControl injected via code-behind -->
+                        <ContentControl x:Name="ConnectionsContent"
+                            Visibility="{Binding IsConnectionsActive, Converter={StaticResource BoolToVisibility}}" />
+
+                        <!-- Search placeholder -->
+                        <TextBlock Text="Search will appear here"
+                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="{Binding IsSearchActive, Converter={StaticResource BoolToVisibility}}" />
+
+                        <!-- Settings placeholder -->
+                        <TextBlock Text="Settings will appear here"
+                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="{Binding IsSettingsActive, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
                 </DockPanel>
             </Border>
 
