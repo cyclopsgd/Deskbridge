@@ -73,7 +73,7 @@ Plans:
 - [x] 03-01-PLAN.md -- Data layer: IConnectionStore extension, JsonConnectionStore, ICredentialService, WindowsCredentialService, CR-01 fix, unit tests
 - [x] 03-02-PLAN.md -- Tree ViewModels and ConnectionTreeControl XAML: TreeView with hierarchical templates, search filter, quick properties panel, MainWindow integration
 - [x] 03-03-PLAN.md -- Editor dialogs: ConnectionEditorDialog with 4-tab editor and credential InfoBar, GroupEditorDialog with credentials and inheritance count
-- [ ] 03-04-PLAN.md -- Tree interactions: multi-select, drag-drop, context menu, F2 rename, all ViewModel commands, Ctrl+N shortcut, visual checkpoint
+- [x] 03-04-PLAN.md -- Tree interactions: multi-select, drag-drop, context menu, F2 rename, all ViewModel commands, Ctrl+N shortcut, visual checkpoint
 
 ### Phase 4: RDP Integration
 **Goal**: Users can double-click a connection and establish a live RDP session rendered in the viewport, with proper COM lifecycle, reconnection on failure, and per-connection error isolation
