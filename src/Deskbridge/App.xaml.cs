@@ -43,7 +43,17 @@ public partial class App : Application
         services.AddSingleton<INotificationService, NotificationService>();
         services.AddSingleton<IConnectionPipeline, ConnectionPipeline>();
         services.AddSingleton<IDisconnectPipeline, DisconnectPipeline>();
-        services.AddSingleton<IConnectionQuery, ConnectionQueryService>();
+
+        // Connection persistence and credentials
+        services.AddSingleton<IConnectionStore>(sp =>
+        {
+            var store = new JsonConnectionStore();
+            store.Load();
+            return store;
+        });
+        services.AddSingleton<ICredentialService, WindowsCredentialService>();
+        services.AddSingleton<IConnectionQuery>(sp =>
+            new ConnectionQueryService(sp.GetRequiredService<IConnectionStore>()));
 
         // WPF-UI services (for Phases 3+ and 6)
         services.AddSingleton<ISnackbarService, SnackbarService>();
