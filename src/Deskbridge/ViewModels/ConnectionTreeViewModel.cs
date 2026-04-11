@@ -1,6 +1,11 @@
 using System.Collections.ObjectModel;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
+using Deskbridge.Dialogs;
+using Microsoft.Extensions.DependencyInjection;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
+using Wpf.Ui.Extensions;
 
 namespace Deskbridge.ViewModels;
 
@@ -9,6 +14,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private readonly IConnectionStore _connectionStore;
     private readonly IConnectionQuery _connectionQuery;
     private readonly ICredentialService _credentialService;
+    private readonly IContentDialogService _contentDialogService;
+    private readonly ISnackbarService _snackbarService;
+    private readonly IServiceProvider _serviceProvider;
 
     // Cached full tree for restoring after search filter clears
     private ObservableCollection<TreeItemViewModel> _fullTree = [];
@@ -16,11 +24,17 @@ public partial class ConnectionTreeViewModel : ObservableObject
     public ConnectionTreeViewModel(
         IConnectionStore connectionStore,
         IConnectionQuery connectionQuery,
-        ICredentialService credentialService)
+        ICredentialService credentialService,
+        IContentDialogService contentDialogService,
+        ISnackbarService snackbarService,
+        IServiceProvider serviceProvider)
     {
         _connectionStore = connectionStore;
         _connectionQuery = connectionQuery;
         _credentialService = credentialService;
+        _contentDialogService = contentDialogService;
+        _snackbarService = snackbarService;
+        _serviceProvider = serviceProvider;
     }
 
     // Data
@@ -185,6 +199,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         if (model is null)
             return;
 
+        model.Name = connVm.Name;
         model.Hostname = hostname;
         model.Port = connVm.Port;
         model.Username = connVm.Username;
@@ -218,7 +233,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         var result = new List<(Guid Id, string DisplayName, int Depth)>();
 
         // Build parent->children lookup
-        var childLookup = new Dictionary<string, List<Core.Models.ConnectionGroup>>();
+        var childLookup = new Dictionary<string, List<ConnectionGroup>>();
         foreach (var g in groups)
         {
             var parentKey = g.ParentGroupId?.ToString() ?? string.Empty;
@@ -244,27 +259,158 @@ public partial class ConnectionTreeViewModel : ObservableObject
         return result;
     }
 
-    // --- Commands (stubs for Plan 03/04) ---
+    // --- Commands ---
 
     [RelayCommand]
-    private Task NewConnectionAsync()
+    private async Task NewConnectionAsync()
     {
-        /* Plan 03 — implemented in Plan 03 (editor dialog) */
-        return Task.CompletedTask;
+        var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
+        vm.Initialize();
+
+        var host = _contentDialogService.GetDialogHostEx();
+        if (host is null) return;
+
+        var dialog = new ConnectionEditorDialog(host, vm);
+        var result = await dialog.ShowAsync();
+
+        if (result == ContentDialogResult.Primary)
+        {
+            vm.Save();
+            RefreshTree();
+        }
     }
 
     [RelayCommand]
-    private Task NewGroupAsync()
+    private async Task NewGroupAsync()
     {
-        /* Plan 03 — implemented in Plan 03 (editor dialog) */
-        return Task.CompletedTask;
+        var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
+        vm.Initialize();
+
+        var host = _contentDialogService.GetDialogHostEx();
+        if (host is null) return;
+
+        var dialog = new GroupEditorDialog(host, vm);
+        var result = await dialog.ShowAsync();
+
+        if (result == ContentDialogResult.Primary)
+        {
+            vm.Save();
+            RefreshTree();
+        }
     }
 
     [RelayCommand]
-    private Task DeleteSelectedAsync()
+    private async Task EditItemAsync(TreeItemViewModel? item)
     {
-        /* Plan 04 — not yet implemented */
-        return Task.CompletedTask;
+        if (item is null) return;
+
+        var host = _contentDialogService.GetDialogHostEx();
+        if (host is null) return;
+
+        if (item is ConnectionTreeItemViewModel connItem)
+        {
+            var existing = _connectionStore.GetById(connItem.Id);
+            if (existing is null) return;
+
+            var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
+            vm.Initialize(existing);
+
+            var dialog = new ConnectionEditorDialog(host, vm);
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                vm.Save();
+                RefreshTree();
+            }
+        }
+        else if (item is GroupTreeItemViewModel groupItem)
+        {
+            var existing = _connectionStore.GetGroupById(groupItem.Id);
+            if (existing is null) return;
+
+            var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
+            vm.Initialize(existing);
+
+            var dialog = new GroupEditorDialog(host, vm);
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                vm.Save();
+                RefreshTree();
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteSelectedAsync()
+    {
+        if (SelectedItems.Count == 0) return;
+
+        // Snapshot selected items (Pitfall 7: collection may change during async)
+        var itemsToDelete = SelectedItems.ToList();
+
+        // Build confirmation message per UI-SPEC copywriting contract
+        string title;
+        string content;
+
+        if (itemsToDelete.Count == 1)
+        {
+            var single = itemsToDelete[0];
+            if (single is GroupTreeItemViewModel groupVm)
+            {
+                var connectionCount = groupVm.ConnectionCount;
+                title = "Delete group?";
+                content = $"Are you sure you want to delete the group {single.Name} and all {connectionCount} connections inside it? This action cannot be undone.";
+            }
+            else
+            {
+                title = "Delete connection?";
+                content = $"Are you sure you want to delete {single.Name}? This action cannot be undone.";
+            }
+        }
+        else
+        {
+            title = $"Delete {itemsToDelete.Count} items?";
+            content = $"Are you sure you want to delete {itemsToDelete.Count} selected items? This action cannot be undone.";
+        }
+
+        // Show confirmation dialog
+        var result = await _contentDialogService.ShowSimpleDialogAsync(
+            new SimpleContentDialogCreateOptions
+            {
+                Title = title,
+                Content = content,
+                PrimaryButtonText = "Delete",
+                CloseButtonText = "Cancel"
+            });
+
+        if (result != ContentDialogResult.Primary) return;
+
+        // Delete confirmed - execute deletions
+        foreach (var item in itemsToDelete)
+        {
+            if (item is ConnectionTreeItemViewModel connItem)
+            {
+                var model = _connectionStore.GetById(connItem.Id);
+                if (model is not null)
+                {
+                    _credentialService.DeleteForConnection(model);
+                }
+                _connectionStore.Delete(connItem.Id);
+            }
+            else if (item is GroupTreeItemViewModel groupItem)
+            {
+                // T-03-15: DeleteGroup orphans connections (sets GroupId=null), does not delete them
+                _credentialService.DeleteForGroup(groupItem.Id);
+                _connectionStore.DeleteGroup(groupItem.Id);
+            }
+        }
+
+        SelectedItems.Clear();
+        PrimarySelectedItem = null;
+        RefreshTree();
     }
 
     [RelayCommand]
@@ -276,36 +422,98 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [RelayCommand]
     private void Connect()
     {
-        /* Phase 4/5 — not yet implemented */
+        /* Phase 4/5 -- RDP connection will be wired here */
     }
 
     [RelayCommand]
-    private void EditItem(TreeItemViewModel item)
+    private void RenameItem(TreeItemViewModel? item)
     {
-        /* Plan 04 — not yet implemented */
+        if (item is null) return;
+        item.IsRenaming = true;
     }
 
     [RelayCommand]
-    private void RenameItem(TreeItemViewModel item)
+    private void CopyHostname(ConnectionTreeItemViewModel? item)
     {
-        /* Plan 04 — not yet implemented */
+        if (item is null) return;
+
+        Clipboard.SetText(item.Hostname);
+        _snackbarService.Show(
+            "Copied",
+            "Hostname copied to clipboard",
+            ControlAppearance.Info,
+            null,
+            TimeSpan.FromSeconds(2));
     }
 
     [RelayCommand]
-    private void CopyHostname(ConnectionTreeItemViewModel item)
+    private void DuplicateConnection(ConnectionTreeItemViewModel? item)
     {
-        /* Plan 04 — not yet implemented */
-    }
+        if (item is null) return;
 
-    [RelayCommand]
-    private void DuplicateConnection(ConnectionTreeItemViewModel item)
-    {
-        /* Plan 04 — not yet implemented */
+        var original = _connectionStore.GetById(item.Id);
+        if (original is null) return;
+
+        // Create copy with new Guid and "(Copy)" suffix (T-03-14: do NOT copy credentials)
+        var copy = new ConnectionModel
+        {
+            Id = Guid.NewGuid(),
+            Name = $"{original.Name} (Copy)",
+            Hostname = original.Hostname,
+            Port = original.Port,
+            Username = original.Username,
+            Domain = original.Domain,
+            Protocol = original.Protocol,
+            GroupId = original.GroupId,
+            Notes = original.Notes,
+            CredentialMode = CredentialMode.Inherit, // Default to Inherit, user must set own creds
+            DisplaySettings = original.DisplaySettings is not null
+                ? new DisplaySettings
+                {
+                    Width = original.DisplaySettings.Width,
+                    Height = original.DisplaySettings.Height,
+                    SmartSizing = original.DisplaySettings.SmartSizing
+                }
+                : null,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _connectionStore.Save(copy);
+        RefreshTree();
     }
 
     [RelayCommand]
     private void MoveToGroup(Guid? targetGroupId)
     {
-        /* Plan 04 — not yet implemented */
+        if (SelectedItems.Count == 0) return;
+
+        // Snapshot items (collection may change during iteration)
+        var items = SelectedItems.ToList();
+
+        foreach (var item in items)
+        {
+            if (item is ConnectionTreeItemViewModel connItem)
+            {
+                var model = _connectionStore.GetById(connItem.Id);
+                if (model is not null)
+                {
+                    model.GroupId = targetGroupId;
+                    model.UpdatedAt = DateTime.UtcNow;
+                    _connectionStore.Save(model);
+                }
+            }
+            else if (item is GroupTreeItemViewModel groupItem)
+            {
+                var group = _connectionStore.GetGroupById(groupItem.Id);
+                if (group is not null)
+                {
+                    group.ParentGroupId = targetGroupId;
+                    _connectionStore.SaveGroup(group);
+                }
+            }
+        }
+
+        RefreshTree();
     }
 }

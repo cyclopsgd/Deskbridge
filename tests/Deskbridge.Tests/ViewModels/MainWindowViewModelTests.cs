@@ -1,11 +1,30 @@
+using Deskbridge.Core.Interfaces;
 using Deskbridge.Models;
 using Deskbridge.ViewModels;
+using NSubstitute;
+using Wpf.Ui;
 
 namespace Deskbridge.Tests.ViewModels;
 
 public class MainWindowViewModelTests
 {
-    private readonly MainWindowViewModel _sut = new();
+    private readonly MainWindowViewModel _sut;
+
+    public MainWindowViewModelTests()
+    {
+        var connectionStore = Substitute.For<IConnectionStore>();
+        var connectionQuery = Substitute.For<IConnectionQuery>();
+        var credentialService = Substitute.For<ICredentialService>();
+        var contentDialogService = Substitute.For<IContentDialogService>();
+        var snackbarService = Substitute.For<ISnackbarService>();
+        var serviceProvider = Substitute.For<IServiceProvider>();
+
+        var treeVm = new ConnectionTreeViewModel(
+            connectionStore, connectionQuery, credentialService,
+            contentDialogService, snackbarService, serviceProvider);
+
+        _sut = new MainWindowViewModel(treeVm);
+    }
 
     // --- Panel toggle state machine (D-04) ---
 

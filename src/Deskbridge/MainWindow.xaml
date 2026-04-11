@@ -13,6 +13,7 @@
     <!-- Keyboard shortcuts -->
     <ui:FluentWindow.InputBindings>
         <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseTabCommand}" CommandParameter="{Binding ActiveTab}" />
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding ConnectionTree.NewConnectionCommand}" />
         <!-- NOTE: Ctrl+Tab and Ctrl+Shift+Tab cannot be reliably bound via XAML KeyBinding
              (WPF intercepts them for tab navigation). These will be wired in Phase 5
              via code-behind PreviewKeyDown handling when tabs are functional. -->
