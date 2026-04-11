@@ -5,7 +5,8 @@ namespace Deskbridge.Core.Services;
 
 public sealed class ConnectionQueryService : IConnectionQuery
 {
-    private List<ConnectionModel> _connections;
+    private readonly IConnectionStore? _store;
+    private readonly List<ConnectionModel> _connections;
 
     public ConnectionQueryService()
     {
@@ -17,7 +18,16 @@ public sealed class ConnectionQueryService : IConnectionQuery
         _connections = connections.ToList();
     }
 
-    public IReadOnlyList<ConnectionModel> GetAll() => _connections.AsReadOnly();
+    public ConnectionQueryService(IConnectionStore store)
+    {
+        _store = store;
+        _connections = [];
+    }
+
+    private IReadOnlyList<ConnectionModel> CurrentConnections =>
+        _store is not null ? _store.GetAll() : _connections.AsReadOnly();
+
+    public IReadOnlyList<ConnectionModel> GetAll() => CurrentConnections;
 
     public IReadOnlyList<ConnectionModel> Search(string query)
     {
@@ -26,7 +36,7 @@ public sealed class ConnectionQueryService : IConnectionQuery
 
         var normalizedQuery = query.Trim().ToLowerInvariant();
 
-        return _connections
+        return CurrentConnections
             .Select(c => new { Connection = c, Score = CalculateScore(c, normalizedQuery) })
             .Where(x => x.Score > 0)
             .OrderByDescending(x => x.Score)
@@ -35,14 +45,14 @@ public sealed class ConnectionQueryService : IConnectionQuery
     }
 
     public IReadOnlyList<ConnectionModel> GetByGroup(Guid groupId)
-        => _connections.Where(c => c.GroupId == groupId).ToList();
+        => CurrentConnections.Where(c => c.GroupId == groupId).ToList();
 
     public IReadOnlyList<ConnectionModel> GetByTag(string tag)
-        => _connections.Where(c => c.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)).ToList();
+        => CurrentConnections.Where(c => c.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)).ToList();
 
     public IReadOnlyList<ConnectionModel> GetByFilter(ConnectionFilter filter)
     {
-        var results = _connections.AsEnumerable();
+        var results = CurrentConnections.AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(filter.SearchText))
         {
@@ -60,7 +70,7 @@ public sealed class ConnectionQueryService : IConnectionQuery
     }
 
     public IReadOnlyList<ConnectionModel> GetRecent(int count = 10)
-        => _connections.OrderByDescending(c => c.UpdatedAt).Take(count).ToList();
+        => CurrentConnections.OrderByDescending(c => c.UpdatedAt).Take(count).ToList();
 
     private static int CalculateScore(ConnectionModel c, string query)
     {
