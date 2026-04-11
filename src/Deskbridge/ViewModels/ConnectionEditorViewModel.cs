@@ -199,7 +199,14 @@ public partial class ConnectionEditorViewModel : ObservableValidator
         // Store credentials when mode is Own and password is non-empty (T-03-09)
         if (CredentialMode == CredentialMode.Own && !string.IsNullOrEmpty(_password))
         {
-            _credentialService.StoreForConnection(connection, Username ?? string.Empty, Domain, _password);
+            try
+            {
+                _credentialService.StoreForConnection(connection, Username ?? string.Empty, Domain, _password);
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Failed to store credentials for connection {ConnectionId}", connection.Id);
+            }
         }
 
         _connectionStore.Save(connection);

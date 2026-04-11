@@ -114,7 +114,14 @@ public partial class GroupEditorViewModel : ObservableValidator
         if (!string.IsNullOrWhiteSpace(CredentialUsername))
         {
             // Store credentials when username is provided
-            _credentialService.StoreForGroup(GroupId, CredentialUsername, CredentialDomain, _password);
+            try
+            {
+                _credentialService.StoreForGroup(GroupId, CredentialUsername, CredentialDomain, _password);
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Failed to store group credentials for group {GroupId}", GroupId);
+            }
         }
         else if (_hadCredentialsPreviously)
         {
