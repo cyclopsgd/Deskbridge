@@ -9,15 +9,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Project Foundation
 
-- [ ] **PROJ-01**: Solution builds on net10.0-windows with all packages restoring successfully
-- [ ] **PROJ-02**: Directory.Build.props shared config (UseWPF, Nullable, ImplicitUsings) applied to all projects
-- [ ] **PROJ-03**: App manifest declares Windows 10/11 support and PerMonitorV2 DPI awareness
-- [ ] **PROJ-04**: Interop DLLs (MSTSCLib.dll, AxMSTSCLib.dll) positioned in src/Deskbridge.Protocols.Rdp/Interop/
-- [ ] **PROJ-05**: Velopack entry point (custom Main, App.xaml as Page) compiles and runs
+- [x] **PROJ-01**: Solution builds on net10.0-windows with all packages restoring successfully
+- [x] **PROJ-02**: Directory.Build.props shared config (UseWPF, Nullable, ImplicitUsings) applied to all projects
+- [x] **PROJ-03**: App manifest declares Windows 10/11 support and PerMonitorV2 DPI awareness
+- [x] **PROJ-04**: Interop DLLs (MSTSCLib.dll, AxMSTSCLib.dll) positioned in src/Deskbridge.Protocols.Rdp/Interop/
+- [x] **PROJ-05**: Velopack entry point (custom Main, App.xaml as Page) compiles and runs
 
 ### Core Services
 
-- [ ] **CORE-01**: DI container registers all services as interfaces in App.xaml.cs composition root
+- [x] **CORE-01**: DI container registers all services as interfaces in App.xaml.cs composition root
 - [ ] **CORE-02**: Event bus (WeakReferenceMessenger) publishes and subscribes to typed events without memory leaks
 - [ ] **CORE-03**: Connection pipeline executes ordered stages (resolve credentials, create host, connect, publish event, update recents, audit)
 - [ ] **CORE-04**: Notification service raises events consumed by UI for toast display
@@ -167,12 +167,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROJ-01 | Phase 1 | Pending |
-| PROJ-02 | Phase 1 | Pending |
-| PROJ-03 | Phase 1 | Pending |
-| PROJ-04 | Phase 1 | Pending |
-| PROJ-05 | Phase 1 | Pending |
-| CORE-01 | Phase 1 | Pending |
+| PROJ-01 | Phase 1 | Complete |
+| PROJ-02 | Phase 1 | Complete |
+| PROJ-03 | Phase 1 | Complete |
+| PROJ-04 | Phase 1 | Complete |
+| PROJ-05 | Phase 1 | Complete |
+| CORE-01 | Phase 1 | Complete |
 | CORE-02 | Phase 1 | Pending |
 | CORE-03 | Phase 1 | Pending |
 | CORE-04 | Phase 1 | Pending |
