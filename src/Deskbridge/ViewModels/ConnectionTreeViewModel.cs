@@ -269,29 +269,36 @@ public partial class ConnectionTreeViewModel : ObservableObject
     {
         if (_isDialogOpen) return;
 
-        var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
-        vm.Initialize();
-
-        // Pre-select the group when invoked from a group context menu
-        if (defaultGroupId is not null)
-        {
-            vm.GroupId = defaultGroupId;
-        }
-
-        var host = _contentDialogService.GetDialogHostEx();
-        if (host is null) return;
-
         _isDialogOpen = true;
         try
         {
-            var dialog = new ConnectionEditorDialog(host, vm);
-            var result = await dialog.ShowAsync();
+            var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
+            vm.Initialize();
+
+            // Pre-select the group when invoked from a group context menu
+            if (defaultGroupId is not null)
+            {
+                vm.GroupId = defaultGroupId;
+            }
+
+            var result = await _contentDialogService.ShowSimpleDialogAsync(
+                new SimpleContentDialogCreateOptions
+                {
+                    Title = vm.DialogTitle,
+                    Content = CreateConnectionEditorContent(vm),
+                    PrimaryButtonText = "Save Connection",
+                    CloseButtonText = "Cancel",
+                });
 
             if (result == ContentDialogResult.Primary)
             {
                 vm.Save();
                 RefreshTree();
             }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to show New Connection dialog");
         }
         finally
         {
@@ -304,23 +311,30 @@ public partial class ConnectionTreeViewModel : ObservableObject
     {
         if (_isDialogOpen) return;
 
-        var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
-        vm.Initialize();
-
-        var host = _contentDialogService.GetDialogHostEx();
-        if (host is null) return;
-
         _isDialogOpen = true;
         try
         {
-            var dialog = new GroupEditorDialog(host, vm);
-            var result = await dialog.ShowAsync();
+            var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
+            vm.Initialize();
+
+            var result = await _contentDialogService.ShowSimpleDialogAsync(
+                new SimpleContentDialogCreateOptions
+                {
+                    Title = vm.DialogTitle,
+                    Content = CreateGroupEditorContent(vm),
+                    PrimaryButtonText = "Save Group",
+                    CloseButtonText = "Cancel",
+                });
 
             if (result == ContentDialogResult.Primary)
             {
                 vm.Save();
                 RefreshTree();
             }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to show New Group dialog");
         }
         finally
         {
@@ -334,9 +348,6 @@ public partial class ConnectionTreeViewModel : ObservableObject
         if (item is null) return;
         if (_isDialogOpen) return;
 
-        var host = _contentDialogService.GetDialogHostEx();
-        if (host is null) return;
-
         _isDialogOpen = true;
         try
         {
@@ -348,8 +359,14 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 var vm = _serviceProvider.GetRequiredService<ConnectionEditorViewModel>();
                 vm.Initialize(existing);
 
-                var dialog = new ConnectionEditorDialog(host, vm);
-                var result = await dialog.ShowAsync();
+                var result = await _contentDialogService.ShowSimpleDialogAsync(
+                    new SimpleContentDialogCreateOptions
+                    {
+                        Title = vm.DialogTitle,
+                        Content = CreateConnectionEditorContent(vm),
+                        PrimaryButtonText = "Save Connection",
+                        CloseButtonText = "Cancel",
+                    });
 
                 if (result == ContentDialogResult.Primary)
                 {
@@ -365,8 +382,14 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
                 vm.Initialize(existing);
 
-                var dialog = new GroupEditorDialog(host, vm);
-                var result = await dialog.ShowAsync();
+                var result = await _contentDialogService.ShowSimpleDialogAsync(
+                    new SimpleContentDialogCreateOptions
+                    {
+                        Title = vm.DialogTitle,
+                        Content = CreateGroupEditorContent(vm),
+                        PrimaryButtonText = "Save Group",
+                        CloseButtonText = "Cancel",
+                    });
 
                 if (result == ContentDialogResult.Primary)
                 {
@@ -375,10 +398,32 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 }
             }
         }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to show Edit dialog");
+        }
         finally
         {
             _isDialogOpen = false;
         }
+    }
+
+    /// <summary>
+    /// Creates the connection editor UI content for use inside IContentDialogService.ShowSimpleDialogAsync.
+    /// </summary>
+    private static object CreateConnectionEditorContent(ConnectionEditorViewModel vm)
+    {
+        var control = new Dialogs.ConnectionEditorContent { DataContext = vm };
+        return control;
+    }
+
+    /// <summary>
+    /// Creates the group editor UI content for use inside IContentDialogService.ShowSimpleDialogAsync.
+    /// </summary>
+    private static object CreateGroupEditorContent(GroupEditorViewModel vm)
+    {
+        var control = new Dialogs.GroupEditorContent { DataContext = vm };
+        return control;
     }
 
     [RelayCommand]
