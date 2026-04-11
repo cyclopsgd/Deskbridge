@@ -5,6 +5,15 @@ namespace Deskbridge.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
+    public MainWindowViewModel(ConnectionTreeViewModel connectionTree)
+    {
+        ConnectionTree = connectionTree;
+    }
+
+    // Expose ConnectionTreeViewModel for Ctrl+N binding in MainWindow
+    [ObservableProperty]
+    public partial ConnectionTreeViewModel ConnectionTree { get; set; }
+
     [ObservableProperty]
     public partial string Title { get; set; } = "Deskbridge";
 
