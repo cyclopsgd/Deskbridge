@@ -49,13 +49,12 @@ Plans:
   3. The tab bar displays placeholder tabs with close buttons, active accent, and horizontal scroll on overflow
   4. The viewport area fills all remaining space with no WPF elements overlapping it (verified visually -- airspace-safe)
   5. Custom accent colours (#007ACC, #F44747, #89D185) are applied throughout the shell
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md -- ViewModels, PanelMode enum, App.xaml resources, accent colour, DI registrations, unit tests
+- [ ] 02-02-PLAN.md -- MainWindow.xaml full VS Code-style layout (icon rail, panel, tab bar, viewport, status bar, overlay hosts)
 
 ### Phase 3: Connection Management
 **Goal**: Users can create, organise, and edit connections and groups with full credential storage and inheritance -- everything needed to describe "where to connect" before actually connecting
@@ -153,7 +152,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/3 | Planning complete | - |
-| 2. Application Shell | 0/3 | Not started | - |
+| 2. Application Shell | 0/2 | Planning complete | - |
 | 3. Connection Management | 0/3 | Not started | - |
 | 4. RDP Integration | 0/3 | Not started | - |
 | 5. Tab Management | 0/2 | Not started | - |
