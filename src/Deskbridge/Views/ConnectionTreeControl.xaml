@@ -63,7 +63,8 @@
             <Separator />
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
-                      Command="{Binding DataContext.NewConnectionCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding DataContext.NewConnectionCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                      CommandParameter="{Binding Id}" />
             <MenuItem Header="New Group"
                       Icon="{ui:SymbolIcon FolderAdd24}"
                       Command="{Binding DataContext.NewGroupCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
