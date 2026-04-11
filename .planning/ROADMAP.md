@@ -66,13 +66,14 @@ Plans:
   3. Closing and reopening the application preserves all connections and groups (JSON persistence at %AppData%)
   4. User can set credentials on a group and see child connections display "inherited from: [group name]" in the credential tab
   5. Groups with stored credentials display a key icon in the connection tree
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md -- Data layer: IConnectionStore extension, JsonConnectionStore, ICredentialService, WindowsCredentialService, CR-01 fix, unit tests
+- [ ] 03-02-PLAN.md -- Tree ViewModels and ConnectionTreeControl XAML: TreeView with hierarchical templates, search filter, quick properties panel, MainWindow integration
+- [ ] 03-03-PLAN.md -- Editor dialogs: ConnectionEditorDialog with 4-tab editor and credential InfoBar, GroupEditorDialog with credentials and inheritance count
+- [ ] 03-04-PLAN.md -- Tree interactions: multi-select, drag-drop, context menu, F2 rename, all ViewModel commands, Ctrl+N shortcut, visual checkpoint
 
 ### Phase 4: RDP Integration
 **Goal**: Users can double-click a connection and establish a live RDP session rendered in the viewport, with proper COM lifecycle, reconnection on failure, and per-connection error isolation
@@ -153,7 +154,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/3 | Planning complete | - |
 | 2. Application Shell | 0/2 | Planning complete | - |
-| 3. Connection Management | 0/3 | Not started | - |
+| 3. Connection Management | 0/4 | Planning complete | - |
 | 4. RDP Integration | 0/3 | Not started | - |
 | 5. Tab Management | 0/2 | Not started | - |
 | 6. Cross-Cutting Features | 0/4 | Not started | - |
