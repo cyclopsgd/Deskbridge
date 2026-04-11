@@ -10,4 +10,7 @@ public interface IConnectionStore
     void Delete(Guid id);
     IReadOnlyList<ConnectionGroup> GetGroups();
     ConnectionGroup? GetGroupById(Guid id);
+    void SaveGroup(ConnectionGroup group);
+    void DeleteGroup(Guid groupId);
+    void Load();
 }
