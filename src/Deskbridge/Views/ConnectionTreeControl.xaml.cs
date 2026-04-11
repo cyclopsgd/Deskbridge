@@ -10,8 +10,8 @@ public partial class ConnectionTreeControl : UserControl
 {
     private readonly ConnectionTreeViewModel _viewModel;
 
-    // Track original name for Escape-cancel during rename
-    private string? _originalNameBeforeRename;
+    // Original name for Escape-cancel is stored on _viewModel.OriginalNameBeforeRename
+    // (set by the RenameItem command before IsRenaming=true)
 
     public ConnectionTreeControl(ConnectionTreeViewModel viewModel)
     {
@@ -32,17 +32,26 @@ public partial class ConnectionTreeControl : UserControl
         UpdateQuickPropertiesRowHeight();
 
         // Track RootItems changes for empty state visibility
-        _viewModel.RootItems.CollectionChanged += RootItems_CollectionChanged;
+        _subscribedRootItems = _viewModel.RootItems;
+        _subscribedRootItems.CollectionChanged += RootItems_CollectionChanged;
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
     }
+
+    // Track the collection we're subscribed to, so we can unsubscribe when RootItems changes
+    private System.Collections.ObjectModel.ObservableCollection<TreeItemViewModel>? _subscribedRootItems;
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ConnectionTreeViewModel.RootItems))
         {
             UpdateEmptyState();
-            // Re-subscribe to the new collection
-            _viewModel.RootItems.CollectionChanged += RootItems_CollectionChanged;
+            // Unsubscribe from the old collection before subscribing to the new one
+            if (_subscribedRootItems is not null)
+            {
+                _subscribedRootItems.CollectionChanged -= RootItems_CollectionChanged;
+            }
+            _subscribedRootItems = _viewModel.RootItems;
+            _subscribedRootItems.CollectionChanged += RootItems_CollectionChanged;
         }
         else if (e.PropertyName == nameof(ConnectionTreeViewModel.IsQuickPropertiesVisible))
         {
@@ -292,12 +301,12 @@ public partial class ConnectionTreeControl : UserControl
 
             case Key.Escape:
                 // Cancel rename - restore original name
-                if (_originalNameBeforeRename is not null)
+                if (_viewModel.OriginalNameBeforeRename is not null)
                 {
-                    item.Name = _originalNameBeforeRename;
+                    item.Name = _viewModel.OriginalNameBeforeRename;
                 }
                 item.IsRenaming = false;
-                _originalNameBeforeRename = null;
+                _viewModel.OriginalNameBeforeRename = null;
                 e.Handled = true;
                 break;
         }
@@ -325,7 +334,7 @@ public partial class ConnectionTreeControl : UserControl
     private void CommitRename(TreeItemViewModel item)
     {
         item.IsRenaming = false;
-        _originalNameBeforeRename = null;
+        _viewModel.OriginalNameBeforeRename = null;
 
         var name = item.Name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name)) return;
@@ -339,14 +348,6 @@ public partial class ConnectionTreeControl : UserControl
         {
             _viewModel.SaveGroupFromQuickEdit(groupVm);
         }
-    }
-
-    /// <summary>
-    /// Called by RenameItem command to record original name before rename begins.
-    /// </summary>
-    public void BeginRename(TreeItemViewModel item)
-    {
-        _originalNameBeforeRename = item.Name;
     }
 
     // Quick properties inline edit handlers -- save on focus loss

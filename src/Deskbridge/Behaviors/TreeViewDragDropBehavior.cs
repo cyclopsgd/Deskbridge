@@ -140,6 +140,12 @@ public static class TreeViewDragDropBehavior
         if (e.Data.GetData(DragDataFormat) is List<TreeItemViewModel> draggedItems
             && draggedItems.Contains(targetVm)) return;
 
+        // Don't allow dropping a group onto one of its own descendants (circular reference)
+        if (targetVm is GroupTreeItemViewModel targetGroup
+            && e.Data.GetData(DragDataFormat) is List<TreeItemViewModel> draggedForDescendantCheck
+            && draggedForDescendantCheck.OfType<GroupTreeItemViewModel>().Any(g => IsDescendantOf(targetGroup, g)))
+            return;
+
         if (targetVm is GroupTreeItemViewModel)
         {
             // Drop ON group: highlight with SubtleFillColorSecondaryBrush via adorner
@@ -168,6 +174,9 @@ public static class TreeViewDragDropBehavior
 
         if (dropTarget?.DataContext is GroupTreeItemViewModel group)
         {
+            // Prevent dropping a group onto its own descendant (circular reference)
+            if (draggedItems.OfType<GroupTreeItemViewModel>().Any(g => IsDescendantOf(group, g)))
+                return;
             targetGroupId = group.Id;
         }
         else if (dropTarget?.DataContext is ConnectionTreeItemViewModel conn)
@@ -241,6 +250,21 @@ public static class TreeViewDragDropBehavior
 
         _currentAdorner = null;
         _currentDropTarget = null;
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="candidate"/> is a descendant of <paramref name="potentialAncestor"/>
+    /// in the ViewModel tree. Used to prevent circular group nesting via drag-drop.
+    /// </summary>
+    private static bool IsDescendantOf(GroupTreeItemViewModel candidate, GroupTreeItemViewModel potentialAncestor)
+    {
+        foreach (var child in potentialAncestor.Children)
+        {
+            if (child == candidate) return true;
+            if (child is GroupTreeItemViewModel childGroup && IsDescendantOf(candidate, childGroup))
+                return true;
+        }
+        return false;
     }
 
     private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject

@@ -60,16 +60,16 @@ public partial class App : Application
         services.AddSingleton<IContentDialogService, ContentDialogService>();
 
         // ViewModels
-        services.AddTransient<ViewModels.MainWindowViewModel>();
+        services.AddSingleton<ViewModels.MainWindowViewModel>();
         services.AddSingleton<ViewModels.ConnectionTreeViewModel>();
         services.AddTransient<ViewModels.ConnectionEditorViewModel>();
         services.AddTransient<ViewModels.GroupEditorViewModel>();
 
         // Views
-        services.AddTransient<Views.ConnectionTreeControl>();
+        services.AddSingleton<Views.ConnectionTreeControl>();
         services.AddTransient<Dialogs.ConnectionEditorDialog>();
         services.AddTransient<Dialogs.GroupEditorDialog>();
-        services.AddTransient<MainWindow>();
+        services.AddSingleton<MainWindow>();
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -477,8 +477,15 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private void RenameItem(TreeItemViewModel? item)
     {
         if (item is null) return;
+        // Store original name so Escape can restore it (consumed by ConnectionTreeControl)
+        OriginalNameBeforeRename = item.Name;
         item.IsRenaming = true;
     }
+
+    /// <summary>
+    /// Stored by RenameItem so the view can restore the name on Escape.
+    /// </summary>
+    public string? OriginalNameBeforeRename { get; set; }
 
     [RelayCommand]
     private void CopyHostname(ConnectionTreeItemViewModel? item)
@@ -553,6 +560,10 @@ public partial class ConnectionTreeViewModel : ObservableObject
             }
             else if (item is GroupTreeItemViewModel groupItem)
             {
+                // Prevent moving a group into itself or its own descendant (circular reference)
+                if (targetGroupId is not null && IsDescendantOrSelf(groupItem, targetGroupId.Value))
+                    continue;
+
                 var group = _connectionStore.GetGroupById(groupItem.Id);
                 if (group is not null)
                 {
@@ -563,5 +574,20 @@ public partial class ConnectionTreeViewModel : ObservableObject
         }
 
         RefreshTree();
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="targetGroupId"/> is the group itself or a descendant of it.
+    /// Used to prevent circular group nesting.
+    /// </summary>
+    private static bool IsDescendantOrSelf(GroupTreeItemViewModel group, Guid targetGroupId)
+    {
+        if (group.Id == targetGroupId) return true;
+        foreach (var child in group.Children)
+        {
+            if (child is GroupTreeItemViewModel childGroup && IsDescendantOrSelf(childGroup, targetGroupId))
+                return true;
+        }
+        return false;
     }
 }
