@@ -59,9 +59,12 @@ public partial class App : Application
         services.AddSingleton<ISnackbarService, SnackbarService>();
         services.AddSingleton<IContentDialogService, ContentDialogService>();
 
+        // ViewModels
+        services.AddTransient<ViewModels.MainWindowViewModel>();
+        services.AddTransient<ViewModels.ConnectionTreeViewModel>();
+
         // Views
         services.AddTransient<MainWindow>();
-        services.AddTransient<ViewModels.MainWindowViewModel>();
     }
 
     protected override void OnExit(ExitEventArgs e)
