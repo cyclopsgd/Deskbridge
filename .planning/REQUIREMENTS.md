@@ -36,14 +36,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Connection Management
 
-- [ ] **CONN-01**: Connection model with Id, Name, Hostname, Port, Username, Domain, Protocol, GroupId, Notes, Tags, CredentialMode, DisplaySettings, timestamps
-- [ ] **CONN-02**: Connection groups with Id, Name, ParentGroupId, SortOrder supporting arbitrary nesting
-- [ ] **CONN-03**: JSON persistence at %AppData%/Deskbridge/connections.json with atomic writes
+- [x] **CONN-01**: Connection model with Id, Name, Hostname, Port, Username, Domain, Protocol, GroupId, Notes, Tags, CredentialMode, DisplaySettings, timestamps
+- [x] **CONN-02**: Connection groups with Id, Name, ParentGroupId, SortOrder supporting arbitrary nesting
+- [x] **CONN-03**: JSON persistence at %AppData%/Deskbridge/connections.json with atomic writes
 - [ ] **CONN-04**: Connection tree in slide-out panel with context menu, drag-drop reorder, F2 rename, and search filter
 - [ ] **CONN-05**: Connection editor modal dialog with tabs: General, Credentials, Display, Notes
 - [ ] **CONN-06**: Group editor for setting group-level credentials with inheritance count indicator
-- [ ] **CONN-07**: Credential storage via AdysTech.CredentialManager (TERMSRV/<hostname> for connections, DESKBRIDGE/GROUP/<guid> for groups)
-- [ ] **CONN-08**: Credential inheritance resolves recursively up the group tree (Inherit/Own/Prompt modes)
+- [x] **CONN-07**: Credential storage via AdysTech.CredentialManager (TERMSRV/<hostname> for connections, DESKBRIDGE/GROUP/<guid> for groups)
+- [x] **CONN-08**: Credential inheritance resolves recursively up the group tree (Inherit/Own/Prompt modes)
 - [ ] **CONN-09**: Connection editor shows "inherited from: [group name]" indicator when CredentialMode is Inherit
 - [ ] **CONN-10**: Groups display key icon when they have credentials set
 
@@ -185,14 +185,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHEL-06 | Phase 2 | Complete |
 | SHEL-07 | Phase 2 | Complete |
 | SHEL-08 | Phase 2 | Complete |
-| CONN-01 | Phase 3 | Pending |
-| CONN-02 | Phase 3 | Pending |
-| CONN-03 | Phase 3 | Pending |
+| CONN-01 | Phase 3 | Complete |
+| CONN-02 | Phase 3 | Complete |
+| CONN-03 | Phase 3 | Complete |
 | CONN-04 | Phase 3 | Pending |
 | CONN-05 | Phase 3 | Pending |
 | CONN-06 | Phase 3 | Pending |
-| CONN-07 | Phase 3 | Pending |
-| CONN-08 | Phase 3 | Pending |
+| CONN-07 | Phase 3 | Complete |
+| CONN-08 | Phase 3 | Complete |
 | CONN-09 | Phase 3 | Pending |
 | CONN-10 | Phase 3 | Pending |
 | RDP-01 | Phase 4 | Pending |
