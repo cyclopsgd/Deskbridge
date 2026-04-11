@@ -29,6 +29,7 @@ public partial class ConnectionTreeControl : UserControl
     {
         _viewModel.LoadTree();
         UpdateEmptyState();
+        UpdateQuickPropertiesRowHeight();
 
         // Track RootItems changes for empty state visibility
         _viewModel.RootItems.CollectionChanged += RootItems_CollectionChanged;
@@ -43,6 +44,10 @@ public partial class ConnectionTreeControl : UserControl
             // Re-subscribe to the new collection
             _viewModel.RootItems.CollectionChanged += RootItems_CollectionChanged;
         }
+        else if (e.PropertyName == nameof(ConnectionTreeViewModel.IsQuickPropertiesVisible))
+        {
+            UpdateQuickPropertiesRowHeight();
+        }
     }
 
     private void RootItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -55,6 +60,20 @@ public partial class ConnectionTreeControl : UserControl
         EmptyStateOverlay.Visibility = _viewModel.RootItems.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    private void UpdateQuickPropertiesRowHeight()
+    {
+        if (_viewModel.IsQuickPropertiesVisible)
+        {
+            QuickPropertiesRow.MinHeight = 80;
+            QuickPropertiesRow.Height = new GridLength(120);
+        }
+        else
+        {
+            QuickPropertiesRow.MinHeight = 0;
+            QuickPropertiesRow.Height = new GridLength(0);
+        }
     }
 
     // --- Keyboard shortcuts in TreeView ---
