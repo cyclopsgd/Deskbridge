@@ -1,3 +1,6 @@
+using Deskbridge.Core.Interfaces;
+using Deskbridge.Core.Pipeline;
+using Deskbridge.Core.Services;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
@@ -27,11 +30,16 @@ public partial class App : Application
 
     private static void ConfigureServices(IServiceCollection services)
     {
+        // Core services
+        services.AddSingleton<IEventBus, EventBus>();
+        services.AddSingleton<INotificationService, NotificationService>();
+        services.AddSingleton<IConnectionPipeline, ConnectionPipeline>();
+        services.AddSingleton<IDisconnectPipeline, DisconnectPipeline>();
+        services.AddSingleton<IConnectionQuery, ConnectionQueryService>();
+
         // Views
         services.AddTransient<MainWindow>();
         services.AddTransient<ViewModels.MainWindowViewModel>();
-
-        // Core services will be registered in Plan 02
     }
 
     protected override void OnExit(ExitEventArgs e)
