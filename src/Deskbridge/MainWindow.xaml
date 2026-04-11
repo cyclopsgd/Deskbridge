@@ -1,0 +1,24 @@
+<ui:FluentWindow x:Class="Deskbridge.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="{Binding Title}"
+    Width="1100" Height="700"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="Mica"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="Deskbridge" Height="32" />
+        <TextBlock Grid.Row="1"
+            Text="Deskbridge Foundation"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+            FontSize="20" />
+    </Grid>
+</ui:FluentWindow>
