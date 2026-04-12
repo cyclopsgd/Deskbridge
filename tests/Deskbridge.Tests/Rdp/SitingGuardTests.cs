@@ -44,15 +44,19 @@ public class SitingGuardTests
 
         StaRunner.Run(() =>
         {
-            // Arrange: Grid is NOT added to any Window, so no HwndSource exists and
-            // the AxHost's Handle will stay IntPtr.Zero even after being added.
+            // Arrange: FakeAxHost forces Handle == IntPtr.Zero by swapping Control._window for
+            // a fresh NativeWindow and no-op'ing CreateHandle(). Under WPF 10 / .NET 10 the real
+            // AxMsRdpClient9NotSafeForScripting realizes a handle even on an unrooted Grid (the
+            // StaRunner Dispatcher pump is enough), so a stub is the only way to cover the
+            // "handle stays zero" branch of the guard. See FakeAxHost.cs for the rationale and
+            // Plan 04-01 Task 0.1 line 166 for the approved approach.
             var viewport = new Grid();
             var host = new WindowsFormsHost();
-            var rdp = new AxMsRdpClient9NotSafeForScripting();
+            var rdp = new FakeAxHost();
 
             // Act + Assert
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                AxSiting.SiteAndConfigure(viewport, host, rdp, r => r.Server = "ignored"));
+                AxSiting.SiteAndConfigure(viewport, host, rdp, _ => { /* should not execute */ }));
 
             Assert.Contains("not sited", ex.Message);
 
