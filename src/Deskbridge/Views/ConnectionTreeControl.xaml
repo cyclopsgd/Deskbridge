@@ -35,11 +35,6 @@
                       Icon="{ui:SymbolIcon Edit24}"
                       Command="{Binding EditItemCommand}"
                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
-            <MenuItem Header="Rename"
-                      Icon="{ui:SymbolIcon Rename24}"
-                      InputGestureText="F2"
-                      Command="{Binding RenameItemCommand}"
-                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <MenuItem Header="Duplicate"
                       Icon="{ui:SymbolIcon Copy24}"
                       Command="{Binding DuplicateConnectionCommand}"
@@ -72,11 +67,6 @@
             <MenuItem Header="Edit"
                       Icon="{ui:SymbolIcon Edit24}"
                       Command="{Binding EditItemCommand}"
-                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
-            <MenuItem Header="Rename"
-                      Icon="{ui:SymbolIcon Rename24}"
-                      InputGestureText="F2"
-                      Command="{Binding RenameItemCommand}"
                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
             <MenuItem Header="New Connection"
@@ -173,20 +163,11 @@
                                 </ui:SymbolIcon.Style>
                             </ui:SymbolIcon>
 
-                            <!-- Group name (TextBlock, hidden when renaming) -->
+                            <!-- Group name -->
                             <TextBlock Text="{Binding Name}"
                                        FontWeight="SemiBold" FontSize="14"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                       VerticalAlignment="Center"
-                                       Visibility="{Binding IsRenaming, Converter={StaticResource InverseBoolToVisibility}}" />
-
-                            <!-- Rename TextBox (visible when renaming) -->
-                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="24" Padding="4,2" FontSize="14"
-                                     Visibility="{Binding IsRenaming, Converter={StaticResource BoolToVisibility}}"
-                                     KeyDown="RenameTextBox_KeyDown"
-                                     LostFocus="RenameTextBox_LostFocus"
-                                     Loaded="RenameTextBox_Loaded" />
+                                       VerticalAlignment="Center" />
 
                             <!-- Key icon for groups with credentials (CONN-10) -->
                             <ui:SymbolIcon Symbol="Key24" FontSize="12"
@@ -204,20 +185,11 @@
                             <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Margin="0,0,4,0"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
-                            <!-- Connection name (TextBlock, hidden when renaming) -->
+                            <!-- Connection name -->
                             <TextBlock Text="{Binding Name}"
                                        FontSize="14"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                       VerticalAlignment="Center"
-                                       Visibility="{Binding IsRenaming, Converter={StaticResource InverseBoolToVisibility}}" />
-
-                            <!-- Rename TextBox (visible when renaming) -->
-                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="24" Padding="4,2" FontSize="14"
-                                     Visibility="{Binding IsRenaming, Converter={StaticResource BoolToVisibility}}"
-                                     KeyDown="RenameTextBox_KeyDown"
-                                     LostFocus="RenameTextBox_LostFocus"
-                                     Loaded="RenameTextBox_Loaded" />
+                                       VerticalAlignment="Center" />
                         </StackPanel>
                     </DataTemplate>
                 </TreeView.Resources>
