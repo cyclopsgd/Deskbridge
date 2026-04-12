@@ -28,7 +28,7 @@ public sealed class ConnectionPipelineIntegrationTests
         var resolve = new TracingConnectStage(
             new ResolveCredentialsStage(creds, store, bus, NullLogger<ResolveCredentialsStage>.Instance),
             "Resolve", trace);
-        var create = new TracingConnectStage(new CreateHostStage(factory), "Create", trace);
+        var create = new TracingConnectStage(new CreateHostStage(factory, bus), "Create", trace);
         var connect = new TracingConnectStage(new ConnectStage(bus, NullLogger<ConnectStage>.Instance), "Connect", trace);
         var recents = new TracingConnectStage(new UpdateRecentsStage(store), "Recents", trace);
 
