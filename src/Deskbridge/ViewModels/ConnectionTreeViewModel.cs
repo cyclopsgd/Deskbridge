@@ -58,6 +58,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsConnectionSelected))]
     [NotifyPropertyChangedFor(nameof(IsGroupSelected))]
     [NotifyPropertyChangedFor(nameof(SelectedItemCredentialMode))]
+    [NotifyPropertyChangedFor(nameof(IsQuickCredentialFieldsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsQuickCredentialFieldsEnabled))]
     public partial TreeItemViewModel? PrimarySelectedItem { get; set; }
 
     /// <summary>
@@ -78,9 +80,27 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 item.CredentialMode = value;
                 SaveConnectionFromQuickEdit(item);
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsQuickCredentialFieldsVisible));
+                OnPropertyChanged(nameof(IsQuickCredentialFieldsEnabled));
             }
         }
     }
+
+    /// <summary>
+    /// True when the current selection's CredentialMode is Inherit or Own (i.e.
+    /// the Username/Domain fields should be visible). Prompt hides them because
+    /// credentials are requested at connect time.
+    /// </summary>
+    public bool IsQuickCredentialFieldsVisible =>
+        SelectedItemCredentialMode != CredentialMode.Prompt;
+
+    /// <summary>
+    /// True only when the current selection's CredentialMode is Own (i.e. the
+    /// Username/Domain fields should be editable). In Inherit mode the fields
+    /// are visible but disabled, matching the editor dialog behavior.
+    /// </summary>
+    public bool IsQuickCredentialFieldsEnabled =>
+        SelectedItemCredentialMode == CredentialMode.Own;
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
@@ -146,6 +166,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 Hostname = conn.Hostname,
                 Port = conn.Port,
                 Username = conn.Username,
+                Domain = conn.Domain,
                 CredentialMode = conn.CredentialMode,
                 GroupId = conn.GroupId,
                 SortOrder = conn.SortOrder
@@ -300,6 +321,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         model.Hostname = hostname;
         model.Port = connVm.Port;
         model.Username = connVm.Username;
+        model.Domain = connVm.Domain;
         model.CredentialMode = connVm.CredentialMode;
         model.UpdatedAt = DateTime.UtcNow;
         _connectionStore.Save(model);
