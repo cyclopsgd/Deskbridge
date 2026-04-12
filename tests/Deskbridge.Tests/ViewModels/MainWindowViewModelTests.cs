@@ -29,20 +29,24 @@ public class MainWindowViewModelTests
     // --- Panel toggle state machine (D-04) ---
 
     [Fact]
-    public void ActivePanelMode_DefaultsToNone()
+    public void ActivePanelMode_DefaultsToConnections()
     {
-        _sut.ActivePanelMode.Should().Be(PanelMode.None);
+        _sut.ActivePanelMode.Should().Be(PanelMode.Connections);
     }
 
     [Fact]
-    public void IsPanelVisible_DefaultsToFalse()
+    public void IsPanelVisible_DefaultsToTrue()
     {
-        _sut.IsPanelVisible.Should().BeFalse();
+        _sut.IsPanelVisible.Should().BeTrue();
     }
 
     [Fact]
     public void TogglePanel_FromNone_OpensPanelWithThatMode()
     {
+        // Start from None by toggling Connections off
+        _sut.TogglePanelCommand.Execute(PanelMode.Connections);
+        _sut.ActivePanelMode.Should().Be(PanelMode.None);
+
         _sut.TogglePanelCommand.Execute(PanelMode.Connections);
 
         _sut.ActivePanelMode.Should().Be(PanelMode.Connections);
@@ -52,7 +56,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void TogglePanel_SameMode_ClosesPanel()
     {
-        _sut.TogglePanelCommand.Execute(PanelMode.Connections);
+        // Connections panel is open by default; toggling it should close.
         _sut.TogglePanelCommand.Execute(PanelMode.Connections);
 
         _sut.ActivePanelMode.Should().Be(PanelMode.None);
@@ -72,13 +76,14 @@ public class MainWindowViewModelTests
     [Fact]
     public void IsConnectionsActive_TrueOnlyWhenModeIsConnections()
     {
-        _sut.IsConnectionsActive.Should().BeFalse();
-
-        _sut.TogglePanelCommand.Execute(PanelMode.Connections);
+        // Default is Connections, so it's true out of the gate.
         _sut.IsConnectionsActive.Should().BeTrue();
 
         _sut.TogglePanelCommand.Execute(PanelMode.Search);
         _sut.IsConnectionsActive.Should().BeFalse();
+
+        _sut.TogglePanelCommand.Execute(PanelMode.Connections);
+        _sut.IsConnectionsActive.Should().BeTrue();
     }
 
     [Fact]
