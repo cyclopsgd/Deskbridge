@@ -52,12 +52,11 @@
             <StackPanel Margin="16,12">
                 <TextBlock Text="Credential mode" FontSize="14"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                <ComboBox SelectedValue="{Binding CredentialMode}"
-                    SelectedValuePath="Tag" Margin="0,0,0,12">
-                    <ComboBoxItem Content="Inherit from parent group" Tag="{x:Static models:CredentialMode.Inherit}" />
-                    <ComboBoxItem Content="Use own credentials" Tag="{x:Static models:CredentialMode.Own}" />
-                    <ComboBoxItem Content="Prompt at connection time" Tag="{x:Static models:CredentialMode.Prompt}" />
-                </ComboBox>
+                <ComboBox ItemsSource="{Binding CredentialModes}"
+                    SelectedValue="{Binding CredentialMode}"
+                    SelectedValuePath="Value"
+                    DisplayMemberPath="DisplayName"
+                    Margin="0,0,0,12" />
 
                 <!-- InfoBar for Inherit mode (D-13, CONN-09) -->
                 <ui:InfoBar Title="Inherited credentials"

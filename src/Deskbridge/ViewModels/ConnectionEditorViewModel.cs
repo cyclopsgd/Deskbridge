@@ -8,6 +8,8 @@ namespace Deskbridge.ViewModels;
 
 public record GroupDisplayItem(Guid? Id, string DisplayName, int Depth);
 
+public record CredentialModeOption(CredentialMode Value, string DisplayName);
+
 public partial class ConnectionEditorViewModel : ObservableValidator
 {
     private readonly IConnectionStore _connectionStore;
@@ -49,6 +51,16 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     [NotifyPropertyChangedFor(nameof(IsInheritInfoBarVisible))]
     [NotifyPropertyChangedFor(nameof(IsPromptInfoBarVisible))]
     public partial CredentialMode CredentialMode { get; set; } = CredentialMode.Inherit;
+
+    // Display-friendly options for the CredentialMode ComboBox.
+    // (ComboBoxItem with an enum Tag renders as a control template marker ("..." / "-")
+    // inside a ContentDialog, so we bind to an ItemsSource of real display objects.)
+    public IReadOnlyList<CredentialModeOption> CredentialModes { get; } = new[]
+    {
+        new CredentialModeOption(CredentialMode.Inherit, "Inherit from parent group"),
+        new CredentialModeOption(CredentialMode.Own, "Use own credentials"),
+        new CredentialModeOption(CredentialMode.Prompt, "Prompt at connection time"),
+    };
 
     [ObservableProperty]
     public partial string? Username { get; set; }
