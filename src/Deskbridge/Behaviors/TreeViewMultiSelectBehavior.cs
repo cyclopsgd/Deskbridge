@@ -121,7 +121,11 @@ public static class TreeViewMultiSelectBehavior
 
     private static void DeselectAll(ConnectionTreeViewModel viewModel)
     {
-        foreach (var item in viewModel.SelectedItems)
+        // Snapshot the collection: IsSelected setters could theoretically trigger
+        // handlers that mutate SelectedItems (they don't today, but the contract is
+        // safer to enforce).
+        var snapshot = viewModel.SelectedItems.ToList();
+        foreach (var item in snapshot)
         {
             item.IsSelected = false;
         }

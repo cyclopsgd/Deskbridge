@@ -133,10 +133,14 @@ public partial class ConnectionTreeControl : UserControl
                 break;
 
             case Key.Escape:
-                // Escape: Deselect all
-                foreach (var item in _viewModel.SelectedItems)
+                // Escape: Deselect all (snapshot SelectedItems before iterating — IsSelected
+                // setters shouldn't mutate the collection today but defense-in-depth is cheap).
                 {
-                    item.IsSelected = false;
+                    var snapshot = _viewModel.SelectedItems.ToList();
+                    foreach (var item in snapshot)
+                    {
+                        item.IsSelected = false;
+                    }
                 }
                 _viewModel.SelectedItems.Clear();
                 _viewModel.PrimarySelectedItem = null;
@@ -182,8 +186,9 @@ public partial class ConnectionTreeControl : UserControl
         // Select the item if not already in selection
         if (!item.IsSelected)
         {
-            // Deselect others and select this one
-            foreach (var sel in _viewModel.SelectedItems)
+            // Deselect others (snapshot to avoid modification during enumeration) and select this one
+            var snapshot = _viewModel.SelectedItems.ToList();
+            foreach (var sel in snapshot)
                 sel.IsSelected = false;
             _viewModel.SelectedItems.Clear();
 
