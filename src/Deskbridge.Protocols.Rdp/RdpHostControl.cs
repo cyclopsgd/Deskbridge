@@ -75,6 +75,13 @@ public sealed class RdpHostControl : IProtocolHost
         _logger = logger;
         _host = new WindowsFormsHost { Background = System.Windows.Media.Brushes.Black };
         _rdp = new AxMsRdpClient9NotSafeForScripting();
+        // [CITED: RDP-ACTIVEX-PITFALLS §1] Pre-wire AxHost as WFH.Child so that when the
+        // caller (MainWindow.OnHostMounted) adds _host to the visual tree, the AxHost's
+        // Win32 Handle realizes. Without this step the AxHost is orphaned — adding the WFH
+        // to the visual tree is insufficient on its own, and ConnectStage would throw
+        // "not sited" despite the WFH being parented. Matches the canonical sequence used
+        // by Plan 04-01's RdpSmokeHost via AxSiting.SiteAndConfigure (step 1).
+        _host.Child = _rdp;
     }
 
     public Task ConnectAsync(ConnectionContext context)

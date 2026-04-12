@@ -71,4 +71,27 @@ public sealed class RdpHostControlShapeTests
             Assert.Throws<ObjectDisposedException>(() => { var _ = host.Host; });
         });
     }
+
+    [Fact]
+    public void Constructor_WiresAxHostAsWindowsFormsHostChild()
+    {
+        _ = _fixture;
+        // Regression: before this wire-up, MainWindow adding rdp.Host to the visual tree
+        // left the AxHost orphaned — Handle stayed 0 and ConnectStage threw "not sited".
+        // RDP-ACTIVEX-PITFALLS §1 requires host.Child = rdp BEFORE the WFH is parented.
+        StaRunner.Run(() =>
+        {
+            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance);
+            try
+            {
+                host.Host.Child.Should().NotBeNull(
+                    "RdpHostControl ctor must wire the AxHost as WindowsFormsHost.Child so " +
+                    "the AxHost sites when the WFH is added to the visual tree.");
+            }
+            finally
+            {
+                host.Dispose();
+            }
+        });
+    }
 }
