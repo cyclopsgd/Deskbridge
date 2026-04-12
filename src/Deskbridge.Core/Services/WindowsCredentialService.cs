@@ -95,9 +95,18 @@ public sealed class WindowsCredentialService : ICredentialService
 
     public NetworkCredential? ResolveInherited(ConnectionModel connection, IConnectionStore connectionStore)
     {
+        // Walk the group parent chain, guarding against cycles (bad data can produce
+        // infinite loops otherwise: group A.Parent=B, B.Parent=A).
+        var visited = new HashSet<Guid>();
         var groupId = connection.GroupId;
         while (groupId.HasValue)
         {
+            if (!visited.Add(groupId.Value))
+            {
+                Log.Warning("Cycle detected in group parent chain starting at {GroupId}", groupId.Value);
+                break;
+            }
+
             var cred = GetForGroup(groupId.Value);
             if (cred is not null)
                 return cred;
