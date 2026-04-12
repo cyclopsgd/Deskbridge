@@ -4,6 +4,9 @@ using System.Windows.Forms.Integration;
 using Deskbridge.Protocols.Rdp;
 using Deskbridge.Tests.Fixtures;
 
+// Disambiguate from System.Drawing.Image (transitively pulled via WinForms references)
+using Image = System.Windows.Controls.Image;
+
 namespace Deskbridge.Tests.Rdp;
 
 /// <summary>
