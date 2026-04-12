@@ -146,6 +146,42 @@ public sealed class RdpHostControl : IProtocolHost
             _loginTcs.TrySetException(ex);
         }
 
+        // TODO-DIAG-REMOVE: Probe immediate COM state. If _rdp.Connect() initiated properly,
+        // Connected=0 (not yet) and no exception was thrown. If this log doesn't appear, we
+        // know Connect() blocked synchronously.
+        try
+        {
+            _logger.LogInformation(
+                "[diag] _rdp.Connect() returned; Connected={Connected} thread={ThreadId} apartment={Apartment}",
+                _rdp.Connected, System.Environment.CurrentManagedThreadId, Thread.CurrentThread.GetApartmentState());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("[diag] Could not read _rdp.Connected after Connect(): {ExceptionType} HResult={HResult:X8}",
+                ex.GetType().Name, ex.HResult);
+        }
+
+        // TODO-DIAG-REMOVE: Schedule a follow-up probe 2 seconds later off the dispatcher to see
+        // if state changed without any event firing. This reveals whether events are being
+        // swallowed vs. connection never progressing. TaskScheduler.Default = thread pool, so
+        // this probe runs even if the dispatcher is blocked. Reading _rdp.Connected from a
+        // thread pool thread may fail due to COM apartment marshaling — hence the try/catch.
+        var rdp = _rdp;
+        var logger = _logger;
+        System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ =>
+        {
+            try
+            {
+                var connected = rdp?.Connected ?? -1;
+                logger.LogInformation("[diag] +2s probe: _rdp.Connected={Connected}", connected);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("[diag] +2s probe failed: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
+        }, System.Threading.Tasks.TaskScheduler.Default);
+
         return _loginTcs.Task;
     }
 
@@ -302,6 +338,9 @@ public sealed class RdpHostControl : IProtocolHost
 
     private void OnLoginComplete(object? sender, EventArgs e)
     {
+        // TODO-DIAG-REMOVE
+        _logger.LogInformation("[diag] OnLoginComplete fired");
+
         // Swap OnDisconnected from "during connect" (fails _loginTcs) to "after connect"
         // (raises DisconnectedAfterConnect for Plan 04-03 reconnect coordinator).
         if (_rdp is not null)
@@ -314,6 +353,9 @@ public sealed class RdpHostControl : IProtocolHost
 
     private void OnDisconnectedDuringConnect(object? sender, IMsTscAxEvents_OnDisconnectedEvent e)
     {
+        // TODO-DIAG-REMOVE
+        _logger.LogInformation("[diag] OnDisconnectedDuringConnect fired: discReason={DiscReason}", e.discReason);
+
         var extended = 0;
         Func<uint, uint, string>? describe = null;
         if (_rdp is not null)
@@ -327,6 +369,9 @@ public sealed class RdpHostControl : IProtocolHost
 
     private void OnDisconnectedAfterConnectHandler(object? sender, IMsTscAxEvents_OnDisconnectedEvent e)
     {
+        // TODO-DIAG-REMOVE
+        _logger.LogInformation("[diag] OnDisconnectedAfterConnectHandler fired: discReason={DiscReason}", e.discReason);
+
         // Plan 04-03 subscribes here for reconnect logic.
         DisconnectedAfterConnect?.Invoke(this, e.discReason);
     }
@@ -334,7 +379,8 @@ public sealed class RdpHostControl : IProtocolHost
     private void OnLogonError(object? sender, IMsTscAxEvents_OnLogonErrorEvent e)
     {
         ErrorOccurred?.Invoke(this, $"LogonError: {e.lError}");
-        _logger.LogWarning("OnLogonError fired: lError={LError}", e.lError);
+        // TODO-DIAG-REMOVE: [diag] prefix added for consistency with other diagnostic probes.
+        _logger.LogWarning("[diag] OnLogonError fired: lError={LError}", e.lError);
     }
 
     // --- Helpers -------------------------------------------------------------
