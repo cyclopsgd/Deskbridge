@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms.Integration;
-using AxMSTSCLib;
 using Deskbridge.Protocols.Rdp;
 using Deskbridge.Protocols.Rdp.Prototype;
 using Deskbridge.Tests.Fixtures;
+using Deskbridge.Tests.Rdp;
 using Xunit;
 
 namespace Deskbridge.Tests.Smoke;
@@ -23,7 +23,13 @@ namespace Deskbridge.Tests.Smoke;
 ///          target and OnLoginComplete fires (D-02 criterion #2).
 /// Gate 3 — AxSiting.SiteAndConfigure throws <c>InvalidOperationException</c> when the
 ///          AxHost.Handle remains 0 after presumed siting (D-02 criterion #3). No live
-///          RDP required — this is the pure-unit gate.
+///          RDP required — this is the pure-unit gate. Uses <see cref="FakeAxHost"/>
+///          because under WPF 10 / .NET 10 the real <c>AxMsRdpClient9NotSafeForScripting</c>
+///          realizes a Win32 handle even on an unrooted <see cref="Grid"/> once the
+///          <see cref="StaRunner"/> Dispatcher pump is running — so a real control can't
+///          reproduce the <c>Handle == 0</c> branch. Deviation from the original plan
+///          (where Gate 3 was end-to-end); see Plan 04-01 Task 0.1 line 166 which
+///          pre-authorized the FakeAxHost approach.
 /// Gate 4 — Intentional bad hostname triggers OnDisconnected without tearing down the
 ///          test process; <c>ErrorOccurred</c> is surfaced (D-02 criterion #4).
 ///
@@ -117,13 +123,16 @@ public class RdpHostControlSmokeTests
         StaRunner.Run(() =>
         {
             // Verify SiteAndConfigure helper throws if Handle == 0 after presumed siting.
-            // No Window root → Grid has no HwndSource → handle stays 0.
+            // Uses FakeAxHost to force Handle == 0: under WPF 10 / .NET 10 the real
+            // AxMsRdpClient9NotSafeForScripting realizes a handle even on an unrooted Grid
+            // once the Dispatcher pump is running, so the guard's throw path is only
+            // reachable through a stub. See FakeAxHost.cs and Plan 04-01 Task 0.1 line 166.
             var panel = new Grid();
             var host = new WindowsFormsHost();
-            var rdp = new AxMsRdpClient9NotSafeForScripting();
+            var rdp = new FakeAxHost();
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                AxSiting.SiteAndConfigure(panel, host, rdp, r => r.Server = "ignored"));
+                AxSiting.SiteAndConfigure(panel, host, rdp, _ => { /* should not execute */ }));
             Assert.Contains("not sited", ex.Message);
 
             try { host.Child = null; } catch { }
