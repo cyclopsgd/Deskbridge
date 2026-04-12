@@ -1,7 +1,12 @@
+using System.IO;
 using System.Windows.Media;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Pipeline;
+using Deskbridge.Core.Pipeline.Stages;
 using Deskbridge.Core.Services;
+using Deskbridge.Protocols.Rdp;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
@@ -15,6 +20,15 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // --- Serilog baseline (Phase 4 — Phase 6 LOG-01 refines) ---
+        var logPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Deskbridge", "logs", "deskbridge-.log");
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.File(logPath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 5)
+            .CreateLogger();
 
         ApplicationThemeManager.Apply(
             ApplicationTheme.Dark,
@@ -32,6 +46,22 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
+        // Wire stages into pipelines (must happen after container build)
+        var connectPipeline = _serviceProvider.GetRequiredService<IConnectionPipeline>();
+        foreach (var stage in _serviceProvider.GetServices<IConnectionPipelineStage>())
+        {
+            connectPipeline.AddStage(stage);
+        }
+
+        var disconnectPipeline = _serviceProvider.GetRequiredService<IDisconnectPipeline>();
+        foreach (var stage in _serviceProvider.GetServices<IDisconnectPipelineStage>())
+        {
+            disconnectPipeline.AddStage(stage);
+        }
+
+        // Resolve ConnectionCoordinator eagerly so it subscribes to the event bus
+        _ = _serviceProvider.GetRequiredService<IConnectionCoordinator>();
+
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
@@ -43,6 +73,31 @@ public partial class App : Application
         services.AddSingleton<INotificationService, NotificationService>();
         services.AddSingleton<IConnectionPipeline, ConnectionPipeline>();
         services.AddSingleton<IDisconnectPipeline, DisconnectPipeline>();
+
+        // Microsoft.Extensions.Logging backing (Serilog adapter) — Phase 4 baseline
+        services.AddLogging(b => b.AddSerilog(dispose: false));
+
+        // ---- Phase 4: RDP integration ----
+        // Pipeline stages (connect)
+        services.AddSingleton<IConnectionPipelineStage, ResolveCredentialsStage>();
+        services.AddSingleton<IConnectionPipelineStage, CreateHostStage>();
+        services.AddSingleton<IConnectionPipelineStage, ConnectStage>();
+        services.AddSingleton<IConnectionPipelineStage, UpdateRecentsStage>();
+
+        // Pipeline stages (disconnect)
+        services.AddSingleton<IDisconnectPipelineStage, DisconnectStage>();
+        services.AddSingleton<IDisconnectPipelineStage, DisposeStage>();
+        services.AddSingleton<IDisconnectPipelineStage, PublishClosedEventStage>();
+
+        // Protocol host factory + RDP impl
+        services.AddSingleton<IProtocolHostFactory, RdpProtocolHostFactory>();
+
+        // Connection coordinator (event-bus bridge — D-11 STA marshal + D-12 single-host policy)
+        services.AddSingleton<IConnectionCoordinator, ConnectionCoordinator>();
+
+        // Airspace swapper (WM_ENTERSIZEMOVE bitmap-swap per D-13 + D-14)
+        services.AddSingleton<AirspaceSwapper>();
+        // ---- end Phase 4 ----
 
         // Connection persistence and credentials
         services.AddSingleton<IConnectionStore>(sp =>

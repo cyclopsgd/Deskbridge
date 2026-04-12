@@ -17,8 +17,11 @@
     <PackageReference Include="Velopack" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Deskbridge.Core\Deskbridge.Core.csproj" />
+    <ProjectReference Include="..\Deskbridge.Protocols.Rdp\Deskbridge.Protocols.Rdp.csproj" />
   </ItemGroup>
 </Project>
