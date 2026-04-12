@@ -37,6 +37,14 @@ public static class TreeViewMultiSelectBehavior
     // most one multi-select TreeView in the app at a time.
     private static TreeItemViewModel? _anchorItem;
 
+    // Deferred-collapse state. When a user plain-clicks an item that is already part of
+    // a multi-selection, we don't collapse the selection to just that item immediately
+    // (doing so would break drag-to-move of a whole selection group, because the drag
+    // doesn't start until MouseMove crosses the threshold — see WPF-TREEVIEW-PATTERNS
+    // §4.5). Instead we remember the pending item and collapse on MouseUp only if no
+    // drag occurred.
+    private static TreeItemViewModel? _pendingCollapseItem;
+
     private static void OnEnableMultiSelectChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not TreeView treeView) return;
@@ -51,12 +59,19 @@ public static class TreeViewMultiSelectBehavior
                 UIElement.MouseLeftButtonDownEvent,
                 new MouseButtonEventHandler(TreeView_MouseLeftButtonDown),
                 handledEventsToo: true);
+            treeView.AddHandler(
+                UIElement.MouseLeftButtonUpEvent,
+                new MouseButtonEventHandler(TreeView_MouseLeftButtonUp),
+                handledEventsToo: true);
         }
         else
         {
             treeView.RemoveHandler(
                 UIElement.MouseLeftButtonDownEvent,
                 new MouseButtonEventHandler(TreeView_MouseLeftButtonDown));
+            treeView.RemoveHandler(
+                UIElement.MouseLeftButtonUpEvent,
+                new MouseButtonEventHandler(TreeView_MouseLeftButtonUp));
         }
     }
 
@@ -81,17 +96,30 @@ public static class TreeViewMultiSelectBehavior
         {
             ToggleItem(viewModel, clickedItem);
             _anchorItem = clickedItem;
+            _pendingCollapseItem = null;
         }
         else if (isShift && _anchorItem is not null)
         {
             SelectRange(viewModel, _anchorItem, clickedItem);
             // Anchor stays the same for subsequent shift-clicks
+            _pendingCollapseItem = null;
+        }
+        else if (clickedItem.IsSelected && viewModel.SelectedItems.Count > 1)
+        {
+            // Plain click on an already-selected item inside a multi-selection.
+            // Preserve the full selection so drag-drop can carry all of them;
+            // defer "collapse to single-select" to MouseUp if no drag started.
+            // See WPF-TREEVIEW-PATTERNS §4.5 (deferred selection).
+            _pendingCollapseItem = clickedItem;
+            viewModel.PrimarySelectedItem = clickedItem;
+            _anchorItem = clickedItem;
         }
         else
         {
             ClearAll(viewModel);
             SelectItem(viewModel, clickedItem);
             _anchorItem = clickedItem;
+            _pendingCollapseItem = null;
         }
 
         // Suppress native TreeView single-select highlight: TreeView's internal
@@ -113,6 +141,32 @@ public static class TreeViewMultiSelectBehavior
         // Focus so keyboard navigation continues from this item
         treeViewItem.Focus();
     }
+
+    private static void TreeView_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pendingCollapseItem is null) return;
+        if (sender is not TreeView treeView) return;
+        if (treeView.DataContext is not ConnectionTreeViewModel viewModel)
+        {
+            _pendingCollapseItem = null;
+            return;
+        }
+
+        var toCollapse = _pendingCollapseItem;
+        _pendingCollapseItem = null;
+
+        // No drag happened; collapse the multi-selection to just the clicked item.
+        ClearAll(viewModel);
+        SelectItem(viewModel, toCollapse);
+        _anchorItem = toCollapse;
+    }
+
+    /// <summary>
+    /// Called by <see cref="TreeViewDragDropBehavior"/> when a drag has begun,
+    /// so the deferred-collapse pending state is cleared (drag preserved the
+    /// multi-selection instead of collapsing it on MouseUp).
+    /// </summary>
+    public static void NotifyDragStarted() => _pendingCollapseItem = null;
 
     private static void SelectItem(ConnectionTreeViewModel vm, TreeItemViewModel item)
     {
