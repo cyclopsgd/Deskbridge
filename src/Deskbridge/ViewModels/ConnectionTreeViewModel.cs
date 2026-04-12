@@ -512,9 +512,27 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private void RenameItem(TreeItemViewModel? item)
     {
         if (item is null) return;
+        // Enforce single-rename-at-a-time: clear IsRenaming on every other item
+        // (including descendants) before activating the target.
+        ClearRenamingExcept(RootItems, item);
         // Store original name so Escape can restore it (consumed by ConnectionTreeControl)
         OriginalNameBeforeRename = item.Name;
         item.IsRenaming = true;
+    }
+
+    private static void ClearRenamingExcept(IEnumerable<TreeItemViewModel> items, TreeItemViewModel target)
+    {
+        foreach (var item in items)
+        {
+            if (!ReferenceEquals(item, target) && item.IsRenaming)
+            {
+                item.IsRenaming = false;
+            }
+            if (item is GroupTreeItemViewModel group)
+            {
+                ClearRenamingExcept(group.Children, target);
+            }
+        }
     }
 
     /// <summary>
