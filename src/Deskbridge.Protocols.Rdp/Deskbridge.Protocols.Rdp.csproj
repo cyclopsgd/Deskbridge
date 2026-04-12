@@ -11,6 +11,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Deskbridge.Core\Deskbridge.Core.csproj" />
   </ItemGroup>
 </Project>
