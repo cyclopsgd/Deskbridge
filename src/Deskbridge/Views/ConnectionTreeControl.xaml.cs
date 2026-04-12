@@ -193,10 +193,20 @@ public partial class ConnectionTreeControl : UserControl
         }
 
         // Determine which context menu to show
+        //
+        // CONTEXT-MENU BINDING CONTRACT (see ConnectionTreeControl.xaml)
+        // -- The menus are x:Shared="False" resources; each FindResource() call returns a
+        //    FRESH ContextMenu instance.
+        // -- We set menu.DataContext = _viewModel (the tree VM). MenuItem Command bindings
+        //    resolve against the tree VM via inherited DataContext. CommandParameter bindings
+        //    use PlacementTarget.DataContext (i.e. the TreeViewItem's item VM).
+        // -- RelativeSource AncestorType=TreeView bindings DO NOT work here because the
+        //    menu's logical tree is rooted in the UserControl.Resources, not the TreeView.
         if (_viewModel.SelectedItems.Count > 1)
         {
             // Multi-select context menu
             var menu = (ContextMenu)FindResource("MultiSelectContextMenu");
+            menu.DataContext = _viewModel;
             // Update the header item with count
             if (menu.Items[0] is MenuItem header)
             {
@@ -208,12 +218,14 @@ public partial class ConnectionTreeControl : UserControl
         else if (item is ConnectionTreeItemViewModel)
         {
             var menu = (ContextMenu)FindResource("ConnectionContextMenu");
+            menu.DataContext = _viewModel;
             PopulateMoveToSubmenu(menu);
             treeViewItem.ContextMenu = menu;
         }
         else if (item is GroupTreeItemViewModel)
         {
             var menu = (ContextMenu)FindResource("GroupContextMenu");
+            menu.DataContext = _viewModel;
             PopulateMoveToSubmenu(menu);
             treeViewItem.ContextMenu = menu;
         }

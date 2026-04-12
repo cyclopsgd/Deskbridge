@@ -6,68 +6,86 @@
     xmlns:behaviors="clr-namespace:Deskbridge.Behaviors">
 
     <UserControl.Resources>
+        <!--
+             CONTEXT-MENU BINDING CONTRACT
+             =============================
+             These ContextMenus are stored as shared (default x:Shared=True) resources and assigned
+             to individual TreeViewItems at right-click time via code-behind. Because the menu's
+             logical parent chain does NOT include the TreeView (it is rooted in the UserControl
+             that owns the resource), bindings using RelativeSource AncestorType=TreeView fail
+             silently — that was the root cause of Edit / Rename / Duplicate / Copy Hostname /
+             Delete etc doing nothing on right-click.
+
+             Correct pattern:
+               * The code-behind sets menu.DataContext = _viewModel (the tree VM).
+                 -> Command bindings become {Binding <Command>} with no RelativeSource.
+               * CommandParameter pulls the item VM via PlacementTarget.DataContext on the menu.
+                 PlacementTarget = TreeViewItem, whose DataContext = the item VM.
+        -->
+
         <!-- Connection context menu -->
-        <ContextMenu x:Key="ConnectionContextMenu">
+        <ContextMenu x:Key="ConnectionContextMenu" x:Shared="False">
             <MenuItem Header="Connect"
                       Icon="{ui:SymbolIcon Play24}"
                       InputGestureText="Enter"
-                      Command="{Binding DataContext.ConnectCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding ConnectCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
             <MenuItem Header="Edit"
                       Icon="{ui:SymbolIcon Edit24}"
-                      Command="{Binding DataContext.EditItemCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                      CommandParameter="{Binding}" />
+                      Command="{Binding EditItemCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <MenuItem Header="Rename"
                       Icon="{ui:SymbolIcon Rename24}"
                       InputGestureText="F2"
-                      Command="{Binding DataContext.RenameItemCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                      CommandParameter="{Binding}" />
+                      Command="{Binding RenameItemCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <MenuItem Header="Duplicate"
                       Icon="{ui:SymbolIcon Copy24}"
-                      Command="{Binding DataContext.DuplicateConnectionCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                      CommandParameter="{Binding}" />
+                      Command="{Binding DuplicateConnectionCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
             <MenuItem Header="Copy Hostname"
                       Icon="{ui:SymbolIcon Copy24}"
-                      Command="{Binding DataContext.CopyHostnameCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                      CommandParameter="{Binding}" />
+                      Command="{Binding CopyHostnameCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
             <MenuItem Header="Move to..."
                       Icon="{ui:SymbolIcon ArrowMove24}" />
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
                       InputGestureText="Ctrl+N"
-                      Command="{Binding DataContext.NewConnectionCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding NewConnectionCommand}" />
             <MenuItem Header="New Group"
                       Icon="{ui:SymbolIcon FolderAdd24}"
-                      Command="{Binding DataContext.NewGroupCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding NewGroupCommand}" />
             <Separator />
             <MenuItem Header="Delete"
                       Icon="{ui:SymbolIcon Delete24}"
                       InputGestureText="Delete"
                       Foreground="{DynamicResource DeskbridgeErrorBrush}"
-                      Command="{Binding DataContext.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding DeleteSelectedCommand}" />
         </ContextMenu>
 
         <!-- Group context menu -->
-        <ContextMenu x:Key="GroupContextMenu">
+        <ContextMenu x:Key="GroupContextMenu" x:Shared="False">
             <MenuItem Header="Edit"
                       Icon="{ui:SymbolIcon Edit24}"
-                      Command="{Binding DataContext.EditItemCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                      CommandParameter="{Binding}" />
+                      Command="{Binding EditItemCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <MenuItem Header="Rename"
                       Icon="{ui:SymbolIcon Rename24}"
                       InputGestureText="F2"
-                      Command="{Binding DataContext.RenameItemCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                      CommandParameter="{Binding}" />
+                      Command="{Binding RenameItemCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
-                      Command="{Binding DataContext.NewConnectionCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                      CommandParameter="{Binding Id}" />
+                      Command="{Binding NewConnectionCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext.Id, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <MenuItem Header="New Group"
                       Icon="{ui:SymbolIcon FolderAdd24}"
-                      Command="{Binding DataContext.NewGroupCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding NewGroupCommand}" />
             <Separator />
             <MenuItem Header="Move to..."
                       Icon="{ui:SymbolIcon ArrowMove24}" />
@@ -76,11 +94,11 @@
                       Icon="{ui:SymbolIcon Delete24}"
                       InputGestureText="Delete"
                       Foreground="{DynamicResource DeskbridgeErrorBrush}"
-                      Command="{Binding DataContext.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding DeleteSelectedCommand}" />
         </ContextMenu>
 
         <!-- Multi-select context menu -->
-        <ContextMenu x:Key="MultiSelectContextMenu">
+        <ContextMenu x:Key="MultiSelectContextMenu" x:Shared="False">
             <MenuItem IsEnabled="False" FontWeight="SemiBold" x:Name="MultiSelectHeader" />
             <Separator />
             <MenuItem Header="Move to..."
@@ -89,11 +107,11 @@
                       Icon="{ui:SymbolIcon Delete24}"
                       InputGestureText="Delete"
                       Foreground="{DynamicResource DeskbridgeErrorBrush}"
-                      Command="{Binding DataContext.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=TreeView}}" />
+                      Command="{Binding DeleteSelectedCommand}" />
         </ContextMenu>
 
-        <!-- Empty area context menu -->
-        <ContextMenu x:Key="EmptyAreaContextMenu">
+        <!-- Empty area context menu (attached directly to the UserControl's Grid; DataContext is the tree VM) -->
+        <ContextMenu x:Key="EmptyAreaContextMenu" x:Shared="False">
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
                       InputGestureText="Ctrl+N"
