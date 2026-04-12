@@ -145,7 +145,7 @@ public partial class ConnectionTreeControl : UserControl
         }
     }
 
-    // --- Double-click: open editor dialog ---
+    // --- Double-click: connect (or toggle group expand) ---
 
     private void TreeView_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
@@ -157,8 +157,8 @@ public partial class ConnectionTreeControl : UserControl
 
         if (item is ConnectionTreeItemViewModel)
         {
-            // Double-click connection: open editor
-            _viewModel.EditItemCommand.Execute(item);
+            // Double-click connection: connect (Phase 4/5 will wire this to the RDP pipeline)
+            _viewModel.ConnectCommand.Execute(item);
             e.Handled = true;
         }
         else if (item is GroupTreeItemViewModel group)
