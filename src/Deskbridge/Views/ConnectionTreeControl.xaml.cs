@@ -69,7 +69,7 @@ public partial class ConnectionTreeControl : UserControl
         if (_viewModel.IsQuickPropertiesVisible)
         {
             QuickPropertiesRow.MinHeight = 80;
-            QuickPropertiesRow.Height = new GridLength(120);
+            QuickPropertiesRow.Height = new GridLength(200);
         }
         else
         {
