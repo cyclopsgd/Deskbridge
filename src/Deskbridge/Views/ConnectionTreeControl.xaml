@@ -28,7 +28,7 @@
                       CommandParameter="{Binding}" />
             <Separator />
             <MenuItem Header="Copy Hostname"
-                      Icon="{ui:SymbolIcon ClipboardText24}"
+                      Icon="{ui:SymbolIcon Copy24}"
                       Command="{Binding DataContext.CopyHostnameCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
                       CommandParameter="{Binding}" />
             <Separator />

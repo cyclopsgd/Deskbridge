@@ -513,9 +513,20 @@ public partial class ConnectionTreeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Connect()
+    private void Connect(TreeItemViewModel? item = null)
     {
-        /* Phase 4/5 -- RDP connection will be wired here */
+        // Phase 4/5 -- RDP connection will be wired here via IConnectionPipeline.
+        // For now, show a snackbar so users know the connection path exists but isn't wired.
+        var target = item as ConnectionTreeItemViewModel
+                     ?? PrimarySelectedItem as ConnectionTreeItemViewModel;
+        if (target is null) return;
+
+        _snackbarService.Show(
+            "Not yet connected",
+            $"Connecting to {target.Name} will be wired in Phase 4.",
+            ControlAppearance.Info,
+            null,
+            TimeSpan.FromSeconds(3));
     }
 
     [RelayCommand]
