@@ -23,7 +23,7 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsConnectionsActive))]
     [NotifyPropertyChangedFor(nameof(IsSearchActive))]
     [NotifyPropertyChangedFor(nameof(IsSettingsActive))]
-    public partial PanelMode ActivePanelMode { get; set; } = PanelMode.None;
+    public partial PanelMode ActivePanelMode { get; set; } = PanelMode.Connections;
 
     public bool IsPanelVisible => ActivePanelMode != PanelMode.None;
     public bool IsConnectionsActive => ActivePanelMode == PanelMode.Connections;
