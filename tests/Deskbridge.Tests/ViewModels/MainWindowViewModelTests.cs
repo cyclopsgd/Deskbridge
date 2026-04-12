@@ -18,10 +18,11 @@ public class MainWindowViewModelTests
         var contentDialogService = Substitute.For<IContentDialogService>();
         var snackbarService = Substitute.For<ISnackbarService>();
         var serviceProvider = Substitute.For<IServiceProvider>();
+        var eventBus = Substitute.For<IEventBus>();
 
         var treeVm = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
-            contentDialogService, snackbarService, serviceProvider);
+            contentDialogService, snackbarService, serviceProvider, eventBus);
 
         _sut = new MainWindowViewModel(treeVm);
     }

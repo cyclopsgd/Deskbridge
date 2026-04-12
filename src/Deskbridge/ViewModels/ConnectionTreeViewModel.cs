@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Dialogs;
@@ -24,6 +25,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private readonly IContentDialogService _contentDialogService;
     private readonly ISnackbarService _snackbarService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IEventBus _eventBus;
 
     // Cached full tree for restoring after search filter clears
     private ObservableCollection<TreeItemViewModel> _fullTree = [];
@@ -37,7 +39,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
         ICredentialService credentialService,
         IContentDialogService contentDialogService,
         ISnackbarService snackbarService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IEventBus eventBus)
     {
         _connectionStore = connectionStore;
         _connectionQuery = connectionQuery;
@@ -45,6 +48,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _contentDialogService = contentDialogService;
         _snackbarService = snackbarService;
         _serviceProvider = serviceProvider;
+        _eventBus = eventBus;
     }
 
     // Data
@@ -650,18 +654,15 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [RelayCommand]
     private void Connect(TreeItemViewModel? item = null)
     {
-        // Phase 4/5 -- RDP connection will be wired here via IConnectionPipeline.
-        // For now, show a snackbar so users know the connection path exists but isn't wired.
+        // Phase 4 (RDP-05): publish ConnectionRequestedEvent. ConnectionCoordinator subscribes,
+        // marshals to STA (D-11), and runs IConnectionPipeline.ConnectAsync. Failures surface
+        // via ConnectionFailedEvent on the bus — do not call IConnectionPipeline directly here.
         var target = item as ConnectionTreeItemViewModel
                      ?? PrimarySelectedItem as ConnectionTreeItemViewModel;
         if (target is null) return;
-
-        _snackbarService.Show(
-            "Not yet connected",
-            $"Connecting to {target.Name} will be wired in Phase 4.",
-            ControlAppearance.Info,
-            null,
-            TimeSpan.FromSeconds(3));
+        var model = _connectionStore.GetById(target.Id);
+        if (model is null) return;
+        _eventBus.Publish(new ConnectionRequestedEvent(model));
     }
 
     [RelayCommand]
