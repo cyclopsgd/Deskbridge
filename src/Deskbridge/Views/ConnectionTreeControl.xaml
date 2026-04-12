@@ -230,7 +230,7 @@
                         <Setter Property="Padding" Value="0" />
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+                                <Setter Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
                                 <Setter Property="BorderThickness" Value="2,0,0,0" />
                             </Trigger>
@@ -294,43 +294,54 @@
                             <RowDefinition Height="28" />
                             <RowDefinition Height="28" />
                             <RowDefinition Height="28" />
+                            <RowDefinition Height="28" />
                         </Grid.RowDefinitions>
 
-                        <!-- Hostname -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Hostname"
+                        <!-- Name -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
                         <TextBox Grid.Row="0" Grid.Column="1"
+                                 Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
+                                 Height="24" Padding="4,2" FontSize="14"
+                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                 x:Name="ConnectionNameTextBox" LostFocus="QuickProperty_LostFocus" />
+
+                        <!-- Hostname -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Hostname"
+                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1" Grid.Column="1"
                                  Text="{Binding PrimarySelectedItem.Hostname, UpdateSourceTrigger=LostFocus}"
                                  Height="24" Padding="4,2" FontSize="14"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="HostnameTextBox" LostFocus="QuickProperty_LostFocus" />
 
                         <!-- Port -->
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Port"
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Port"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
-                        <TextBox Grid.Row="1" Grid.Column="1"
+                        <TextBox Grid.Row="2" Grid.Column="1"
                                  Text="{Binding PrimarySelectedItem.Port, UpdateSourceTrigger=LostFocus}"
                                  Height="24" Padding="4,2" FontSize="14"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="PortTextBox" LostFocus="QuickProperty_LostFocus" />
 
                         <!-- Username -->
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Username"
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Username"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
-                        <TextBox Grid.Row="2" Grid.Column="1"
+                        <TextBox Grid.Row="3" Grid.Column="1"
                                  Text="{Binding PrimarySelectedItem.Username, UpdateSourceTrigger=LostFocus}"
                                  Height="24" Padding="4,2" FontSize="14"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="UsernameTextBox" LostFocus="QuickProperty_LostFocus" />
 
                         <!-- Credentials mode -->
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Credentials"
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Credentials"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="3" Grid.Column="1"
+                        <ComboBox Grid.Row="4" Grid.Column="1"
                                   SelectedItem="{Binding PrimarySelectedItem.CredentialMode}"
                                   Height="24" FontSize="14"
                                   x:Name="CredentialModeCombo"
