@@ -678,6 +678,28 @@ public partial class ConnectionTreeViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Append dragged items to the root level (ParentGroupId = null / GroupId = null).
+    /// Used when the user drops onto empty tree area (past the last item), which the
+    /// DragOver handler surfaces as a null drop target.
+    /// </summary>
+    public void MoveItemsToRoot(IReadOnlyList<TreeItemViewModel> draggedItems)
+    {
+        if (draggedItems.Count == 0) return;
+
+        // Place items at the end of the root level, each with SortOrder past the
+        // current maximum so they land after existing root entries.
+        var rootSiblings = GetSiblingsAtLevel(null);
+        int nextSort = (rootSiblings.Count == 0 ? 0 : rootSiblings.Max(s => s.sortOrder)) + 10;
+
+        foreach (var item in draggedItems)
+        {
+            ApplyMove(item, newGroupId: null, sortOrder: nextSort);
+            nextSort += 10;
+        }
+        RefreshTree();
+    }
+
+    /// <summary>
     /// Reorder dragged items relative to a target. <paramref name="position"/> controls placement:
     /// Before inserts dragged items just before target, After inserts after target, Into drops into
     /// target (only valid if target is a group).

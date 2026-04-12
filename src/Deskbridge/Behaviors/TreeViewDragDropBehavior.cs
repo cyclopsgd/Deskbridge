@@ -153,7 +153,12 @@ public static class TreeViewDragDropBehavior
         if (e.OriginalSource is not DependencyObject dragOverSource
             || FindAncestor<TreeViewItem>(dragOverSource) is not TreeViewItem treeViewItem)
         {
+            // Dropping into empty tree area (past the last item) -> move to root.
+            // Allow the operation but don't draw a per-item adorner; the Drop
+            // handler routes this to MoveItemsToRoot.
             ClearDropIndicators();
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
             return;
         }
 
@@ -226,11 +231,22 @@ public static class TreeViewDragDropBehavior
         if (e.Data.GetData(DragDataFormat) is not List<TreeItemViewModel> draggedItems
             || draggedItems.Count == 0) return;
 
-        var dropTarget = e.OriginalSource is DependencyObject ds ? FindAncestor<TreeViewItem>(ds) : null;
-        if (dropTarget?.DataContext is not TreeItemViewModel targetVm) return;
-
         if (sender is not TreeView treeView) return;
         if (treeView.DataContext is not ConnectionTreeViewModel viewModel) return;
+
+        var dropTarget = e.OriginalSource is DependencyObject ds ? FindAncestor<TreeViewItem>(ds) : null;
+
+        // Drop into empty tree area (no TreeViewItem under the cursor) moves the
+        // dragged items to the root level. This is the only way to move a
+        // subfolder out of its parent when the user hasn't got another root-level
+        // item to drop Before/After.
+        if (dropTarget?.DataContext is not TreeItemViewModel targetVm)
+        {
+            viewModel.MoveItemsToRoot(draggedItems);
+            ClearDropIndicators();
+            e.Handled = true;
+            return;
+        }
 
         // Prevent dropping a group onto / next to its own descendant (circular reference)
         if (targetVm is GroupTreeItemViewModel tg
