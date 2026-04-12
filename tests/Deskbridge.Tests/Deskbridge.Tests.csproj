@@ -4,6 +4,10 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- Required so tests can construct WindowsFormsHost / AxMsRdpClient9NotSafeForScripting.
+         CLAUDE.md forbids UseWindowsForms in Directory.Build.props; setting it locally on the
+         test project is explicit and scoped. -->
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
@@ -13,5 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Deskbridge\Deskbridge.csproj" />
     <ProjectReference Include="..\..\src\Deskbridge.Core\Deskbridge.Core.csproj" />
+    <ProjectReference Include="..\..\src\Deskbridge.Protocols.Rdp\Deskbridge.Protocols.Rdp.csproj" />
   </ItemGroup>
 </Project>
