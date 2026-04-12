@@ -1,7 +1,6 @@
 using System.Collections.Specialized;
 using System.Windows.Input;
 using System.Windows.Media;
-using Deskbridge.Core.Models;
 using Deskbridge.ViewModels;
 
 namespace Deskbridge.Views;
@@ -9,9 +8,6 @@ namespace Deskbridge.Views;
 public partial class ConnectionTreeControl : UserControl
 {
     private readonly ConnectionTreeViewModel _viewModel;
-
-    // Original name for Escape-cancel is stored on _viewModel.OriginalNameBeforeRename
-    // (set by the RenameItem command before IsRenaming=true)
 
     public ConnectionTreeControl(ConnectionTreeViewModel viewModel)
     {
@@ -88,15 +84,6 @@ public partial class ConnectionTreeControl : UserControl
     {
         switch (e.Key)
         {
-            case Key.F2:
-                // F2: Start inline rename on PrimarySelectedItem
-                if (_viewModel.PrimarySelectedItem is not null)
-                {
-                    _viewModel.RenameItemCommand.Execute(_viewModel.PrimarySelectedItem);
-                    e.Handled = true;
-                }
-                break;
-
             case Key.Delete:
                 // Delete: Delete selected items with confirmation
                 if (_viewModel.SelectedItems.Count > 0)
@@ -295,79 +282,6 @@ public partial class ConnectionTreeControl : UserControl
             }
 
             moveToItem.Items.Add(groupMenuItem);
-        }
-    }
-
-    // --- Rename TextBox handlers ---
-
-    private void RenameTextBox_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (sender is not TextBox textBox) return;
-        if (textBox.DataContext is not TreeItemViewModel item) return;
-
-        switch (e.Key)
-        {
-            case Key.Enter:
-                // Commit rename
-                CommitRename(item);
-                e.Handled = true;
-                break;
-
-            case Key.Escape:
-                // Cancel rename - restore original name
-                if (_viewModel.OriginalNameBeforeRename is not null)
-                {
-                    item.Name = _viewModel.OriginalNameBeforeRename;
-                }
-                item.IsRenaming = false;
-                _viewModel.OriginalNameBeforeRename = null;
-                e.Handled = true;
-                break;
-        }
-    }
-
-    private void RenameTextBox_LostFocus(object sender, RoutedEventArgs e)
-    {
-        if (sender is not TextBox textBox) return;
-        if (textBox.DataContext is not TreeItemViewModel item || !item.IsRenaming) return;
-
-        // Commit rename on focus loss
-        CommitRename(item);
-    }
-
-    private void RenameTextBox_Loaded(object sender, RoutedEventArgs e)
-    {
-        // When the rename TextBox appears, focus it and select all text.
-        // Must defer to Render priority so WPF has finished laying out and making
-        // the element hit-testable -- a synchronous Focus() on Loaded can no-op.
-        if (sender is not TextBox textBox) return;
-
-        textBox.Dispatcher.BeginInvoke(
-            new Action(() =>
-            {
-                Keyboard.Focus(textBox);
-                textBox.Focus();
-                textBox.SelectAll();
-            }),
-            System.Windows.Threading.DispatcherPriority.Render);
-    }
-
-    private void CommitRename(TreeItemViewModel item)
-    {
-        item.IsRenaming = false;
-        _viewModel.OriginalNameBeforeRename = null;
-
-        var name = item.Name?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(name)) return;
-
-        // Persist the renamed item
-        if (item is ConnectionTreeItemViewModel connVm)
-        {
-            _viewModel.SaveConnectionFromQuickEdit(connVm);
-        }
-        else if (item is GroupTreeItemViewModel groupVm)
-        {
-            _viewModel.SaveGroupFromQuickEdit(groupVm);
         }
     }
 
