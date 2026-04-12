@@ -79,6 +79,15 @@ public class RdpHostControlSmokeTests
 
             int final = GetGdi();
             int delta = final - baseline;
+
+            // Emit the delta unconditionally so reruns show the actual number, not just pass/fail.
+            // TestContext.Current is xunit.v3's ambient context; SendDiagnosticMessage surfaces in
+            // test output when diagnostic messages are enabled, and Console.WriteLine is captured
+            // into the per-test log regardless of runner config.
+            var msg = $"Gate1: GDI handle delta over 20 cycles = {delta} (baseline={baseline}, final={final})";
+            TestContext.Current.SendDiagnosticMessage(msg);
+            Console.WriteLine(msg);
+
             // [VERIFIED: dotnet/winforms #13499 reported still leaking in .NET 10 preview 6]
             // If this assertion fails, escalate before Plan 04-02 begins.
             Assert.True(
@@ -104,9 +113,31 @@ public class RdpHostControlSmokeTests
                 using var smoke = new RdpSmokeHost();
                 viewport.Children.Add(new ContentControl());  // realize layout
 
+                // Capture ErrorOccurred payload (includes OnLogonError lError + disconnect reason
+                // text) so we can emit it alongside discReason if ConnectAsync throws. NEVER logs
+                // the password — RdpSmokeHost already guarantees the event message is sanitized.
+                string? capturedError = null;
+                smoke.ErrorOccurred += (_, msg) => capturedError = msg;
+
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                var connectTask = smoke.ConnectAsync(viewport, Host!, DefaultPort, User, Domain, Pass, cts.Token);
-                await connectTask;  // Should complete via OnLoginComplete
+                try
+                {
+                    var connectTask = smoke.ConnectAsync(viewport, Host!, DefaultPort, User, Domain, Pass, cts.Token);
+                    await connectTask;  // Should complete via OnLoginComplete
+                }
+                catch (Exception ex)
+                {
+                    // Emit diagnostics BEFORE rethrowing so the failed-test log shows enough to
+                    // distinguish server auth rejection (1800) from transport (264/516/520/1032).
+                    var header = $"Gate2: Connect failed. discReason={smoke.LastDiscReason?.ToString() ?? "<null>"}, ErrorOccurred payload={capturedError ?? "<none>"}";
+                    TestContext.Current.SendDiagnosticMessage(header);
+                    Console.WriteLine(header);
+                    Console.WriteLine("Gate2 hint: discReason 1800 typically = server rejected auth (wrong password, disabled account, CredSSP/NLA mismatch, or account lacks RDP grant).");
+                    Console.WriteLine("Gate2 hint: discReason 516/520 = socket failure. 264 = DNS. 1032 = DNS name lookup failure.");
+                    Console.WriteLine("Gate2 hint: See https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpbcgr/ for full reason code table.");
+                    _ = ex;
+                    throw;
+                }
             }
             finally
             {
