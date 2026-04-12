@@ -5,8 +5,10 @@ These files are the technical authority for this project. Read them before editi
 - **`REFERENCE.md`** — Architecture, constraints, feature spec, disposal sequences, DI registrations
 - **`DESIGN.md`** — WPF-UI patterns, control usage, colour tokens, layout reference
 - **`WPF-UI-PITFALLS.md`** — 8 categories of silent WPF-UI failures with correct patterns. **Read this before writing ANY WPF-UI code.** Covers ContentDialog hosting, TreeView context menus, FluentWindow conflicts, icon resolution, Color vs Brush resource keys, MVVM command generation, and theme override persistence.
+- **`.planning/research/RDP-ACTIVEX-PITFALLS.md`** — **Read before Phase 4 (RDP Integration).** AxMsRdpClient9 siting/disposal, GDI handle leaks, IMsTscNonScriptable password casting, thread affinity, focus stealing, reconnection edge cases.
+- **`.planning/research/WINFORMS-HOST-AIRSPACE.md`** — **Read before Phase 4-5 (RDP + Tab Management).** Airspace problem with FluentWindow/Mica, WM_ENTERSIZEMOVE bitmap snapshot, PerMonitorV2 DPI across monitors, WPF-UI overlay z-order against WindowsFormsHost.
 
-Every WPF-UI bug we've hit in this project is documented in `WPF-UI-PITFALLS.md`. If you're about to use ContentDialog, ContextMenu, SymbolIcon, `*Color` resources, or accent theming — consult it first.
+Every WPF-UI bug we've hit in this project is documented in `WPF-UI-PITFALLS.md`. If you're about to use ContentDialog, ContextMenu, SymbolIcon, `*Color` resources, or accent theming — consult it first. Before ANY ActiveX or WindowsFormsHost code, read the two `.planning/research/` pitfall docs.
 
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
