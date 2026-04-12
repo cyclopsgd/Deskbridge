@@ -40,10 +40,22 @@
 
                 <TextBlock Text="Group" FontSize="14"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                <!--
+                     Explicit ItemTemplate is required so that SelectionBoxItem (the
+                     collapsed selection visual) uses the same template as the open
+                     dropdown. When only SelectedValuePath + DisplayMemberPath are set,
+                     WPF-UI's ComboBox template renders SelectionBoxItem as the raw
+                     VALUE (the Guid/enum), producing the "- - -" placeholder glyphs.
+                -->
                 <ComboBox ItemsSource="{Binding AvailableGroups}"
                     SelectedValue="{Binding GroupId}"
-                    SelectedValuePath="Id"
-                    DisplayMemberPath="DisplayName" />
+                    SelectedValuePath="Id">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
         </TabItem>
 
@@ -52,11 +64,23 @@
             <StackPanel Margin="16,12">
                 <TextBlock Text="Credential mode" FontSize="14"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                <!--
+                     Explicit ItemTemplate forces SelectionBoxItem (collapsed visual)
+                     to use the same template as the dropdown items. Without this,
+                     SelectedValuePath="Value" causes SelectionBoxItem to be the raw
+                     enum, which WPF-UI's ComboBox template renders as "- - -"
+                     placeholder glyphs.
+                -->
                 <ComboBox ItemsSource="{Binding CredentialModes}"
                     SelectedValue="{Binding CredentialMode}"
                     SelectedValuePath="Value"
-                    DisplayMemberPath="DisplayName"
-                    Margin="0,0,0,12" />
+                    Margin="0,0,0,12">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
 
                 <!-- InfoBar for Inherit mode (D-13, CONN-09) -->
                 <ui:InfoBar Title="Inherited credentials"

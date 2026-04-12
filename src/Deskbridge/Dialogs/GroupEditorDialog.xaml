@@ -28,10 +28,21 @@
         <!-- Parent Group -->
         <TextBlock Text="Parent group" FontSize="14"
             Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+        <!--
+             Explicit ItemTemplate forces SelectionBoxItem to use the same
+             rendering as dropdown items; otherwise SelectedValuePath="Id" leaves
+             SelectionBoxItem as the raw Guid, which WPF-UI's ComboBox template
+             renders as "- - -" placeholder glyphs.
+        -->
         <ComboBox ItemsSource="{Binding AvailableParentGroups}"
             SelectedValue="{Binding ParentGroupId}"
-            SelectedValuePath="Id"
-            DisplayMemberPath="DisplayName" Margin="0,0,0,12" />
+            SelectedValuePath="Id" Margin="0,0,0,12">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
 
         <!-- Separator -->
         <Border Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,12" />
