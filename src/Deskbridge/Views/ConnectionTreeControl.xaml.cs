@@ -340,12 +340,19 @@ public partial class ConnectionTreeControl : UserControl
 
     private void RenameTextBox_Loaded(object sender, RoutedEventArgs e)
     {
-        // When the rename TextBox appears, focus it and select all text
-        if (sender is TextBox textBox)
-        {
-            textBox.Focus();
-            textBox.SelectAll();
-        }
+        // When the rename TextBox appears, focus it and select all text.
+        // Must defer to Render priority so WPF has finished laying out and making
+        // the element hit-testable -- a synchronous Focus() on Loaded can no-op.
+        if (sender is not TextBox textBox) return;
+
+        textBox.Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                Keyboard.Focus(textBox);
+                textBox.Focus();
+                textBox.SelectAll();
+            }),
+            System.Windows.Threading.DispatcherPriority.Render);
     }
 
     private void CommitRename(TreeItemViewModel item)
