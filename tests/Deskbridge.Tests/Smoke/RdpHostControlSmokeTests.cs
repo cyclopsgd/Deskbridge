@@ -17,7 +17,7 @@ namespace Deskbridge.Tests.Smoke;
 /// <summary>
 /// Plan 04-01 gate tests for the RDP ActiveX smoke prototype.
 ///
-/// Gate 1 — 20-cycle GDI baseline: GetGuiResources delta < 50 after 20 connect/disconnect
+/// Gate 1 — 20-cycle GDI baseline: GetGuiResources delta &lt; 50 after 20 connect/disconnect
 ///          cycles (RDP-ACTIVEX-PITFALLS §2, D-02 criterion #1).
 /// Gate 2 — IMsTscNonScriptable cast + ClearTextPassword succeeds against a real RDP
 ///          target and OnLoginComplete fires (D-02 criterion #2).
@@ -27,8 +27,10 @@ namespace Deskbridge.Tests.Smoke;
 /// Gate 4 — Intentional bad hostname triggers OnDisconnected without tearing down the
 ///          test process; <c>ErrorOccurred</c> is surfaced (D-02 criterion #4).
 ///
-/// Gates 1, 2, 4 Skip when <c>DESKBRIDGE_SMOKE_RDP_HOST</c> is unset (see how-to-verify
-/// in the plan checkpoint). Gate 3 runs unconditionally.
+/// Gates 1, 2, 4 Skip when <c>DESKBRIDGE_SMOKE_RDP_HOST</c> is unset. Gate 3 runs
+/// unconditionally. Every gate body is hosted on a fresh STA thread by
+/// <see cref="StaRunner"/> — xUnit v3 3.2.2 worker threads are MTA and the package ships
+/// no STA attribute, so the pump is built per-test (see <see cref="StaCollectionFixture"/>).
 /// </summary>
 [Collection("RDP-STA")]
 public class RdpHostControlSmokeTests
@@ -49,116 +51,128 @@ public class RdpHostControlSmokeTests
     }
 
     [Fact]
-    public async Task Gate1_20CycleGdiBaseline_HandleCountReturnsToBaseline()
+    public void Gate1_20CycleGdiBaseline_HandleCountReturnsToBaseline()
     {
         Skip.If(Host is null, "Set DESKBRIDGE_SMOKE_RDP_HOST to run");
-        Skip.IfNot(_fixture.IsSta(), "STA required");
+        _ = _fixture;
 
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        int baseline = GetGdi();
-
-        for (int i = 0; i < 20; i++)
+        StaRunner.RunAsync(async () =>
         {
-            await RunOneCycleAsync();
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-        }
+            int baseline = GetGdi();
 
-        int final = GetGdi();
-        int delta = final - baseline;
-        // [VERIFIED: dotnet/winforms #13499 reported still leaking in .NET 10 preview 6]
-        // If this assertion fails, escalate before Plan 04-02 begins.
-        Assert.True(
-            delta < 50,
-            $"GDI handle leak detected: baseline={baseline}, final={final}, delta={delta}");
+            for (int i = 0; i < 20; i++)
+            {
+                await RunOneCycleAsync();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+            }
+
+            int final = GetGdi();
+            int delta = final - baseline;
+            // [VERIFIED: dotnet/winforms #13499 reported still leaking in .NET 10 preview 6]
+            // If this assertion fails, escalate before Plan 04-02 begins.
+            Assert.True(
+                delta < 50,
+                $"GDI handle leak detected: baseline={baseline}, final={final}, delta={delta}");
+        });
     }
 
     [Fact]
-    public async Task Gate2_IMsTscNonScriptable_PasswordSetSucceeds()
+    public void Gate2_IMsTscNonScriptable_PasswordSetSucceeds()
     {
         Skip.If(Host is null, "Set DESKBRIDGE_SMOKE_RDP_HOST to run");
         Skip.If(User is null || Pass is null, "Set DESKBRIDGE_SMOKE_RDP_USER + DESKBRIDGE_SMOKE_RDP_PASS to run");
-        Skip.IfNot(_fixture.IsSta(), "STA required");
+        _ = _fixture;
 
-        var window = CreateHiddenStagingWindow(out var viewport);
-        window.Show();
-
-        try
+        StaRunner.RunAsync(async () =>
         {
-            using var smoke = new RdpSmokeHost();
-            viewport.Children.Add(new ContentControl());  // realize layout
+            var window = CreateHiddenStagingWindow(out var viewport);
+            window.Show();
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            var connectTask = smoke.ConnectAsync(viewport, Host!, DefaultPort, User, Domain, Pass, cts.Token);
-            await connectTask;  // Should complete via OnLoginComplete
-        }
-        finally
-        {
-            window.Close();
-        }
+            try
+            {
+                using var smoke = new RdpSmokeHost();
+                viewport.Children.Add(new ContentControl());  // realize layout
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var connectTask = smoke.ConnectAsync(viewport, Host!, DefaultPort, User, Domain, Pass, cts.Token);
+                await connectTask;  // Should complete via OnLoginComplete
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
     }
 
     [Fact]
     public void Gate3_SitingOrderGuard_ThrowsWhenConfigureBeforeSite()
     {
-        Skip.IfNot(_fixture.IsSta(), "STA required");
+        _ = _fixture;
 
-        // Verify SiteAndConfigure helper throws if Handle == 0 after presumed siting.
-        // No Window root → Grid has no HwndSource → handle stays 0.
-        var panel = new Grid();
-        var host = new WindowsFormsHost();
-        var rdp = new AxMsRdpClient9NotSafeForScripting();
+        StaRunner.Run(() =>
+        {
+            // Verify SiteAndConfigure helper throws if Handle == 0 after presumed siting.
+            // No Window root → Grid has no HwndSource → handle stays 0.
+            var panel = new Grid();
+            var host = new WindowsFormsHost();
+            var rdp = new AxMsRdpClient9NotSafeForScripting();
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            AxSiting.SiteAndConfigure(panel, host, rdp, r => r.Server = "ignored"));
-        Assert.Contains("not sited", ex.Message);
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                AxSiting.SiteAndConfigure(panel, host, rdp, r => r.Server = "ignored"));
+            Assert.Contains("not sited", ex.Message);
 
-        try { host.Child = null; } catch { }
-        try { rdp.Dispose(); } catch { }
-        try { host.Dispose(); } catch { }
+            try { host.Child = null; } catch { }
+            try { rdp.Dispose(); } catch { }
+            try { host.Dispose(); } catch { }
+        });
     }
 
     [Fact]
-    public async Task Gate4_ComError_DoesNotTearDownApp()
+    public void Gate4_ComError_DoesNotTearDownApp()
     {
         Skip.If(Host is null, "Set DESKBRIDGE_SMOKE_RDP_HOST to run");
-        Skip.IfNot(_fixture.IsSta(), "STA required");
+        _ = _fixture;
 
-        var window = CreateHiddenStagingWindow(out var viewport);
-        window.Show();
-
-        string? observedError = null;
-
-        try
+        StaRunner.RunAsync(async () =>
         {
-            using var smoke = new RdpSmokeHost();
-            smoke.ErrorOccurred += (_, msg) => observedError = msg;
+            var window = CreateHiddenStagingWindow(out var viewport);
+            window.Show();
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            // Deliberately invalid hostname — OnDisconnected should fire with discReason != 0.
-            var act = () => smoke.ConnectAsync(viewport, "definitely-not-a-host.invalid", DefaultPort, User, Domain, Pass, cts.Token);
-            var ex = await Assert.ThrowsAnyAsync<Exception>(act);
-            Assert.NotNull(ex);
+            string? observedError = null;
 
-            // Dispose cleanly. If this throws or tears down the process, the gate fails.
-            smoke.Dispose();
+            try
+            {
+                using var smoke = new RdpSmokeHost();
+                smoke.ErrorOccurred += (_, msg) => observedError = msg;
 
-            // Process stayed alive and disconnect reason was surfaced.
-            Assert.False(Process.GetCurrentProcess().HasExited);
-            Assert.NotNull(smoke.LastDiscReason);
-            Assert.NotEqual(0, smoke.LastDiscReason);
-        }
-        finally
-        {
-            window.Close();
-        }
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                // Deliberately invalid hostname — OnDisconnected should fire with discReason != 0.
+                var act = () => smoke.ConnectAsync(viewport, "definitely-not-a-host.invalid", DefaultPort, User, Domain, Pass, cts.Token);
+                var ex = await Assert.ThrowsAnyAsync<Exception>(act);
+                Assert.NotNull(ex);
 
-        // observedError may or may not be set depending on whether OnLogonError fired;
-        // the contract is that Dispose runs cleanly and the process survives.
-        _ = observedError;
+                // Dispose cleanly. If this throws or tears down the process, the gate fails.
+                smoke.Dispose();
+
+                // Process stayed alive and disconnect reason was surfaced.
+                Assert.False(Process.GetCurrentProcess().HasExited);
+                Assert.NotNull(smoke.LastDiscReason);
+                Assert.NotEqual(0, smoke.LastDiscReason);
+            }
+            finally
+            {
+                window.Close();
+            }
+
+            // observedError may or may not be set depending on whether OnLogonError fired;
+            // the contract is that Dispose runs cleanly and the process survives.
+            _ = observedError;
+        });
     }
 
     // ---- Helpers -------------------------------------------------------------
