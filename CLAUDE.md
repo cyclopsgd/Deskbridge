@@ -1,3 +1,13 @@
+## MANDATORY READING (before any code change)
+
+These files are the technical authority for this project. Read them before editing code:
+
+- **`REFERENCE.md`** — Architecture, constraints, feature spec, disposal sequences, DI registrations
+- **`DESIGN.md`** — WPF-UI patterns, control usage, colour tokens, layout reference
+- **`WPF-UI-PITFALLS.md`** — 8 categories of silent WPF-UI failures with correct patterns. **Read this before writing ANY WPF-UI code.** Covers ContentDialog hosting, TreeView context menus, FluentWindow conflicts, icon resolution, Color vs Brush resource keys, MVVM command generation, and theme override persistence.
+
+Every WPF-UI bug we've hit in this project is documented in `WPF-UI-PITFALLS.md`. If you're about to use ContentDialog, ContextMenu, SymbolIcon, `*Color` resources, or accent theming — consult it first.
+
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 

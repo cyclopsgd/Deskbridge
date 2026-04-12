@@ -62,6 +62,13 @@ Connection model persistence (JSON with schema versioning), TreeView with drag-d
 - `DESIGN.md` §3 — TreeView auto-styled by ControlsDictionary
 - `DESIGN.md` §6 — Colour tokens for tree item styling
 
+### WPF-UI Pitfalls (MANDATORY — read before editing any WPF-UI code)
+- `WPF-UI-PITFALLS.md` §1 — ContentDialog host registration and custom dialog subclass base style
+- `WPF-UI-PITFALLS.md` §2 — TreeView context menu separate visual tree; shared resources + DataContext pattern
+- `WPF-UI-PITFALLS.md` §5 — Icon validation, Color vs Brush resource keys (*Brush suffix required for Foreground/Background)
+- `WPF-UI-PITFALLS.md` §7 — MVVM command generation (strips Async/On prefix), ComboBoxItem in ContentDialog trap
+- `WPF-UI-PITFALLS.md` §8 — Theme override persistence with SystemThemeWatcher
+
 ### Existing Code
 - `src/Deskbridge.Core/Models/ConnectionModel.cs` — Existing model (Phase 1)
 - `src/Deskbridge.Core/Models/ConnectionGroup.cs` — Existing model (Phase 1)
