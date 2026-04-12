@@ -451,11 +451,10 @@
                         -->
                         <ComboBox Grid.Row="4" Grid.Column="1"
                                   ItemsSource="{Binding CredentialModes}"
-                                  SelectedValue="{Binding PrimarySelectedItem.CredentialMode}"
+                                  SelectedValue="{Binding SelectedItemCredentialMode}"
                                   SelectedValuePath="Value"
                                   Height="24" FontSize="14"
-                                  x:Name="CredentialModeCombo"
-                                  SelectionChanged="CredentialMode_SelectionChanged">
+                                  x:Name="CredentialModeCombo">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding DisplayName}" />
