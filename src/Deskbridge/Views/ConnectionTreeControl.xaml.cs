@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using Deskbridge.ViewModels;
@@ -8,6 +9,13 @@ namespace Deskbridge.Views;
 public partial class ConnectionTreeControl : UserControl
 {
     private readonly ConnectionTreeViewModel _viewModel;
+
+    // Persist user-resized panel height across collapse/expand cycles. See
+    // WPF-TREEVIEW-PATTERNS.md Section 3 — GridSplitter writes pixel values
+    // with GridUnitType.Star (dotnet/wpf#4392), so we capture ActualHeight
+    // in DragCompleted rather than binding RowDefinition.Height directly.
+    private GridLength _savedPanelHeight = new(200, GridUnitType.Pixel);
+    private const double MinExpandedPanelHeight = 80;
 
     public ConnectionTreeControl(ConnectionTreeViewModel viewModel)
     {
@@ -38,7 +46,6 @@ public partial class ConnectionTreeControl : UserControl
         if (e.PropertyName == nameof(ConnectionTreeViewModel.RootItems))
         {
             UpdateEmptyState();
-            // Unsubscribe from the old collection before subscribing to the new one
             if (_subscribedRootItems is not null)
             {
                 _subscribedRootItems.CollectionChanged -= RootItems_CollectionChanged;
@@ -46,7 +53,7 @@ public partial class ConnectionTreeControl : UserControl
             _subscribedRootItems = _viewModel.RootItems;
             _subscribedRootItems.CollectionChanged += RootItems_CollectionChanged;
         }
-        else if (e.PropertyName == nameof(ConnectionTreeViewModel.IsQuickPropertiesVisible))
+        else if (e.PropertyName == nameof(ConnectionTreeViewModel.IsQuickPropertiesExpanded))
         {
             UpdateQuickPropertiesRowHeight();
         }
@@ -64,18 +71,41 @@ public partial class ConnectionTreeControl : UserControl
             : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Expand/collapse the quick-properties BODY row. Header row stays always visible
+    /// (see ConnectionTreeControl.xaml Row 3). On collapse we save the current height
+    /// so re-expanding restores the user's preferred size.
+    /// </summary>
     private void UpdateQuickPropertiesRowHeight()
     {
-        if (_viewModel.IsQuickPropertiesVisible)
+        if (_viewModel.IsQuickPropertiesExpanded)
         {
-            QuickPropertiesRow.MinHeight = 80;
-            QuickPropertiesRow.Height = new GridLength(200);
+            QuickPropertiesRow.MinHeight = 0;
+            QuickPropertiesRow.Height = _savedPanelHeight;
         }
         else
         {
+            // Save current height before collapsing (only if not already collapsed)
+            double actual = QuickPropertiesRow.ActualHeight;
+            if (actual >= MinExpandedPanelHeight)
+                _savedPanelHeight = new GridLength(actual, GridUnitType.Pixel);
+
             QuickPropertiesRow.MinHeight = 0;
             QuickPropertiesRow.Height = new GridLength(0);
         }
+    }
+
+    /// <summary>
+    /// Persist user-resized body height after a GridSplitter drag completes.
+    /// Critical: read ActualHeight, not RowDefinition.Height — dotnet/wpf#4392
+    /// causes GridSplitter to write GridUnitType.Star values that corrupt the
+    /// stored GridLength.
+    /// </summary>
+    private void PanelSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        double actual = QuickPropertiesRow.ActualHeight;
+        if (actual >= MinExpandedPanelHeight)
+            _savedPanelHeight = new GridLength(actual, GridUnitType.Pixel);
     }
 
     // --- Keyboard shortcuts in TreeView ---

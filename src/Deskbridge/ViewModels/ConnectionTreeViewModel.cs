@@ -56,7 +56,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial bool IsQuickPropertiesVisible { get; set; } = true;
+    public partial bool IsQuickPropertiesExpanded { get; set; } = true;
 
     // Display-friendly options for the CredentialMode ComboBox in the quick properties
     // panel. Raw Enum.GetValues() binding rendered as placeholder glyphs ("- - -") under
@@ -499,7 +499,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [RelayCommand]
     private void ToggleQuickProperties()
     {
-        IsQuickPropertiesVisible = !IsQuickPropertiesVisible;
+        IsQuickPropertiesExpanded = !IsQuickPropertiesExpanded;
     }
 
     [RelayCommand]
