@@ -17,6 +17,13 @@ public class ConnectionModel
     public DisplaySettings? DisplaySettings { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Timestamp of the most recent successful connect. Nullable: older connections and
+    /// connections that have never been opened remain <c>null</c>. Populated by
+    /// <c>UpdateRecentsStage</c> (Order=400) after <c>ConnectionEstablishedEvent</c>.
+    /// </summary>
+    public DateTime? LastUsedAt { get; set; }
 }
 
 public class DisplaySettings
