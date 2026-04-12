@@ -214,10 +214,14 @@ public partial class GroupEditorViewModel : ObservableValidator
             if (conn.CredentialMode != CredentialMode.Inherit)
                 continue;
 
-            // Walk up the group chain to see if this group is in the chain
+            // Walk up the group chain (cycle-safe) to see if this group is in the chain
+            var visited = new HashSet<Guid>();
             var currentGroupId = conn.GroupId;
             while (currentGroupId is not null)
             {
+                if (!visited.Add(currentGroupId.Value))
+                    break;
+
                 if (currentGroupId.Value == groupId)
                 {
                     count++;

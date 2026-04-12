@@ -284,9 +284,14 @@ public partial class ConnectionEditorViewModel : ObservableValidator
 
     private string? FindGroupWithCredentials(Guid groupId)
     {
+        // Cycle-safe parent walk: bad data could produce A.Parent=B, B.Parent=A.
+        var visited = new HashSet<Guid>();
         var currentGroupId = (Guid?)groupId;
         while (currentGroupId is not null)
         {
+            if (!visited.Add(currentGroupId.Value))
+                break;
+
             if (_credentialService.HasGroupCredentials(currentGroupId.Value))
             {
                 var group = _connectionStore.GetGroupById(currentGroupId.Value);
