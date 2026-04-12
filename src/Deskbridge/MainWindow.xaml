@@ -250,15 +250,22 @@
                 <!-- Viewport (Editor Row 1, D-08 empty state, SHEL-07 airspace-safe) -->
                 <Border Grid.Row="1"
                     Background="{DynamicResource ApplicationBackgroundBrush}">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Visibility="{Binding HasNoTabs, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="Deskbridge" FontSize="20" FontWeight="SemiBold"
-                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                            HorizontalAlignment="Center" />
-                        <TextBlock Text="Ctrl+N to create a connection" FontSize="14"
-                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                            HorizontalAlignment="Center" Margin="0,8,0,0" />
-                    </StackPanel>
+                    <Grid x:Name="ViewportGrid">
+                        <!-- Empty-state placeholder (kept from Phase 2) -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="{Binding HasNoTabs, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="Deskbridge" FontSize="20" FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                HorizontalAlignment="Center" />
+                            <TextBlock Text="Ctrl+N to create a connection" FontSize="14"
+                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                HorizontalAlignment="Center" Margin="0,8,0,0" />
+                        </StackPanel>
+                        <!-- Snapshot Image for drag/resize (RDP-09, D-13). Collapsed by default;
+                             AirspaceSwapper toggles on WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE. -->
+                        <Image x:Name="ViewportSnapshot" Stretch="Fill" Visibility="Collapsed" />
+                        <!-- RDP host mounts here via code-behind ViewportGrid.Children.Add -->
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>
