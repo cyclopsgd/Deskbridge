@@ -76,6 +76,13 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             });
         }
 
+        _logger.LogInformation(
+            "[diag] Dispatching connect for {Hostname} — thread={ThreadId} apartment={Apartment} dispatcherAccess={HasAccess}",
+            evt.Connection.Hostname,
+            System.Environment.CurrentManagedThreadId,
+            Thread.CurrentThread.GetApartmentState(),
+            _dispatcher.CheckAccess());
+
         _logger.LogInformation("Connecting to {Hostname}", evt.Connection.Hostname);
         _ = RunConnectSafely(evt.Connection);
     }
@@ -87,15 +94,25 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     // and surfaced on the bus so UI and tests can observe failures.
     private async Task RunConnectSafely(ConnectionModel model)
     {
+        _logger.LogInformation(
+            "[diag] RunConnectSafely entry — thread={ThreadId} apartment={Apartment}",
+            System.Environment.CurrentManagedThreadId,
+            Thread.CurrentThread.GetApartmentState());
         try
         {
             await _connect.ConnectAsync(model);
         }
         catch (Exception ex)
         {
+            var safeMessage = ex is System.Runtime.InteropServices.COMException
+                                or System.Runtime.InteropServices.ExternalException
+                                or System.Security.Authentication.AuthenticationException
+                                or System.Net.WebException
+                ? "<redacted: sensitive exception type>"
+                : ex.Message;
             _logger.LogError(
-                "Connection pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8}",
-                model.Hostname, ex.GetType().Name, ex.HResult);
+                "Connection pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8} Message={Message}",
+                model.Hostname, ex.GetType().Name, ex.HResult, safeMessage);
             _bus.Publish(new ConnectionFailedEvent(
                 model,
                 $"{ex.GetType().Name} (HResult 0x{ex.HResult:X8})",
@@ -111,9 +128,15 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
         catch (Exception ex)
         {
+            var safeMessage = ex is System.Runtime.InteropServices.COMException
+                                or System.Runtime.InteropServices.ExternalException
+                                or System.Security.Authentication.AuthenticationException
+                                or System.Net.WebException
+                ? "<redacted: sensitive exception type>"
+                : ex.Message;
             _logger.LogError(
-                "Disconnect pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8}",
-                ctx.Connection.Hostname, ex.GetType().Name, ex.HResult);
+                "Disconnect pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8} Message={Message}",
+                ctx.Connection.Hostname, ex.GetType().Name, ex.HResult, safeMessage);
         }
     }
 
