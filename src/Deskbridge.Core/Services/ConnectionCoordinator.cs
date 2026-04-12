@@ -68,7 +68,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             _logger.LogInformation(
                 "Replacing active host for {OldHost} with new connection to {NewHost}",
                 active.Model.Hostname, evt.Connection.Hostname);
-            _ = _disconnect.DisconnectAsync(new DisconnectContext
+            _ = RunDisconnectSafely(new DisconnectContext
             {
                 Connection = active.Model,
                 Host = active.Host,
@@ -77,7 +77,44 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
 
         _logger.LogInformation("Connecting to {Hostname}", evt.Connection.Hostname);
-        _ = _connect.ConnectAsync(evt.Connection);
+        _ = RunConnectSafely(evt.Connection);
+    }
+
+    // Fire-and-forget wrappers. The pipelines throw on failure (no internal try/catch), and
+    // if the outer _ = _connect.ConnectAsync(...) pattern is used directly the exception is
+    // unobserved — no log, no ConnectionFailedEvent, diagnostic trail goes silent. These
+    // helpers guarantee every pipeline throw is logged (type + HResult only, per T-04-EXC)
+    // and surfaced on the bus so UI and tests can observe failures.
+    private async Task RunConnectSafely(ConnectionModel model)
+    {
+        try
+        {
+            await _connect.ConnectAsync(model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                "Connection pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8}",
+                model.Hostname, ex.GetType().Name, ex.HResult);
+            _bus.Publish(new ConnectionFailedEvent(
+                model,
+                $"{ex.GetType().Name} (HResult 0x{ex.HResult:X8})",
+                ex));
+        }
+    }
+
+    private async Task RunDisconnectSafely(DisconnectContext ctx)
+    {
+        try
+        {
+            await _disconnect.DisconnectAsync(ctx);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                "Disconnect pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8}",
+                ctx.Connection.Hostname, ex.GetType().Name, ex.HResult);
+        }
     }
 
     private void OnConnectionEstablished(ConnectionEstablishedEvent evt)
