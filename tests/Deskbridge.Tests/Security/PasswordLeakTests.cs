@@ -4,6 +4,7 @@ using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Core.Pipeline;
 using Deskbridge.Core.Pipeline.Stages;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
 

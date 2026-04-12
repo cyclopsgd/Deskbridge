@@ -3,5 +3,6 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="AdysTech.CredentialManager" />
     <PackageReference Include="Serilog" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 </Project>
