@@ -430,6 +430,46 @@ public ObservableCollection<OptionDisplay> Options { get; } = [
 
 ---
 
+## 8a. Explicit Height on WPF-UI controls can clip internal templates
+
+WPF-UI's default ComboBox / TextBox / Button templates use internal `ContentPresenter`s, `TextBlock`s, and visual states that have implicit minimum heights (~30-32px for ComboBox SelectionBoxItem, ~28px for TextBox). Setting an explicit `Height="24"` or similar small value silently clips the internal template, causing the rendered content to fall back to placeholder glyphs ("- - -", "-", dots) instead of the actual data.
+
+**Incorrect — clipped ComboBox:**
+```xml
+<ComboBox ItemsSource="{Binding Items}"
+          SelectedValue="{Binding CurrentValue}"
+          SelectedValuePath="Value"
+          Height="24" FontSize="14">   <!-- CLIPS template -->
+    <ComboBox.ItemTemplate>
+        <DataTemplate>
+            <TextBlock Text="{Binding DisplayName}" />
+        </DataTemplate>
+    </ComboBox.ItemTemplate>
+</ComboBox>
+```
+
+This renders correctly in the dropdown (items show "Inherit", "Own", "Prompt") but the collapsed `SelectionBoxItem` shows "- - -" / "-" placeholder glyphs.
+
+**Correct — let it size naturally, or use MinHeight:**
+```xml
+<ComboBox ItemsSource="{Binding Items}"
+          SelectedValue="{Binding CurrentValue}"
+          SelectedValuePath="Value"
+          MinHeight="32" FontSize="14">
+    <ComboBox.ItemTemplate>
+        <DataTemplate>
+            <TextBlock Text="{Binding DisplayName}" />
+        </DataTemplate>
+    </ComboBox.ItemTemplate>
+</ComboBox>
+```
+
+When laying out compact UI (like an inline property grid), use `Height="Auto"` on the row definition and let the ComboBox use its natural ~32px height. If you need a specific visual height, use `MinHeight` (not `Height`) so WPF-UI's template can expand if needed.
+
+**Same trap applies to:** `ui:TextBox`, `ui:Button` with content, `PasswordBox` (auto-restyled by WPF-UI). If a WPF-UI control shows broken rendering at small sizes, check for `Height="N"` and remove it or change to `MinHeight`.
+
+---
+
 ## 8. Theme overrides silently revert without the Changed event handler
 
 WPF-UI's theme system works by **swapping entire resource dictionaries** when `ApplicationThemeManager.Apply()` is called. This means any custom color overrides you placed in `App.xaml` resources are wiped on theme switch. The `SystemThemeWatcher.Watch()` method, called in most FluentWindow constructors, re-applies the system accent color by default, silently overriding any custom accent you set.
