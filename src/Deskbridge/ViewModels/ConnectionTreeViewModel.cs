@@ -9,6 +9,13 @@ using Wpf.Ui.Extensions;
 
 namespace Deskbridge.ViewModels;
 
+public enum DropPosition
+{
+    Before,
+    Into,
+    After
+}
+
 public partial class ConnectionTreeViewModel : ObservableObject
 {
     private readonly IConnectionStore _connectionStore;
@@ -99,6 +106,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 Id = group.Id,
                 Name = group.Name,
                 ParentGroupId = group.ParentGroupId,
+                SortOrder = group.SortOrder,
                 IsExpanded = true,
                 HasCredentials = _credentialService.HasGroupCredentials(group.Id)
             };
@@ -116,7 +124,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 Port = conn.Port,
                 Username = conn.Username,
                 CredentialMode = conn.CredentialMode,
-                GroupId = conn.GroupId
+                GroupId = conn.GroupId,
+                SortOrder = conn.SortOrder
             });
         }
 
@@ -172,9 +181,36 @@ public partial class ConnectionTreeViewModel : ObservableObject
             }
         }
 
+        // Sort siblings by SortOrder ascending (groups and connections sort alongside each other).
+        // Tiebreaker on Name keeps deterministic ordering when SortOrder values collide (e.g. zero-init).
+        SortSiblings(rootItems);
+        foreach (var kvp in groupMap)
+        {
+            SortSiblings(kvp.Value.Children);
+        }
+
         _fullTree = rootItems;
         RootItems = new ObservableCollection<TreeItemViewModel>(rootItems);
     }
+
+    private static void SortSiblings(ObservableCollection<TreeItemViewModel> siblings)
+    {
+        var sorted = siblings
+            .OrderBy(GetSortOrder)
+            .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        siblings.Clear();
+        foreach (var item in sorted)
+            siblings.Add(item);
+    }
+
+    private static int GetSortOrder(TreeItemViewModel item) => item switch
+    {
+        ConnectionTreeItemViewModel c => c.SortOrder,
+        GroupTreeItemViewModel g => g.SortOrder,
+        _ => 0
+    };
 
     // --- Search filter ---
 
@@ -636,6 +672,165 @@ public partial class ConnectionTreeViewModel : ObservableObject
                     _connectionStore.SaveGroup(group);
                 }
             }
+        }
+
+        RefreshTree();
+    }
+
+    /// <summary>
+    /// Reorder dragged items relative to a target. <paramref name="position"/> controls placement:
+    /// Before inserts dragged items just before target, After inserts after target, Into drops into
+    /// target (only valid if target is a group).
+    /// </summary>
+    public void ReorderItems(
+        IReadOnlyList<TreeItemViewModel> draggedItems,
+        TreeItemViewModel target,
+        DropPosition position)
+    {
+        if (draggedItems.Count == 0) return;
+
+        // "Into" a group is equivalent to the existing MoveToGroup semantics.
+        if (position == DropPosition.Into)
+        {
+            if (target is not GroupTreeItemViewModel targetGroup) return;
+
+            foreach (var item in draggedItems)
+            {
+                ApplyMove(item, targetGroup.Id, sortOrder: null);
+            }
+            RefreshTree();
+            return;
+        }
+
+        // Determine new parent (the group that the target sits inside) and compute SortOrder
+        // midway between target and its adjacent sibling based on drop position.
+        Guid? newParentId;
+        int targetSortOrder;
+        if (target is ConnectionTreeItemViewModel targetConn)
+        {
+            newParentId = targetConn.GroupId;
+            targetSortOrder = targetConn.SortOrder;
+        }
+        else if (target is GroupTreeItemViewModel targetGrp)
+        {
+            newParentId = targetGrp.ParentGroupId;
+            targetSortOrder = targetGrp.SortOrder;
+        }
+        else return;
+
+        // Collect all siblings at the target's level (connections + groups), sorted by SortOrder.
+        var siblings = GetSiblingsAtLevel(newParentId)
+            .OrderBy(s => s.sortOrder)
+            .ToList();
+
+        int targetIndex = siblings.FindIndex(s => s.id == target.Id);
+        if (targetIndex < 0) return;
+
+        int newSortOrder;
+        if (position == DropPosition.Before)
+        {
+            int prevSort = targetIndex > 0 ? siblings[targetIndex - 1].sortOrder : targetSortOrder - 20;
+            newSortOrder = (prevSort + targetSortOrder) / 2;
+            // Collision fallback: when neighbouring values are identical or only 1 apart,
+            // bump everything after so integer midpoints stay unique.
+            if (newSortOrder == prevSort || newSortOrder == targetSortOrder)
+            {
+                RebaseSortOrders(newParentId);
+                return;
+            }
+        }
+        else // After
+        {
+            int nextSort = targetIndex < siblings.Count - 1 ? siblings[targetIndex + 1].sortOrder : targetSortOrder + 20;
+            newSortOrder = (targetSortOrder + nextSort) / 2;
+            if (newSortOrder == targetSortOrder || newSortOrder == nextSort)
+            {
+                RebaseSortOrders(newParentId);
+                return;
+            }
+        }
+
+        foreach (var item in draggedItems)
+        {
+            ApplyMove(item, newParentId, newSortOrder);
+            // Bump slightly so multi-drag preserves order within the drop slot.
+            newSortOrder += 1;
+        }
+
+        RefreshTree();
+    }
+
+    private void ApplyMove(TreeItemViewModel item, Guid? newGroupId, int? sortOrder)
+    {
+        if (item is ConnectionTreeItemViewModel connItem)
+        {
+            var model = _connectionStore.GetById(connItem.Id);
+            if (model is null) return;
+            model.GroupId = newGroupId;
+            if (sortOrder is not null) model.SortOrder = sortOrder.Value;
+            model.UpdatedAt = DateTime.UtcNow;
+            _connectionStore.Save(model);
+        }
+        else if (item is GroupTreeItemViewModel groupItem)
+        {
+            // Prevent cycle: moving a group into itself or a descendant.
+            if (newGroupId is not null && IsDescendantOrSelf(groupItem, newGroupId.Value))
+                return;
+            var group = _connectionStore.GetGroupById(groupItem.Id);
+            if (group is null) return;
+            group.ParentGroupId = newGroupId;
+            if (sortOrder is not null) group.SortOrder = sortOrder.Value;
+            _connectionStore.SaveGroup(group);
+        }
+    }
+
+    private List<(Guid id, int sortOrder)> GetSiblingsAtLevel(Guid? parentId)
+    {
+        var result = new List<(Guid, int)>();
+        foreach (var g in _connectionStore.GetGroups())
+        {
+            if (g.ParentGroupId == parentId)
+                result.Add((g.Id, g.SortOrder));
+        }
+        foreach (var c in _connectionStore.GetAll())
+        {
+            if (c.GroupId == parentId)
+                result.Add((c.Id, c.SortOrder));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// When SortOrder integer midpoints collide (e.g. 5 and 6, midpoint = 5), rebuild the
+    /// sibling sequence using gaps of 10 so future inserts have room. This is a rare path
+    /// only triggered after many drags without rebase.
+    /// </summary>
+    private void RebaseSortOrders(Guid? parentId)
+    {
+        var siblings = GetSiblingsAtLevel(parentId)
+            .OrderBy(s => s.sortOrder)
+            .ToList();
+
+        int order = 10;
+        foreach (var (id, _) in siblings)
+        {
+            var g = _connectionStore.GetGroupById(id);
+            if (g is not null)
+            {
+                g.SortOrder = order;
+                _connectionStore.SaveGroup(g);
+            }
+            else
+            {
+                var c = _connectionStore.GetById(id);
+                if (c is not null)
+                {
+                    c.SortOrder = order;
+                    c.UpdatedAt = DateTime.UtcNow;
+                    _connectionStore.Save(c);
+                }
+            }
+            order += 10;
         }
 
         RefreshTree();

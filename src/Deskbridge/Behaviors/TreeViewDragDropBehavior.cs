@@ -34,6 +34,7 @@ public static class TreeViewDragDropBehavior
     private static bool _isDragPending;
     private static TreeViewItem? _currentDropTarget;
     private static DropInsertionAdorner? _currentAdorner;
+    private static DropPosition _currentDropPosition = DropPosition.Into;
 
     private static void OnEnableDragDropChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -154,20 +155,54 @@ public static class TreeViewDragDropBehavior
             && draggedForDescendantCheck.OfType<GroupTreeItemViewModel>().Any(g => IsDescendantOf(targetGroup, g)))
             return;
 
+        // Compute drop position within the target TreeViewItem header (not full content
+        // area — content includes nested children and would make the "middle" cover the
+        // whole subtree). The header bounds come from the TreeViewItem's first visual
+        // child row; we fall back to ActualHeight when unavailable.
+        var headerHeight = GetHeaderHeight(treeViewItem);
+        var pos = e.GetPosition(treeViewItem);
+        var third = headerHeight / 3.0;
+
+        DropPosition dropPosition;
         if (targetVm is GroupTreeItemViewModel)
         {
-            // Drop ON group: highlight with SubtleFillColorSecondaryBrush via adorner
-            e.Effects = DragDropEffects.Move;
-            ShowGroupHighlight(treeViewItem);
+            // Groups can accept all three positions.
+            if (pos.Y < third) dropPosition = DropPosition.Before;
+            else if (pos.Y > headerHeight - third) dropPosition = DropPosition.After;
+            else dropPosition = DropPosition.Into;
         }
         else
         {
-            // Drop near a connection: show insertion line
-            e.Effects = DragDropEffects.Move;
-            ShowInsertionLine(treeViewItem);
+            // Connections: only top-half / bottom-half (no "into").
+            dropPosition = pos.Y < headerHeight / 2.0 ? DropPosition.Before : DropPosition.After;
         }
 
+        e.Effects = DragDropEffects.Move;
+        ShowDropIndicator(treeViewItem, dropPosition);
+        _currentDropPosition = dropPosition;
+
         e.Handled = true;
+    }
+
+    private static double GetHeaderHeight(TreeViewItem item)
+    {
+        // A TreeViewItem's visual tree is roughly: Grid > (ToggleButton, ContentPresenter, ItemsPresenter).
+        // We want just the header row height so the "middle" band isn't stretched across
+        // all expanded descendants. When we can't find it, fall back to a sensible min.
+        if (VisualTreeHelper.GetChildrenCount(item) > 0
+            && VisualTreeHelper.GetChild(item, 0) is FrameworkElement grid)
+        {
+            // Header is typically the first row; its children occupy rowSpan 0.
+            // Simplest heuristic: use the content presenter's ActualHeight if present.
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(grid); i++)
+            {
+                if (VisualTreeHelper.GetChild(grid, i) is ContentPresenter cp && cp.ActualHeight > 0)
+                    return cp.ActualHeight;
+            }
+        }
+        // Fallback: capped to avoid misclassifying top/bottom thirds when the subtree
+        // is expanded and ActualHeight balloons.
+        return Math.Min(item.ActualHeight, 32.0);
     }
 
     private static void TreeView_Drop(object sender, DragEventArgs e)
@@ -178,26 +213,20 @@ public static class TreeViewDragDropBehavior
             || draggedItems.Count == 0) return;
 
         var dropTarget = e.OriginalSource is DependencyObject ds ? FindAncestor<TreeViewItem>(ds) : null;
-        Guid? targetGroupId = null;
-
-        if (dropTarget?.DataContext is GroupTreeItemViewModel group)
-        {
-            // Prevent dropping a group onto its own descendant (circular reference)
-            if (draggedItems.OfType<GroupTreeItemViewModel>().Any(g => IsDescendantOf(group, g)))
-                return;
-            targetGroupId = group.Id;
-        }
-        else if (dropTarget?.DataContext is ConnectionTreeItemViewModel conn)
-        {
-            // Drop on a connection moves to the same group as the target connection
-            targetGroupId = conn.GroupId;
-        }
+        if (dropTarget?.DataContext is not TreeItemViewModel targetVm) return;
 
         if (sender is not TreeView treeView) return;
         if (treeView.DataContext is not ConnectionTreeViewModel viewModel) return;
 
-        // Execute the move via the ViewModel's MoveToGroup command
-        viewModel.MoveToGroupCommand.Execute(targetGroupId);
+        // Prevent dropping a group onto / next to its own descendant (circular reference)
+        if (targetVm is GroupTreeItemViewModel tg
+            && draggedItems.OfType<GroupTreeItemViewModel>().Any(g => IsDescendantOf(tg, g)))
+        {
+            ClearDropIndicators();
+            return;
+        }
+
+        viewModel.ReorderItems(draggedItems, targetVm, _currentDropPosition);
 
         ClearDropIndicators();
         e.Handled = true;
@@ -220,9 +249,11 @@ public static class TreeViewDragDropBehavior
 
     // --- Visual indicators ---
 
-    private static void ShowGroupHighlight(TreeViewItem item)
+    private static void ShowDropIndicator(TreeViewItem item, DropPosition position)
     {
-        if (_currentDropTarget == item) return;
+        // Replace the adorner when the target changes OR the position changes on the
+        // same target (e.g. user moves from middle to top third of the same row).
+        if (_currentDropTarget == item && _currentAdorner?.Position == position) return;
 
         ClearDropIndicators();
         _currentDropTarget = item;
@@ -230,21 +261,7 @@ public static class TreeViewDragDropBehavior
         var adornerLayer = AdornerLayer.GetAdornerLayer(item);
         if (adornerLayer is null) return;
 
-        _currentAdorner = new DropInsertionAdorner(item, isGroupHighlight: true);
-        adornerLayer.Add(_currentAdorner);
-    }
-
-    private static void ShowInsertionLine(TreeViewItem item)
-    {
-        if (_currentDropTarget == item) return;
-
-        ClearDropIndicators();
-        _currentDropTarget = item;
-
-        var adornerLayer = AdornerLayer.GetAdornerLayer(item);
-        if (adornerLayer is null) return;
-
-        _currentAdorner = new DropInsertionAdorner(item, isGroupHighlight: false);
+        _currentAdorner = new DropInsertionAdorner(item, position, GetHeaderHeight(item));
         adornerLayer.Add(_currentAdorner);
     }
 
@@ -287,39 +304,43 @@ public static class TreeViewDragDropBehavior
 }
 
 /// <summary>
-/// Adorner that renders either a group drop highlight or a 2px insertion line.
+/// Adorner that renders a drop indicator in one of three positions:
+/// Before (line at top), Into (row highlight), After (line at bottom).
 /// </summary>
 internal sealed class DropInsertionAdorner : Adorner
 {
-    private readonly bool _isGroupHighlight;
+    private readonly double _headerHeight;
 
-    public DropInsertionAdorner(UIElement adornedElement, bool isGroupHighlight)
+    public DropPosition Position { get; }
+
+    public DropInsertionAdorner(UIElement adornedElement, DropPosition position, double headerHeight)
         : base(adornedElement)
     {
-        _isGroupHighlight = isGroupHighlight;
+        Position = position;
+        _headerHeight = headerHeight;
         IsHitTestVisible = false;
     }
 
     protected override void OnRender(DrawingContext drawingContext)
     {
         var size = AdornedElement.RenderSize;
+        var width = size.Width;
 
-        if (_isGroupHighlight)
+        if (Position == DropPosition.Into)
         {
-            // Highlight entire group row with semi-transparent accent
             var brush = TryFindBrush("SubtleFillColorSecondaryBrush")
                 ?? new SolidColorBrush(Color.FromArgb(0x30, 0x00, 0x7A, 0xCC));
-
-            drawingContext.DrawRectangle(brush, null, new Rect(0, 0, size.Width, size.Height));
+            // Highlight just the header row, not the full (expanded) subtree.
+            drawingContext.DrawRectangle(brush, null, new Rect(0, 0, width, _headerHeight));
         }
         else
         {
-            // 2px insertion line at bottom in SystemAccentColorPrimaryBrush
             var brush = TryFindBrush("SystemAccentColorPrimaryBrush")
                 ?? new SolidColorBrush(Color.FromRgb(0x00, 0x7A, 0xCC));
 
             var pen = new Pen(brush, 2);
-            drawingContext.DrawLine(pen, new Point(0, size.Height), new Point(size.Width, size.Height));
+            double y = Position == DropPosition.Before ? 0 : _headerHeight;
+            drawingContext.DrawLine(pen, new Point(0, y), new Point(width, y));
         }
     }
 
