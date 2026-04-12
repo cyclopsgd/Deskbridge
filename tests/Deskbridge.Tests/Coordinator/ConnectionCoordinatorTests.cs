@@ -158,6 +158,52 @@ public sealed class ConnectionCoordinatorTests
         });
     }
 
+    /// <summary>
+    /// Regression guard: <see cref="ConnectionFailedEvent"/> for the active host must
+    /// dispose the host and raise <see cref="IConnectionCoordinator.HostUnmounted"/>.
+    /// Before this subscription existed, the pipeline published ConnectionFailedEvent
+    /// but no one logged or cleaned up — users saw a "silent hang" with no diagnostic trail.
+    /// </summary>
+    [Fact]
+    public void ConnectionFailedEvent_ForActiveHost_DisposesAndRaisesHostUnmounted()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            Action<HostCreatedEvent>? hostCreatedHandler = null;
+            Action<ConnectionFailedEvent>? failedHandler = null;
+            var bus = Substitute.For<IEventBus>();
+            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<HostCreatedEvent>>()))
+                .Do(ci => hostCreatedHandler = ci.Arg<Action<HostCreatedEvent>>());
+            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<ConnectionFailedEvent>>()))
+                .Do(ci => failedHandler = ci.Arg<Action<ConnectionFailedEvent>>());
+            var connect = Substitute.For<IConnectionPipeline>();
+            var disconnect = Substitute.For<IDisconnectPipeline>();
+            var dispatcher = Dispatcher.CurrentDispatcher;
+
+            using var coord = new ConnectionCoordinator(
+                bus, connect, disconnect, NullLogger<ConnectionCoordinator>.Instance, dispatcher);
+
+            IProtocolHost? unmountedHost = null;
+            coord.HostUnmounted += (_, host) => unmountedHost = host;
+
+            var model = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
+            var host = Substitute.For<IProtocolHost>();
+
+            // Seed active host via HostCreatedEvent, then publish matching ConnectionFailedEvent.
+            hostCreatedHandler.Should().NotBeNull();
+            failedHandler.Should().NotBeNull();
+            hostCreatedHandler!(new HostCreatedEvent(model, host));
+            coord.ActiveHost.Should().BeSameAs(host);
+
+            failedHandler!(new ConnectionFailedEvent(model, "self-rejected (1800)", null));
+
+            host.Received().Dispose();
+            unmountedHost.Should().BeSameAs(host);
+            coord.ActiveHost.Should().BeNull();
+        });
+    }
+
     [Fact]
     public void DisposesAndReplaces_ActiveHost_OnSecondConnectionRequestedEvent()
     {

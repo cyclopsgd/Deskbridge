@@ -43,6 +43,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _bus.Subscribe<ConnectionRequestedEvent>(this, OnConnectionRequested);
         _bus.Subscribe<HostCreatedEvent>(this, OnHostCreated);
         _bus.Subscribe<ConnectionEstablishedEvent>(this, OnConnectionEstablished);
+        _bus.Subscribe<ConnectionFailedEvent>(this, OnConnectionFailed);
         _bus.Subscribe<ConnectionClosedEvent>(this, OnConnectionClosed);
     }
 
@@ -77,13 +78,6 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             });
         }
 
-        _logger.LogInformation(
-            "[diag] Dispatching connect for {Hostname} — thread={ThreadId} apartment={Apartment} dispatcherAccess={HasAccess}",
-            evt.Connection.Hostname,
-            System.Environment.CurrentManagedThreadId,
-            Thread.CurrentThread.GetApartmentState(),
-            _dispatcher.CheckAccess());
-
         _logger.LogInformation("Connecting to {Hostname}", evt.Connection.Hostname);
         _ = RunConnectSafely(evt.Connection);
     }
@@ -95,10 +89,6 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     // and surfaced on the bus so UI and tests can observe failures.
     private async Task RunConnectSafely(ConnectionModel model)
     {
-        _logger.LogInformation(
-            "[diag] RunConnectSafely entry — thread={ThreadId} apartment={Apartment}",
-            System.Environment.CurrentManagedThreadId,
-            Thread.CurrentThread.GetApartmentState());
         try
         {
             await _connect.ConnectAsync(model);
@@ -195,6 +185,44 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             "Connection established for {Hostname}", evt.Connection.Hostname);
     }
 
+    /// <summary>
+    /// Surfaces pipeline failures to the log and cleans up the active host. Before this
+    /// handler existed, <c>ConnectionFailedEvent</c> was published by the pipeline but no
+    /// subscriber logged it, producing the "silent hang" symptom where the UI showed a
+    /// spinner but no diagnostic trail existed. Single-host policy (Open Question #2):
+    /// if the failure is for our active host, dispose + raise <see cref="HostUnmounted"/>
+    /// so MainWindow unparents the WFH.
+    /// </summary>
+    private void OnConnectionFailed(ConnectionFailedEvent evt)
+    {
+        if (_disposed) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            _dispatcher.InvokeAsync(() => OnConnectionFailed(evt));
+            return;
+        }
+
+        // Reason is already sanitized by DisconnectReasonClassifier (or "<Type> (HResult 0x...)"
+        // from RunConnectSafely/ConnectStage) — safe to log.
+        _logger.LogWarning(
+            "Connection to {Hostname} failed: {Reason}",
+            evt.Connection.Hostname, evt.Reason);
+
+        if (_active is { } active && active.Model.Id == evt.Connection.Id)
+        {
+            try { active.Host.Dispose(); }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    "Dispose after failed connect threw: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
+            var host = active.Host;
+            _active = null;
+            HostUnmounted?.Invoke(this, host);
+        }
+    }
+
     private void OnConnectionClosed(ConnectionClosedEvent evt)
     {
         if (_disposed) return;
@@ -220,6 +248,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _bus.Unsubscribe<ConnectionRequestedEvent>(this);
         _bus.Unsubscribe<HostCreatedEvent>(this);
         _bus.Unsubscribe<ConnectionEstablishedEvent>(this);
+        _bus.Unsubscribe<ConnectionFailedEvent>(this);
         _bus.Unsubscribe<ConnectionClosedEvent>(this);
 
         if (_active is { } active)
