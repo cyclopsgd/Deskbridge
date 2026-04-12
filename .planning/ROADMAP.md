@@ -85,12 +85,12 @@ Plans:
   3. When a connection drops, a reconnection overlay appears offering "Reconnect" (with exponential backoff) and "Close"
   4. A COM error in one RDP session does not crash the application or affect other sessions
   5. During window drag/resize, the viewport shows a smooth bitmap snapshot instead of flickering
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
-- [ ] 04-03: TBD
+- [ ] 04-01-PLAN.md -- Smoke-test prototype: RdpSmokeHost + AxSiting helper + 4 gate tests (GDI, IMsTscNonScriptable, siting order, COM error isolation)
+- [ ] 04-02-PLAN.md -- Production RdpHostControl (IProtocolHost + WFH leak fixes) + 7 pipeline stages + ConnectionCoordinator + AirspaceSwapper + viewport mount
+- [ ] 04-03-PLAN.md -- Reconnect flow: DisconnectReasonClassifier + RdpReconnectCoordinator (2/4/8/16/cap-30 backoff, 20-attempt cap) + ReconnectOverlay + auth-failure skip
 
 ### Phase 5: Tab Management
 **Goal**: Users can work with multiple simultaneous RDP sessions via a tabbed interface, switching between them efficiently with keyboard or mouse
@@ -155,7 +155,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Foundation | 0/3 | Planning complete | - |
 | 2. Application Shell | 0/2 | Planning complete | - |
 | 3. Connection Management | 0/4 | Planning complete | - |
-| 4. RDP Integration | 0/3 | Not started | - |
+| 4. RDP Integration | 0/3 | Planning complete | - |
 | 5. Tab Management | 0/2 | Not started | - |
 | 6. Cross-Cutting Features | 0/4 | Not started | - |
 | 7. Update & Migration | 0/3 | Not started | - |
