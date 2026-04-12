@@ -17,4 +17,6 @@ public partial class ConnectionTreeItemViewModel : TreeItemViewModel
     public partial CredentialMode CredentialMode { get; set; } = CredentialMode.Inherit;
 
     public Guid? GroupId { get; set; }
+
+    public int SortOrder { get; set; }
 }

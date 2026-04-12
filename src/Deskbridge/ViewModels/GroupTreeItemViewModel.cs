@@ -15,6 +15,8 @@ public partial class GroupTreeItemViewModel : TreeItemViewModel
 
     public Guid? ParentGroupId { get; set; }
 
+    public int SortOrder { get; set; }
+
     public int ConnectionCount => CountConnections(Children);
 
     private static int CountConnections(IEnumerable<TreeItemViewModel> items)

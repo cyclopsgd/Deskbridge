@@ -10,6 +10,7 @@ public class ConnectionModel
     public string? Domain { get; set; }
     public Protocol Protocol { get; set; } = Protocol.Rdp;
     public Guid? GroupId { get; set; }
+    public int SortOrder { get; set; }
     public string? Notes { get; set; }
     public List<string> Tags { get; set; } = [];
     public CredentialMode CredentialMode { get; set; } = CredentialMode.Inherit;
