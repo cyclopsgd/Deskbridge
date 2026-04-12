@@ -2,21 +2,19 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms.Integration;
+using AxMSTSCLib;
+using Deskbridge.Protocols.Rdp;
 using Deskbridge.Tests.Fixtures;
 using Xunit;
 
 namespace Deskbridge.Tests.Rdp;
 
 /// <summary>
-/// Pure-unit tests for <c>AxSiting.SiteAndConfigure</c> (added in Task 1.1).
+/// Pure-unit tests for <see cref="AxSiting.SiteAndConfigure"/>.
 ///
 /// No live RDP required. These tests validate the siting-order guard that both
 /// the Plan 04-01 prototype (<c>RdpSmokeHost</c>) and the Plan 04-02 production
 /// <c>RdpHostControl</c> consume. See RDP-ACTIVEX-PITFALLS §1.
-///
-/// The scaffold (Task 0.1) marks tests Skip until Task 1.1 adds <c>AxSiting</c>
-/// and references to <c>AxMSTSCLib.AxMsRdpClient9NotSafeForScripting</c>; Task 1.1
-/// removes the Skip and replaces <c>PLACEHOLDER</c> with the real calls.
 /// </summary>
 [Collection("RDP-STA")]
 public class SitingGuardTests
@@ -28,7 +26,7 @@ public class SitingGuardTests
         _fixture = fixture;
     }
 
-    [Fact(Skip = "AxSiting not yet implemented — Task 1.1 enables this test")]
+    [Fact]
     public void Throws_When_HandleIsZero_AfterAddingToUnrootedPanel()
     {
         Skip.IfNot(_fixture.IsSta(), "STA required");
@@ -37,21 +35,21 @@ public class SitingGuardTests
         // the AxHost's Handle will stay IntPtr.Zero even after being added.
         var viewport = new Grid();
         var host = new WindowsFormsHost();
-        // var rdp = new AxMsRdpClient9NotSafeForScripting();   // Task 1.1 uncomments
+        var rdp = new AxMsRdpClient9NotSafeForScripting();
 
-        // Act + Assert — Task 1.1 replaces this with:
-        //   var ex = Assert.Throws<InvalidOperationException>(() =>
-        //       AxSiting.SiteAndConfigure(viewport, host, rdp, r => r.Server = "ignored"));
-        //   Assert.Contains("not sited", ex.Message);
-        _ = viewport;
-        _ = host;
+        // Act + Assert
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            AxSiting.SiteAndConfigure(viewport, host, rdp, r => r.Server = "ignored"));
 
-        // Cleanup
+        Assert.Contains("not sited", ex.Message);
+
+        // Cleanup — do not let the AxHost linger rooted in the test host process.
         try { host.Child = null; } catch { }
+        try { rdp.Dispose(); } catch { }
         try { host.Dispose(); } catch { }
     }
 
-    [Fact(Skip = "AxSiting not yet implemented — Task 1.1 enables this test")]
+    [Fact]
     public void DoesNotThrow_When_HandleIsNonZero_AndInvokesConfigureOnce()
     {
         Skip.IfNot(_fixture.IsSta(), "STA required");
@@ -69,22 +67,27 @@ public class SitingGuardTests
         };
         var viewport = new Grid();
         window.Content = viewport;
+
+        // Realize the window without displaying it so the HwndSource is created.
         window.Show();
 
         try
         {
             var host = new WindowsFormsHost();
-            // var rdp = new AxMsRdpClient9NotSafeForScripting();  // Task 1.1 uncomments
+            var rdp = new AxMsRdpClient9NotSafeForScripting();
             int configureCallCount = 0;
 
-            // Act — Task 1.1 replaces with:
-            //   AxSiting.SiteAndConfigure(viewport, host, rdp, _ => configureCallCount++);
-            //   Assert.Equal(1, configureCallCount);
-            //   Assert.NotEqual(IntPtr.Zero, rdp.Handle);
-            _ = host;
-            _ = configureCallCount;
+            // Act
+            AxSiting.SiteAndConfigure(viewport, host, rdp, _ => configureCallCount++);
+
+            // Assert
+            Assert.Equal(1, configureCallCount);
+            Assert.NotEqual(IntPtr.Zero, rdp.Handle);
 
             // Cleanup
+            try { viewport.Children.Remove(host); } catch { }
+            try { host.Child = null; } catch { }
+            try { rdp.Dispose(); } catch { }
             try { host.Dispose(); } catch { }
         }
         finally
