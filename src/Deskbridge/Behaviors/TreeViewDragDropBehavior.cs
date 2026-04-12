@@ -123,7 +123,14 @@ public static class TreeViewDragDropBehavior
 
         if (treeView.DataContext is not ConnectionTreeViewModel viewModel || viewModel.SelectedItems.Count == 0) return;
 
-        // Create data object with selected items (in-process only, no BinaryFormatter)
+        // Tell the multi-select behavior a drag began — otherwise its deferred
+        // "collapse to single-select" would fire on MouseUp and wipe the multi-drag
+        // selection state visually after the drop completes.
+        TreeViewMultiSelectBehavior.NotifyDragStarted();
+
+        // Create data object with selected items (in-process only, no BinaryFormatter).
+        // Snapshot SelectedItems so the drag carries the full multi-selection even
+        // if later handlers mutate the collection.
         var dragData = new DataObject();
         var selectedItems = viewModel.SelectedItems.ToList();
         dragData.SetData(DragDataFormat, selectedItems);
