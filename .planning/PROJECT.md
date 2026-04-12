@@ -15,9 +15,9 @@ Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle managem
 - ✓ Solution scaffold with shared build config, app manifest, and interop DLLs positioned — Phase 1
 - ✓ Core services: DI container, event bus, notification service, connection pipeline interfaces — Phase 1
 - ✓ WPF shell: FluentWindow, dark theme, icon rail, slide-out panel, tab bar, status bar, viewport layout — Phase 2
+- ✓ Connection management: JSON persistence, TreeView, connection editor, credential storage with inheritance — Phase 3
 
 ### Active
-- [ ] Connection management: JSON persistence, TreeView, connection editor, credential storage with inheritance
 - [ ] RDP integration: ActiveX wrapper, siting, disposal, connect/disconnect lifecycle via pipeline
 - [ ] Tab management: open/close/switch, active-only rendering, disposal on close
 - [ ] Command palette and keyboard shortcuts
@@ -94,4 +94,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after Phase 2 completion*
+*Last updated: 2026-04-12 after Phase 3 completion*
