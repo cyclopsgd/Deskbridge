@@ -343,6 +343,14 @@ public partial class ConnectionTreeControl : UserControl
         }
     }
 
+    private void QuickPassword_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.PasswordBox pb)
+        {
+            _viewModel.SaveQuickPassword(pb.Password);
+        }
+    }
+
     private void GroupQuickProperty_LostFocus(object sender, RoutedEventArgs e)
     {
         if (_viewModel.PrimarySelectedItem is GroupTreeItemViewModel groupVm)

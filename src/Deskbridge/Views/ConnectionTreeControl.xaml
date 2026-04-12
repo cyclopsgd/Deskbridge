@@ -403,9 +403,10 @@
                              cleanly to zero height when hidden in Prompt mode.
                         -->
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="28" />
-                            <RowDefinition Height="28" />
-                            <RowDefinition Height="28" />
+                            <RowDefinition Height="Auto" MinHeight="28" />
+                            <RowDefinition Height="Auto" MinHeight="28" />
+                            <RowDefinition Height="Auto" MinHeight="28" />
+                            <RowDefinition Height="Auto" MinHeight="32" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -440,7 +441,7 @@
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="Credentials"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Height="28" />
+                                   VerticalAlignment="Center" />
                         <!--
                              Explicit ItemTemplate is required so SelectionBoxItem
                              renders via the same template as dropdown items. With
@@ -452,7 +453,8 @@
                                   ItemsSource="{Binding CredentialModes}"
                                   SelectedValue="{Binding SelectedItemCredentialMode}"
                                   SelectedValuePath="Value"
-                                  FontSize="14" Height="28"
+                                  FontSize="14" MinHeight="32"
+                                  Margin="0,2"
                                   x:Name="CredentialModeCombo">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -471,7 +473,7 @@
                         -->
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="Username"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Height="28"
+                                   VerticalAlignment="Center"
                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}" />
                         <TextBox Grid.Row="4" Grid.Column="1"
                                  Text="{Binding PrimarySelectedItem.Username, UpdateSourceTrigger=LostFocus}"
@@ -481,11 +483,21 @@
                                  IsEnabled="{Binding IsQuickCredentialFieldsEnabled}"
                                  x:Name="UsernameTextBox" LostFocus="QuickProperty_LostFocus" />
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Domain"
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Password"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Height="28"
+                                   VerticalAlignment="Center"
+                                   Visibility="{Binding IsQuickPasswordVisible, Converter={StaticResource BoolToVisibility}}" />
+                        <PasswordBox Grid.Row="5" Grid.Column="1"
+                                     Padding="4,2" FontSize="14"
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                     Visibility="{Binding IsQuickPasswordVisible, Converter={StaticResource BoolToVisibility}}"
+                                     x:Name="QuickPasswordBox" LostFocus="QuickPassword_LostFocus" />
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Domain"
+                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center"
                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBox Grid.Row="5" Grid.Column="1"
+                        <TextBox Grid.Row="6" Grid.Column="1"
                                  Text="{Binding PrimarySelectedItem.Domain, UpdateSourceTrigger=LostFocus}"
                                  Height="24" Padding="4,2" FontSize="14"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
