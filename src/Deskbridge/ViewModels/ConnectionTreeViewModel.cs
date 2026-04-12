@@ -60,6 +60,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SelectedItemCredentialMode))]
     [NotifyPropertyChangedFor(nameof(IsQuickCredentialFieldsVisible))]
     [NotifyPropertyChangedFor(nameof(IsQuickCredentialFieldsEnabled))]
+    [NotifyPropertyChangedFor(nameof(IsQuickPasswordVisible))]
     public partial TreeItemViewModel? PrimarySelectedItem { get; set; }
 
     /// <summary>
@@ -82,9 +83,18 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsQuickCredentialFieldsVisible));
                 OnPropertyChanged(nameof(IsQuickCredentialFieldsEnabled));
+                OnPropertyChanged(nameof(IsQuickPasswordVisible));
             }
         }
     }
+
+    /// <summary>
+    /// True only when CredentialMode is Own — password field in quick properties
+    /// is only shown in Own mode since showing empty/disabled password fields in
+    /// Inherit/Prompt modes is confusing.
+    /// </summary>
+    public bool IsQuickPasswordVisible =>
+        SelectedItemCredentialMode == CredentialMode.Own;
 
     /// <summary>
     /// True when the current selection's CredentialMode is Inherit or Own (i.e.
@@ -325,6 +335,27 @@ public partial class ConnectionTreeViewModel : ObservableObject
         model.CredentialMode = connVm.CredentialMode;
         model.UpdatedAt = DateTime.UtcNow;
         _connectionStore.Save(model);
+    }
+
+    /// <summary>
+    /// Persist a password typed into the quick properties PasswordBox. Only
+    /// applies when the selection is a connection in Own mode; skips empty
+    /// passwords so a stray LostFocus doesn't overwrite stored credentials.
+    /// </summary>
+    public void SaveQuickPassword(string password)
+    {
+        if (string.IsNullOrEmpty(password)) return;
+        if (PrimarySelectedItem is not ConnectionTreeItemViewModel connVm) return;
+        if (connVm.CredentialMode != CredentialMode.Own) return;
+
+        var model = _connectionStore.GetById(connVm.Id);
+        if (model is null) return;
+
+        _credentialService.StoreForConnection(
+            model,
+            connVm.Username ?? string.Empty,
+            connVm.Domain,
+            password);
     }
 
     public void SaveGroupFromQuickEdit(GroupTreeItemViewModel groupVm)
