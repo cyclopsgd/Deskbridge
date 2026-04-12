@@ -12,7 +12,17 @@ namespace Deskbridge.Behaviors;
 /// </summary>
 public static class TreeViewDragDropBehavior
 {
-    private const double DragThreshold = 4.0;
+    // Drag threshold -- 3x the system default (12px) to avoid accidental drags
+    // from simple clicks. Computed once on first access using
+    // SystemParameters.MinimumHorizontalDragDistance / MinimumVerticalDragDistance
+    // (typically 4px each) so the behavior scales with user accessibility
+    // settings.
+    private const double DragThresholdMultiplier = 3.0;
+    private static readonly double DragThresholdX =
+        SystemParameters.MinimumHorizontalDragDistance * DragThresholdMultiplier;
+    private static readonly double DragThresholdY =
+        SystemParameters.MinimumVerticalDragDistance * DragThresholdMultiplier;
+
     private const string DragDataFormat = "DeskbridgeTreeItems";
 
     // Attached property: EnableDragDrop
@@ -103,8 +113,10 @@ public static class TreeViewDragDropBehavior
         var currentPos = e.GetPosition(treeView);
         var diff = currentPos - _mouseStartPoint;
 
-        // Check drag threshold (4px)
-        if (Math.Abs(diff.X) < DragThreshold && Math.Abs(diff.Y) < DragThreshold)
+        // Require movement past the 3x-system drag threshold before committing
+        // to a drag-drop. This prevents a simple click from initiating drag on
+        // the way to release.
+        if (Math.Abs(diff.X) < DragThresholdX && Math.Abs(diff.Y) < DragThresholdY)
             return;
 
         _isDragPending = false;
