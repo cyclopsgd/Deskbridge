@@ -57,6 +57,11 @@ public sealed class ConnectStage : IConnectionPipelineStage
         }
         catch (RdpConnectFailedException ex)
         {
+            // HumanReason is sanitized classifier output (see DisconnectReasonClassifier) —
+            // safe to log alongside the raw discReason. No credential material leaks.
+            _logger.LogWarning(
+                "Connect failed for {Hostname}: RdpConnectFailedException discReason={DiscReason} reason={Reason}",
+                ctx.Connection.Hostname, ex.DiscReason, ex.HumanReason);
             _bus.Publish(new ConnectionFailedEvent(ctx.Connection, ex.HumanReason, ex));
             return new PipelineResult(false, ex.HumanReason);
         }
