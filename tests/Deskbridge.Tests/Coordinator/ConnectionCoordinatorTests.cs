@@ -39,6 +39,29 @@ public sealed class ConnectionCoordinatorTests
         });
     }
 
+    /// <summary>
+    /// Siting-order regression guard: coordinator MUST subscribe to
+    /// <see cref="HostCreatedEvent"/> on construction so it can raise HostMounted
+    /// BEFORE ConnectStage runs (RDP-ACTIVEX-PITFALLS §1).
+    /// </summary>
+    [Fact]
+    public void Subscribes_ToHostCreatedEvent_OnConstruction()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            var bus = Substitute.For<IEventBus>();
+            var connect = Substitute.For<IConnectionPipeline>();
+            var disconnect = Substitute.For<IDisconnectPipeline>();
+
+            using var coord = new ConnectionCoordinator(
+                bus, connect, disconnect, NullLogger<ConnectionCoordinator>.Instance);
+
+            bus.Received().Subscribe(
+                Arg.Any<object>(), Arg.Any<Action<HostCreatedEvent>>());
+        });
+    }
+
     [Fact]
     public void Marshals_ToDispatcher_WhenPublished_FromWorkerThread()
     {
@@ -97,6 +120,44 @@ public sealed class ConnectionCoordinatorTests
         });
     }
 
+    /// <summary>
+    /// Siting-order regression guard: <c>HostCreatedEvent</c> from the pipeline must
+    /// (a) populate <see cref="ConnectionCoordinator.ActiveHost"/> and
+    /// (b) raise <see cref="IConnectionCoordinator.HostMounted"/> — BEFORE
+    /// <c>ConnectStage</c> runs. MainWindow relies on this to mount the WFH and force
+    /// a layout pass so AxHost.Handle is realized in time for <c>ConnectAsync</c>
+    /// (RDP-ACTIVEX-PITFALLS §1).
+    /// </summary>
+    [Fact]
+    public void HostCreatedEvent_SetsActiveHost_AndRaisesHostMounted()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            Action<HostCreatedEvent>? hostCreatedHandler = null;
+            var bus = Substitute.For<IEventBus>();
+            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<HostCreatedEvent>>()))
+                .Do(ci => hostCreatedHandler = ci.Arg<Action<HostCreatedEvent>>());
+            var connect = Substitute.For<IConnectionPipeline>();
+            var disconnect = Substitute.For<IDisconnectPipeline>();
+            var dispatcher = Dispatcher.CurrentDispatcher;
+
+            using var coord = new ConnectionCoordinator(
+                bus, connect, disconnect, NullLogger<ConnectionCoordinator>.Instance, dispatcher);
+
+            IProtocolHost? mountedHost = null;
+            coord.HostMounted += (_, host) => mountedHost = host;
+
+            var model = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
+            var host = Substitute.For<IProtocolHost>();
+            hostCreatedHandler.Should().NotBeNull();
+            hostCreatedHandler!(new HostCreatedEvent(model, host));
+
+            coord.ActiveHost.Should().BeSameAs(host);
+            mountedHost.Should().BeSameAs(host);
+        });
+    }
+
     [Fact]
     public void DisposesAndReplaces_ActiveHost_OnSecondConnectionRequestedEvent()
     {
@@ -104,12 +165,12 @@ public sealed class ConnectionCoordinatorTests
         StaRunner.Run(() =>
         {
             Action<ConnectionRequestedEvent>? reqHandler = null;
-            Action<ConnectionEstablishedEvent>? estHandler = null;
+            Action<HostCreatedEvent>? hostCreatedHandler = null;
             var bus = Substitute.For<IEventBus>();
             bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<ConnectionRequestedEvent>>()))
                 .Do(ci => reqHandler = ci.Arg<Action<ConnectionRequestedEvent>>());
-            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<ConnectionEstablishedEvent>>()))
-                .Do(ci => estHandler = ci.Arg<Action<ConnectionEstablishedEvent>>());
+            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<HostCreatedEvent>>()))
+                .Do(ci => hostCreatedHandler = ci.Arg<Action<HostCreatedEvent>>());
             var connect = Substitute.For<IConnectionPipeline>();
             connect.ConnectAsync(Arg.Any<ConnectionModel>()).Returns(Task.FromResult(new PipelineResult(true)));
             var disconnect = Substitute.For<IDisconnectPipeline>();
@@ -123,9 +184,9 @@ public sealed class ConnectionCoordinatorTests
             var second = new ConnectionModel { Hostname = "second", Protocol = Protocol.Rdp };
             var firstHost = Substitute.For<IProtocolHost>();
 
-            // Simulate connect flow: first request → established
+            // Simulate connect flow: first request → HostCreated (populates _active in new design)
             reqHandler!(new ConnectionRequestedEvent(first));
-            estHandler!(new ConnectionEstablishedEvent(first, firstHost));
+            hostCreatedHandler!(new HostCreatedEvent(first, firstHost));
 
             coord.ActiveHost.Should().BeSameAs(firstHost);
 

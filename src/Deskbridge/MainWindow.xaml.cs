@@ -71,6 +71,16 @@ public partial class MainWindow : FluentWindow
         {
             // D-12 single live host: swap the WFH into the viewport.
             ViewportGrid.Children.Add(rdp.Host);
+
+            // Fires BEFORE ConnectStage runs (coordinator raises HostMounted on
+            // HostCreatedEvent, Order=200). Force an immediate, synchronous layout pass so
+            // the WindowsFormsHost is parented to a realized HwndSource and AxHost.Handle
+            // becomes non-zero — otherwise the downstream ConnectStage throws
+            // "called before host was added to the visual tree" (RDP-ACTIVEX-PITFALLS §1).
+            // UpdateLayout() is blocking and does NOT pump messages, so it's safe here —
+            // Dispatcher.Yield / PushFrame would re-enter the pump and risk ordering issues.
+            ViewportGrid.UpdateLayout();
+
             _airspace.RegisterHost(rdp.Host, ViewportSnapshot);
             _activeRdpHost = rdp;
         });

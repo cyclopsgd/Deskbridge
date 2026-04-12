@@ -41,6 +41,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
 
         _bus.Subscribe<ConnectionRequestedEvent>(this, OnConnectionRequested);
+        _bus.Subscribe<HostCreatedEvent>(this, OnHostCreated);
         _bus.Subscribe<ConnectionEstablishedEvent>(this, OnConnectionEstablished);
         _bus.Subscribe<ConnectionClosedEvent>(this, OnConnectionClosed);
     }
@@ -140,6 +141,47 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
     }
 
+    /// <summary>
+    /// Fires between <c>CreateHostStage</c> (Order=200) and <c>ConnectStage</c> (Order=300).
+    /// We do TWO things here, both critical to the siting-order state machine
+    /// (RDP-ACTIVEX-PITFALLS §1):
+    /// <list type="number">
+    ///   <item>Record the single active host NOW (not at ConnectionEstablished), so a
+    ///         concurrent request replaces the in-flight host instead of leaking it —
+    ///         and so disposal during Connect failure has the right handle to release.</item>
+    ///   <item>Raise <see cref="HostMounted"/>. MainWindow's handler parents the
+    ///         <c>WindowsFormsHost</c> into <c>ViewportGrid</c> and forces a layout pass;
+    ///         by the time this event handler returns, AxHost's HWND is realized and
+    ///         <c>ConnectStage</c> can safely call <c>ConnectAsync</c>.</item>
+    /// </list>
+    /// Delivery is synchronous: <c>EventBus.Publish</c> → <c>WeakReferenceMessenger.Send</c>
+    /// is inline, and since <c>CreateHostStage.ExecuteAsync</c> runs on the STA dispatcher
+    /// thread (pipeline → coordinator → Connect are all STA-affined per D-11), the
+    /// dispatcher marshal below is a no-op. It's kept as a defensive wrapper in case the
+    /// event source ever changes.
+    /// </summary>
+    private void OnHostCreated(HostCreatedEvent evt)
+    {
+        if (_disposed) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            // Use Invoke (not InvokeAsync) so siting completes BEFORE we return to the
+            // pipeline. ConnectStage must see a sited host. CheckAccess()==true on STA
+            // so this branch is rarely hit.
+            _dispatcher.Invoke(() => OnHostCreated(evt));
+            return;
+        }
+
+        _active = (evt.Host, evt.Connection);
+        HostMounted?.Invoke(this, evt.Host);
+    }
+
+    /// <summary>
+    /// Post-connect observability only. Host tracking and <see cref="HostMounted"/> now
+    /// fire earlier, in <see cref="OnHostCreated"/>, so <c>ConnectStage</c> finds a sited
+    /// host. This handler stays subscribed so tests and telemetry can observe the
+    /// established event reliably.
+    /// </summary>
     private void OnConnectionEstablished(ConnectionEstablishedEvent evt)
     {
         if (_disposed) return;
@@ -149,8 +191,8 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        _active = (evt.Host, evt.Connection);
-        HostMounted?.Invoke(this, evt.Host);
+        _logger.LogInformation(
+            "Connection established for {Hostname}", evt.Connection.Hostname);
     }
 
     private void OnConnectionClosed(ConnectionClosedEvent evt)
@@ -176,6 +218,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _disposed = true;
 
         _bus.Unsubscribe<ConnectionRequestedEvent>(this);
+        _bus.Unsubscribe<HostCreatedEvent>(this);
         _bus.Unsubscribe<ConnectionEstablishedEvent>(this);
         _bus.Unsubscribe<ConnectionClosedEvent>(this);
 
