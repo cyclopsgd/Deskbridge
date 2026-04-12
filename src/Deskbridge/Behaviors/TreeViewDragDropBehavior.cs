@@ -45,6 +45,8 @@ public static class TreeViewDragDropBehavior
     private static TreeViewItem? _currentDropTarget;
     private static DropInsertionAdorner? _currentAdorner;
     private static DropPosition _currentDropPosition = DropPosition.Into;
+    private static TreeView? _currentRootAdornerHost;
+    private static RootDropAdorner? _currentRootAdorner;
 
     private static void OnEnableDragDropChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -161,13 +163,19 @@ public static class TreeViewDragDropBehavior
             || FindAncestor<TreeViewItem>(dragOverSource) is not TreeViewItem treeViewItem)
         {
             // Dropping into empty tree area (past the last item) -> move to root.
-            // Allow the operation but don't draw a per-item adorner; the Drop
-            // handler routes this to MoveItemsToRoot.
-            ClearDropIndicators();
+            // Allow the operation; draw a TreeView-wide adorner so the user can
+            // see where the items will land. Drop handler routes this to
+            // MoveItemsToRoot.
+            ClearItemDropIndicator();
+            if (sender is TreeView hostTree)
+                ShowRootDropIndicator(hostTree);
             e.Effects = DragDropEffects.Move;
             e.Handled = true;
             return;
         }
+
+        // Over a specific item — clear root-area highlight if it was showing.
+        ClearRootDropIndicator();
 
         if (treeViewItem.DataContext is not TreeItemViewModel targetVm) return;
 
@@ -318,6 +326,12 @@ public static class TreeViewDragDropBehavior
 
     private static void ClearDropIndicators()
     {
+        ClearItemDropIndicator();
+        ClearRootDropIndicator();
+    }
+
+    private static void ClearItemDropIndicator()
+    {
         if (_currentAdorner is not null && _currentDropTarget is not null)
         {
             var adornerLayer = AdornerLayer.GetAdornerLayer(_currentDropTarget);
@@ -326,6 +340,32 @@ public static class TreeViewDragDropBehavior
 
         _currentAdorner = null;
         _currentDropTarget = null;
+    }
+
+    private static void ShowRootDropIndicator(TreeView treeView)
+    {
+        if (_currentRootAdornerHost == treeView && _currentRootAdorner is not null) return;
+
+        ClearRootDropIndicator();
+
+        var adornerLayer = AdornerLayer.GetAdornerLayer(treeView);
+        if (adornerLayer is null) return;
+
+        _currentRootAdorner = new RootDropAdorner(treeView);
+        _currentRootAdornerHost = treeView;
+        adornerLayer.Add(_currentRootAdorner);
+    }
+
+    private static void ClearRootDropIndicator()
+    {
+        if (_currentRootAdorner is not null && _currentRootAdornerHost is not null)
+        {
+            var adornerLayer = AdornerLayer.GetAdornerLayer(_currentRootAdornerHost);
+            adornerLayer?.Remove(_currentRootAdorner);
+        }
+
+        _currentRootAdorner = null;
+        _currentRootAdornerHost = null;
     }
 
     /// <summary>
@@ -457,5 +497,42 @@ internal sealed class DropInsertionAdorner : Adorner
         {
             return null;
         }
+    }
+}
+
+/// <summary>
+/// Adorner that highlights the entire TreeView area to indicate "drop to root".
+/// Drawn when the user drags over empty tree space (no TreeViewItem under cursor),
+/// so the move-to-root destination is visually obvious.
+/// </summary>
+internal sealed class RootDropAdorner : Adorner
+{
+    public RootDropAdorner(UIElement adornedElement) : base(adornedElement)
+    {
+        IsHitTestVisible = false;
+    }
+
+    protected override void OnRender(DrawingContext drawingContext)
+    {
+        var size = AdornedElement.RenderSize;
+
+        var accentBrush = (Application.Current?.TryFindResource("SystemAccentColorPrimaryBrush") as Brush)
+            ?? new SolidColorBrush(Color.FromRgb(0x00, 0x7A, 0xCC));
+
+        Color accentColor = (accentBrush is SolidColorBrush b)
+            ? b.Color
+            : Color.FromRgb(0x00, 0x7A, 0xCC);
+
+        // ~10% opacity fill across the entire TreeView so the drop target reads clearly.
+        var fill = new SolidColorBrush(accentColor) { Opacity = 0.10 };
+        // 2px dashed accent border to distinguish from the per-item "Into" solid border.
+        var borderPen = new Pen(accentBrush, 2)
+        {
+            DashStyle = new DashStyle(new double[] { 4, 2 }, 0),
+            DashCap = PenLineCap.Flat,
+        };
+
+        var rect = new Rect(1, 1, Math.Max(0, size.Width - 2), Math.Max(0, size.Height - 2));
+        drawingContext.DrawRectangle(fill, borderPen, rect);
     }
 }
