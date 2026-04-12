@@ -89,7 +89,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md -- Smoke-test prototype: RdpSmokeHost + AxSiting helper + 4 gate tests (GDI, IMsTscNonScriptable, siting order, COM error isolation)
-- [ ] 04-02-PLAN.md -- Production RdpHostControl (IProtocolHost + WFH leak fixes) + 7 pipeline stages + ConnectionCoordinator + AirspaceSwapper + viewport mount
+- [x] 04-02-PLAN.md -- Production RdpHostControl (IProtocolHost + WFH leak fixes) + 7 pipeline stages + ConnectionCoordinator + AirspaceSwapper + viewport mount
 - [ ] 04-03-PLAN.md -- Reconnect flow: DisconnectReasonClassifier + RdpReconnectCoordinator (2/4/8/16/cap-30 backoff, 20-attempt cap) + ReconnectOverlay + auth-failure skip
 
 ### Phase 5: Tab Management
