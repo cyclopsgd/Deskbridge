@@ -160,12 +160,15 @@ public sealed class ConnectionCoordinatorTests
 
     /// <summary>
     /// Regression guard: <see cref="ConnectionFailedEvent"/> for the active host must
-    /// dispose the host and raise <see cref="IConnectionCoordinator.HostUnmounted"/>.
+    /// raise <see cref="IConnectionCoordinator.HostUnmounted"/> BEFORE disposing the host.
+    /// Reverse order causes a cascade <c>ObjectDisposedException</c> because
+    /// <c>MainWindow.OnHostUnmounted</c> accesses <c>rdp.Host</c>, whose getter throws
+    /// once <c>Dispose</c> has nulled the underlying WinForms host.
     /// Before this subscription existed, the pipeline published ConnectionFailedEvent
     /// but no one logged or cleaned up — users saw a "silent hang" with no diagnostic trail.
     /// </summary>
     [Fact]
-    public void ConnectionFailedEvent_ForActiveHost_DisposesAndRaisesHostUnmounted()
+    public void ConnectionFailedEvent_ForActiveHost_RaisesHostUnmountedBeforeDispose()
     {
         _ = _fixture;
         StaRunner.Run(() =>
@@ -184,11 +187,21 @@ public sealed class ConnectionCoordinatorTests
             using var coord = new ConnectionCoordinator(
                 bus, connect, disconnect, NullLogger<ConnectionCoordinator>.Instance, dispatcher);
 
+            // Ordering probe: record every observable action against the host in sequence.
+            // "Unmounted" is recorded from the HostUnmounted event; "Disposed" is recorded
+            // from the NSubstitute stub's Dispose() call. The fix requires Unmounted first.
+            var callOrder = new List<string>();
             IProtocolHost? unmountedHost = null;
-            coord.HostUnmounted += (_, host) => unmountedHost = host;
 
             var model = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
             var host = Substitute.For<IProtocolHost>();
+            host.When(h => h.Dispose()).Do(_ => callOrder.Add("Disposed"));
+
+            coord.HostUnmounted += (_, h) =>
+            {
+                callOrder.Add("Unmounted");
+                unmountedHost = h;
+            };
 
             // Seed active host via HostCreatedEvent, then publish matching ConnectionFailedEvent.
             hostCreatedHandler.Should().NotBeNull();
@@ -201,6 +214,7 @@ public sealed class ConnectionCoordinatorTests
             host.Received().Dispose();
             unmountedHost.Should().BeSameAs(host);
             coord.ActiveHost.Should().BeNull();
+            callOrder.Should().Equal("Unmounted", "Disposed");
         });
     }
 
