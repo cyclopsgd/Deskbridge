@@ -192,9 +192,13 @@ public static class TreeViewDragDropBehavior
         DropPosition dropPosition;
         if (targetVm is GroupTreeItemViewModel)
         {
-            // Groups can accept all three positions.
-            if (pos.Y < third) dropPosition = DropPosition.Before;
-            else if (pos.Y > headerHeight - third) dropPosition = DropPosition.After;
+            // Groups can accept all three positions. Widen the "Into" band to
+            // 60% of the header (narrow 20% strips on top/bottom for reorder),
+            // so the drop target for nested folders is unambiguous. The full-row
+            // highlight then makes it obvious WHICH folder receives the drop.
+            double insertZone = headerHeight * 0.2;
+            if (pos.Y < insertZone) dropPosition = DropPosition.Before;
+            else if (pos.Y > headerHeight - insertZone) dropPosition = DropPosition.After;
             else dropPosition = DropPosition.Into;
         }
         else
@@ -385,23 +389,29 @@ internal sealed class DropInsertionAdorner : Adorner
 
         if (Position == DropPosition.Into)
         {
-            // Semi-transparent fill (30% of accent) + 2px accent border around header.
-            var fill = TryFindBrush("SystemAccentColorSecondaryBrush")
-                ?? new SolidColorBrush(Color.FromArgb(0x4D, 0x00, 0x7A, 0xCC));
-            if (fill is SolidColorBrush solid && solid.Opacity >= 1.0)
-            {
-                fill = new SolidColorBrush(solid.Color) { Opacity = 0.3 };
-            }
+            // "Drop into folder" highlight — a bold full-row fill + accent border so
+            // the target folder is unambiguous even in deeply nested groups. Pull
+            // the accent colour from the resource when possible so it picks up
+            // theme changes.
+            Color accentColor = (accentBrush is SolidColorBrush b)
+                ? b.Color
+                : Color.FromRgb(0x00, 0x7A, 0xCC);
 
+            // ~45% opacity fill spans the FULL row width (not just measured content)
+            // so nested groups still get a clear drop zone.
+            var fill = new SolidColorBrush(accentColor) { Opacity = 0.45 };
             var borderPen = new Pen(accentBrush, 2) { DashCap = PenLineCap.Flat };
+
             // Inset by 1px so the 2px stroke draws entirely inside the row bounds.
             var rect = new Rect(1, 1, Math.Max(0, width - 2), Math.Max(0, _headerHeight - 2));
             drawingContext.DrawRectangle(fill, borderPen, rect);
         }
         else
         {
-            var pen = new Pen(accentBrush, 2);
-            double y = Position == DropPosition.Before ? 1 : _headerHeight - 1;
+            // Insert-before / insert-after line — thicker (3px) than the previous
+            // 2px so the insertion point reads clearly against a busy tree.
+            var pen = new Pen(accentBrush, 3);
+            double y = Position == DropPosition.Before ? 1.5 : _headerHeight - 1.5;
             drawingContext.DrawLine(pen, new Point(0, y), new Point(width, y));
         }
     }
