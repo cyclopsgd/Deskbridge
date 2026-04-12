@@ -144,69 +144,96 @@
                       PreviewMouseDoubleClick="TreeView_PreviewMouseDoubleClick"
                       PreviewMouseRightButtonDown="TreeView_PreviewMouseRightButtonDown">
                 <TreeView.Resources>
+                    <!--
+                         SELECTION HIGHLIGHT CONTRACT
+                         ============================
+                         The default WPF TreeViewItem ControlTemplate paints selection via its
+                         own inner Border + Trigger set, which wins over any Background setter
+                         on the outer ItemContainerStyle. To guarantee the accent-color
+                         highlight actually shows (including for multi-selected items that
+                         aren't the TreeView's single SelectedItem), each DataTemplate root is
+                         a Border whose Background is driven by the ancestor TreeViewItem's
+                         IsSelected via a Style+DataTrigger. This sits inside the content
+                         presenter, so it paints on top of the default selection chrome.
+                    -->
+                    <Style x:Key="TreeItemContentBorderStyle" TargetType="Border">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderBrush" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="2,0,0,0" />
+                        <Setter Property="CornerRadius" Value="2" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+
                     <!-- Group template (HierarchicalDataTemplate for nesting) -->
                     <HierarchicalDataTemplate DataType="{x:Type vm:GroupTreeItemViewModel}"
                                               ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" Height="28" Margin="4,2">
-                            <!-- Folder icon: FolderOpen24 when expanded, Folder24 when collapsed -->
-                            <ui:SymbolIcon FontSize="16" Margin="0,0,4,0"
-                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}">
-                                <ui:SymbolIcon.Style>
-                                    <Style TargetType="ui:SymbolIcon">
-                                        <Setter Property="Symbol" Value="Folder24" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
-                                                <Setter Property="Symbol" Value="FolderOpen24" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ui:SymbolIcon.Style>
-                            </ui:SymbolIcon>
+                        <Border Style="{StaticResource TreeItemContentBorderStyle}">
+                            <StackPanel Orientation="Horizontal" Height="28" Margin="4,2">
+                                <!-- Folder icon: FolderOpen24 when expanded, Folder24 when collapsed -->
+                                <ui:SymbolIcon FontSize="16" Margin="0,0,4,0"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Symbol" Value="Folder24" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                    <Setter Property="Symbol" Value="FolderOpen24" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
 
-                            <!-- Group name -->
-                            <TextBlock Text="{Binding Name}"
-                                       FontWeight="SemiBold" FontSize="14"
-                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                       VerticalAlignment="Center" />
+                                <!-- Group name -->
+                                <TextBlock Text="{Binding Name}"
+                                           FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           VerticalAlignment="Center" />
 
-                            <!-- Key icon for groups with credentials (CONN-10) -->
-                            <ui:SymbolIcon Symbol="Key24" FontSize="12"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Margin="4,0,0,0"
-                                           VerticalAlignment="Center"
-                                           Visibility="{Binding HasCredentials, Converter={StaticResource BoolToVisibility}}" />
-                        </StackPanel>
+                                <!-- Key icon for groups with credentials (CONN-10) -->
+                                <ui:SymbolIcon Symbol="Key24" FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Margin="4,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Visibility="{Binding HasCredentials, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </Border>
                     </HierarchicalDataTemplate>
 
                     <!-- Connection template (flat DataTemplate) -->
                     <DataTemplate DataType="{x:Type vm:ConnectionTreeItemViewModel}">
-                        <StackPanel Orientation="Horizontal" Height="28" Margin="4,2"
-                                    ToolTip="{Binding Hostname}">
-                            <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Margin="0,0,4,0"
-                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Border Style="{StaticResource TreeItemContentBorderStyle}"
+                                ToolTip="{Binding Hostname}">
+                            <StackPanel Orientation="Horizontal" Height="28" Margin="4,2">
+                                <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Margin="0,0,4,0"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
-                            <!-- Connection name -->
-                            <TextBlock Text="{Binding Name}"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
+                                <!-- Connection name -->
+                                <TextBlock Text="{Binding Name}"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
                     </DataTemplate>
                 </TreeView.Resources>
 
-                <!-- ItemContainerStyle for selection/expansion binding -->
+                <!--
+                     ItemContainerStyle: two-way IsSelected/IsExpanded binding. The actual
+                     selection highlight is painted by the DataTemplate's root Border (see
+                     TreeItemContentBorderStyle above) because the default TreeViewItem
+                     control template overrides any Background setter we put here.
+                -->
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                         <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                         <Setter Property="Padding" Value="0" />
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                <Setter Property="BorderThickness" Value="2,0,0,0" />
-                            </Trigger>
-                        </Style.Triggers>
                     </Style>
                 </TreeView.ItemContainerStyle>
             </TreeView>
