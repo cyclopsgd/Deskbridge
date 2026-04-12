@@ -56,6 +56,7 @@ public static class TreeViewDragDropBehavior
             treeView.Drop += TreeView_Drop;
             treeView.DragLeave += TreeView_DragLeave;
             treeView.PreviewKeyDown += TreeView_PreviewKeyDown;
+            treeView.GiveFeedback += TreeView_GiveFeedback;
         }
         else
         {
@@ -69,6 +70,7 @@ public static class TreeViewDragDropBehavior
             treeView.Drop -= TreeView_Drop;
             treeView.DragLeave -= TreeView_DragLeave;
             treeView.PreviewKeyDown -= TreeView_PreviewKeyDown;
+            treeView.GiveFeedback -= TreeView_GiveFeedback;
         }
     }
 
@@ -245,6 +247,16 @@ public static class TreeViewDragDropBehavior
         {
             ClearDropIndicators();
         }
+    }
+
+    private static void TreeView_GiveFeedback(object sender, GiveFeedbackEventArgs e)
+    {
+        // Swap the default Windows dotted-rectangle feedback for an OS cursor that
+        // matches the operation. A cursor-following snapshot is still a stretch goal;
+        // this at least ensures the user sees a clear Move/No-drop indicator.
+        e.UseDefaultCursors = false;
+        Mouse.SetCursor(e.Effects == DragDropEffects.None ? Cursors.No : Cursors.Hand);
+        e.Handled = true;
     }
 
     // --- Visual indicators ---
