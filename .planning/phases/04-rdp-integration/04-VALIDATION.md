@@ -41,7 +41,7 @@ created: 2026-04-12
 | 4-01-G1 | 01 | 1 | RDP-04 | T-04-GDI | No GDI leak over 20 cycles | smoke (live) | `dotnet test --filter "FullyQualifiedName~Gate1_20CycleGdiBaseline"` | ❌ W0 | ⬜ pending |
 | 4-01-G2 | 01 | 1 | RDP-03 | T-04-CRED | IMsTscNonScriptable cast + ClearTextPassword works | smoke (live) | `dotnet test --filter "FullyQualifiedName~Gate2_IMsTscNonScriptable"` | ❌ W0 | ⬜ pending |
 | 4-01-G3 | 01 | 1 | RDP-02 | — | Siting order guard throws if violated | smoke (live) | `dotnet test --filter "FullyQualifiedName~Gate3_SitingOrderGuard"` | ❌ W0 | ⬜ pending |
-| 4-01-G4 | 01 | 1 | RDP-07 | T-04-ISO | COM error in session does not tear down app | smoke (live) | `dotnet test --filter "FullyQualifiedName~Gate4_ErrorIsolation"` | ❌ W0 | ⬜ pending |
+| 4-01-G4 | 01 | 1 | RDP-07 | T-04-ISO | COM error in session does not tear down app | smoke (live) | `dotnet test --filter "FullyQualifiedName~Gate4_ComError"` | ❌ W0 | ⬜ pending |
 | 4-02-01 | 02 | 1 | RDP-01 | — | RdpHostControl implements IProtocolHost correctly | unit | `dotnet test --filter "FullyQualifiedName~RdpHostControlShapeTests"` | ❌ W0 | ⬜ pending |
 | 4-02-02 | 02 | 1 | RDP-02 | — | SiteAndConfigure helper throws if Handle == 0 | unit | `dotnet test --filter "FullyQualifiedName~SitingGuardTests"` | ❌ W0 | ⬜ pending |
 | 4-02-03 | 02 | 1 | RDP-04 | T-04-ISO | DisposeStage runs full sequence without exception | unit (mocked) | `dotnet test --filter "FullyQualifiedName~DisposeStageTests"` | ❌ W0 | ⬜ pending |
@@ -52,7 +52,7 @@ created: 2026-04-12
 | 4-02-08 | 02 | 3 | RDP-09 | — | No black flicker during drag/resize | manual (visual) | Manual test: drag window edge rapidly during live session | n/a | ⬜ pending |
 | 4-03-01 | 03 | 1 | RDP-06 | — | Reconnect coordinator backoff schedule is 2, 4, 8, 30, 30, ... across 20 attempts | unit | `dotnet test --filter "FullyQualifiedName~RdpReconnectCoordinatorTests"` | ❌ W0 | ⬜ pending |
 | 4-03-02 | 03 | 1 | RDP-06 | — | DisconnectReasonClassifier maps all documented codes to correct category | unit | `dotnet test --filter "FullyQualifiedName~DisconnectReasonClassifierTests"` | ❌ W0 | ⬜ pending |
-| 4-03-03 | 03 | 1 | RDP-06 | — | Auth/licensing codes skip auto-retry and go straight to manual overlay | unit | `dotnet test --filter "FullyQualifiedName~RdpReconnectCoordinatorTests.SkipsAuthFailures"` | ❌ W0 | ⬜ pending |
+| 4-03-03 | 03 | 1 | RDP-06 | — | Auth/licensing codes skip auto-retry and go straight to manual overlay | unit | `dotnet test --filter "FullyQualifiedName~SkipsAutoRetry_WhenCategory_IsAuthentication"` | ❌ W0 | ⬜ pending |
 | 4-03-04 | 03 | 2 | RDP-06 | — | Reconnect overlay shows attempt counter and Cancel button (visual checkpoint) | manual | Screenshot compare against DESIGN.md tokens | n/a | ⬜ pending |
 | 4-03-05 | 03 | 2 | RDP-07 | T-04-ISO | ErrorOccurred event fires for COM exception, process stays alive | unit (mocked) | `dotnet test --filter "FullyQualifiedName~ErrorIsolationTests"` | ❌ W0 | ⬜ pending |
 | 4-SEC-01 | any | — | — | T-04-LOG | ResolvedPassword never reaches Serilog output | unit | `dotnet test --filter "FullyQualifiedName~PasswordLeakTests.NotInLogs"` | ❌ W0 | ⬜ pending |
