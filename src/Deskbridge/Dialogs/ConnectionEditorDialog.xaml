@@ -22,7 +22,7 @@
 
         <!-- Tab 1: General -->
         <TabItem Header="General">
-            <StackPanel Margin="16,12">
+            <StackPanel Margin="16,12" MinHeight="320">
                 <TextBlock Text="Name" FontSize="14"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                 <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
@@ -61,7 +61,7 @@
 
         <!-- Tab 2: Credentials (D-11, D-13, CONN-09) -->
         <TabItem Header="Credentials">
-            <StackPanel Margin="16,12">
+            <StackPanel Margin="16,12" MinHeight="320">
                 <TextBlock Text="Credential mode" FontSize="14"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                 <!--
@@ -122,7 +122,7 @@
 
         <!-- Tab 3: Display -->
         <TabItem Header="Display">
-            <StackPanel Margin="16,12">
+            <StackPanel Margin="16,12" MinHeight="320">
                 <TextBlock Text="Resolution" FontSize="14"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                 <Grid Margin="0,0,0,4">
@@ -146,7 +146,7 @@
         <!-- Tab 4: Notes -->
         <TabItem Header="Notes">
             <ui:TextBox Text="{Binding Notes}" AcceptsReturn="True"
-                TextWrapping="Wrap" MinHeight="120" Margin="16,12"
+                TextWrapping="Wrap" MinHeight="320" Margin="16,12"
                 VerticalScrollBarVisibility="Auto"
                 PlaceholderText="Add notes about this connection..." />
         </TabItem>
