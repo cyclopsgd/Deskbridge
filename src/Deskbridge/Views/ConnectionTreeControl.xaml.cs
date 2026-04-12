@@ -24,6 +24,7 @@ public partial class ConnectionTreeControl : UserControl
         InitializeComponent();
 
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -36,6 +37,18 @@ public partial class ConnectionTreeControl : UserControl
         _subscribedRootItems = _viewModel.RootItems;
         _subscribedRootItems.CollectionChanged += RootItems_CollectionChanged;
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        // Unsubscribe to avoid leaking the control via the ViewModel's event list.
+        // The ViewModel is DI-resolved and can outlive the control (transient vs singleton).
+        if (_subscribedRootItems is not null)
+        {
+            _subscribedRootItems.CollectionChanged -= RootItems_CollectionChanged;
+            _subscribedRootItems = null;
+        }
+        _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
     }
 
     // Track the collection we're subscribed to, so we can unsubscribe when RootItems changes
