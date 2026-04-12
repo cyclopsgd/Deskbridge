@@ -14,6 +14,9 @@ public partial class ConnectionTreeItemViewModel : TreeItemViewModel
     public partial string? Username { get; set; }
 
     [ObservableProperty]
+    public partial string? Domain { get; set; }
+
+    [ObservableProperty]
     public partial CredentialMode CredentialMode { get; set; } = CredentialMode.Inherit;
 
     public Guid? GroupId { get; set; }
