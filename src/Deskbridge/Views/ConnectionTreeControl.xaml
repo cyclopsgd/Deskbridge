@@ -9,18 +9,10 @@
         <!--
              CONTEXT-MENU BINDING CONTRACT
              =============================
-             These ContextMenus are stored as shared (default x:Shared=True) resources and assigned
-             to individual TreeViewItems at right-click time via code-behind. Because the menu's
-             logical parent chain does NOT include the TreeView (it is rooted in the UserControl
-             that owns the resource), bindings using RelativeSource AncestorType=TreeView fail
-             silently — that was the root cause of Edit / Rename / Duplicate / Copy Hostname /
-             Delete etc doing nothing on right-click.
-
-             Correct pattern:
-               * The code-behind sets menu.DataContext = _viewModel (the tree VM).
-                 -> Command bindings become {Binding <Command>} with no RelativeSource.
-               * CommandParameter pulls the item VM via PlacementTarget.DataContext on the menu.
-                 PlacementTarget = TreeViewItem, whose DataContext = the item VM.
+             These ContextMenus are x:Shared="False" resources assigned to individual
+             TreeViewItems at right-click time via code-behind. Code-behind sets
+             menu.DataContext = _viewModel; bindings on Command are plain
+             {Binding <Command>}; CommandParameter uses PlacementTarget.DataContext.
         -->
 
         <!-- Connection context menu -->
@@ -100,7 +92,7 @@
                       Command="{Binding DeleteSelectedCommand}" />
         </ContextMenu>
 
-        <!-- Empty area context menu (attached directly to the UserControl's Grid; DataContext is the tree VM) -->
+        <!-- Empty area context menu -->
         <ContextMenu x:Key="EmptyAreaContextMenu" x:Shared="False">
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
@@ -110,6 +102,141 @@
                       Icon="{ui:SymbolIcon FolderAdd24}"
                       Command="{Binding NewGroupCommand}" />
         </ContextMenu>
+
+        <!--
+             FULL-ROW TREEVIEWITEM TEMPLATE (WPF-TREEVIEW-PATTERNS.md Section 2)
+             ===================================================================
+             The default TreeViewItem template paints selection on a Grid.Column=1
+             Border that only wraps the content (Border-in-DataTemplate suffers
+             the same limitation). We replace the entire template so that the
+             selection highlight Border spans full width, and the content inside
+             is indented by depth * 19px via TreeViewItemIndentConverter.
+
+             Selection visual is driven by the VIEWMODEL's IsSelected property
+             (via a DataTrigger), NOT by TreeViewItem.IsSelected. That makes
+             multi-select work: even when WPF's ChangeSelection sets native
+             IsSelected=false on other items, the VM IsSelected stays true and
+             the highlight stays visible.
+        -->
+        <Style x:Key="TreeExpanderStyle" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Width" Value="19" />
+            <Setter Property="Height" Value="19" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Width="19" Height="19">
+                            <Path x:Name="ExpandPath"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Data="M 4,2 L 8,6 L 4,10 Z"
+                                  Fill="{DynamicResource TextFillColorTertiaryBrush}"
+                                  RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <RotateTransform Angle="0" />
+                                </Path.RenderTransform>
+                            </Path>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ExpandPath" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="90" />
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FullRowTreeViewItemStyle" TargetType="TreeViewItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <StackPanel>
+                            <!-- OUTER Border: no Grid.Column so it stretches to full row width -->
+                            <Border x:Name="RowBorder"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    MinHeight="28"
+                                    CornerRadius="{DynamicResource ControlCornerRadius}"
+                                    Margin="0,0,0,1"
+                                    SnapsToDevicePixels="True">
+                                <Grid>
+                                    <!-- 2px left accent stripe (visible when selected) -->
+                                    <Rectangle x:Name="AccentStripe"
+                                               Width="2" Height="16"
+                                               HorizontalAlignment="Left"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0"
+                                               RadiusX="1" RadiusY="1"
+                                               Fill="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                               Visibility="Collapsed" />
+
+                                    <!-- Content indented by depth * 19px -->
+                                    <Grid Margin="{Binding
+                                            Converter={StaticResource TreeViewItemIndent},
+                                            RelativeSource={RelativeSource TemplatedParent}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="19" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ToggleButton x:Name="Expander"
+                                                      Grid.Column="0"
+                                                      Style="{StaticResource TreeExpanderStyle}"
+                                                      ClickMode="Press"
+                                                      IsChecked="{Binding IsExpanded,
+                                                        RelativeSource={RelativeSource TemplatedParent}}" />
+
+                                        <ContentPresenter x:Name="PART_Header"
+                                                          Grid.Column="1"
+                                                          ContentSource="Header"
+                                                          Margin="{TemplateBinding Padding}"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- Children container -->
+                            <ItemsPresenter x:Name="ItemsHost" Visibility="Collapsed" />
+                        </StackPanel>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RowBorder" Property="Background"
+                                        Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <!--
+                              Selection visual bound to the VM's IsSelected (not the
+                              native TreeViewItem.IsSelected). This is what makes
+                              multi-select highlight correctly — see behavior class.
+                            -->
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="RowBorder" Property="Background"
+                                        Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <Setter TargetName="AccentStripe" Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -117,7 +244,8 @@
             <RowDefinition Height="Auto" />   <!-- Row 0: Search TextBox -->
             <RowDefinition Height="*" />      <!-- Row 1: TreeView -->
             <RowDefinition Height="Auto" />   <!-- Row 2: GridSplitter -->
-            <RowDefinition x:Name="QuickPropertiesRow" Height="200" MinHeight="0" MaxHeight="320" /> <!-- Row 3: Quick properties -->
+            <RowDefinition Height="Auto" />   <!-- Row 3: Panel HEADER (always visible) -->
+            <RowDefinition x:Name="QuickPropertiesRow" Height="200" MinHeight="0" MaxHeight="320" /> <!-- Row 4: Panel BODY -->
         </Grid.RowDefinitions>
 
         <!-- Search filter (Row 0) -->
@@ -131,9 +259,11 @@
 
         <!-- TreeView (Row 1) -->
         <Grid Grid.Row="1" ContextMenu="{StaticResource EmptyAreaContextMenu}">
-            <!-- TreeView content -->
             <TreeView x:Name="ConnectionTree"
                       ItemsSource="{Binding RootItems}"
+                      ItemContainerStyle="{StaticResource FullRowTreeViewItemStyle}"
+                      HorizontalContentAlignment="Stretch"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       VirtualizingPanel.IsVirtualizing="False"
                       BorderThickness="0"
                       Background="Transparent"
@@ -144,98 +274,52 @@
                       PreviewMouseDoubleClick="TreeView_PreviewMouseDoubleClick"
                       PreviewMouseRightButtonDown="TreeView_PreviewMouseRightButtonDown">
                 <TreeView.Resources>
-                    <!--
-                         SELECTION HIGHLIGHT CONTRACT
-                         ============================
-                         The default WPF TreeViewItem ControlTemplate paints selection via its
-                         own inner Border + Trigger set, which wins over any Background setter
-                         on the outer ItemContainerStyle. To guarantee the accent-color
-                         highlight actually shows (including for multi-selected items that
-                         aren't the TreeView's single SelectedItem), each DataTemplate root is
-                         a Border whose Background is driven by the ancestor TreeViewItem's
-                         IsSelected via a Style+DataTrigger. This sits inside the content
-                         presenter, so it paints on top of the default selection chrome.
-                    -->
-                    <Style x:Key="TreeItemContentBorderStyle" TargetType="Border">
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderBrush" Value="Transparent" />
-                        <Setter Property="BorderThickness" Value="2,0,0,0" />
-                        <Setter Property="CornerRadius" Value="2" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-
                     <!-- Group template (HierarchicalDataTemplate for nesting) -->
                     <HierarchicalDataTemplate DataType="{x:Type vm:GroupTreeItemViewModel}"
                                               ItemsSource="{Binding Children}">
-                        <Border Style="{StaticResource TreeItemContentBorderStyle}">
-                            <StackPanel Orientation="Horizontal" Height="28" Margin="4,2">
-                                <!-- Folder icon: FolderOpen24 when expanded, Folder24 when collapsed -->
-                                <ui:SymbolIcon FontSize="16" Margin="0,0,4,0"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}">
-                                    <ui:SymbolIcon.Style>
-                                        <Style TargetType="ui:SymbolIcon">
-                                            <Setter Property="Symbol" Value="Folder24" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
-                                                    <Setter Property="Symbol" Value="FolderOpen24" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </ui:SymbolIcon.Style>
-                                </ui:SymbolIcon>
-
-                                <!-- Group name -->
-                                <TextBlock Text="{Binding Name}"
-                                           FontWeight="SemiBold" FontSize="14"
+                        <StackPanel Orientation="Horizontal" Height="28" VerticalAlignment="Center">
+                            <ui:SymbolIcon FontSize="16" Margin="0,0,4,0"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                           VerticalAlignment="Center" />
+                                           VerticalAlignment="Center">
+                                <ui:SymbolIcon.Style>
+                                    <Style TargetType="ui:SymbolIcon">
+                                        <Setter Property="Symbol" Value="Folder24" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                <Setter Property="Symbol" Value="FolderOpen24" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
 
-                                <!-- Key icon for groups with credentials (CONN-10) -->
-                                <ui:SymbolIcon Symbol="Key24" FontSize="12"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Margin="4,0,0,0"
-                                               VerticalAlignment="Center"
-                                               Visibility="{Binding HasCredentials, Converter={StaticResource BoolToVisibility}}" />
-                            </StackPanel>
-                        </Border>
+                            <TextBlock Text="{Binding Name}"
+                                       FontWeight="SemiBold" FontSize="14"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                       VerticalAlignment="Center" />
+
+                            <ui:SymbolIcon Symbol="Key24" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Margin="4,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding HasCredentials, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
                     </HierarchicalDataTemplate>
 
-                    <!-- Connection template (flat DataTemplate) -->
+                    <!-- Connection template -->
                     <DataTemplate DataType="{x:Type vm:ConnectionTreeItemViewModel}">
-                        <Border Style="{StaticResource TreeItemContentBorderStyle}"
-                                ToolTip="{Binding Hostname}">
-                            <StackPanel Orientation="Horizontal" Height="28" Margin="4,2">
-                                <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Margin="0,0,4,0"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-
-                                <!-- Connection name -->
-                                <TextBlock Text="{Binding Name}"
-                                           FontSize="14"
+                        <StackPanel Orientation="Horizontal" Height="28" VerticalAlignment="Center"
+                                    ToolTip="{Binding Hostname}">
+                            <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Margin="0,0,4,0"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
+                            <TextBlock Text="{Binding Name}"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
                     </DataTemplate>
                 </TreeView.Resources>
-
-                <!--
-                     ItemContainerStyle: two-way IsSelected/IsExpanded binding. The actual
-                     selection highlight is painted by the DataTemplate's root Border (see
-                     TreeItemContentBorderStyle above) because the default TreeViewItem
-                     control template overrides any Background setter we put here.
-                -->
-                <TreeView.ItemContainerStyle>
-                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                        <Setter Property="Padding" Value="0" />
-                    </Style>
-                </TreeView.ItemContainerStyle>
             </TreeView>
 
             <!-- Empty tree state overlay -->
@@ -250,39 +334,59 @@
             </StackPanel>
         </Grid>
 
-        <!-- GridSplitter (Row 2) -->
-        <GridSplitter Grid.Row="2"
+        <!-- GridSplitter (Row 2) — hidden when panel collapsed -->
+        <GridSplitter x:Name="PanelSplitter" Grid.Row="2"
             Height="4"
             HorizontalAlignment="Stretch"
+            ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
             Background="{DynamicResource ControlStrokeColorDefaultBrush}"
-            Visibility="{Binding IsQuickPropertiesVisible, Converter={StaticResource BoolToVisibility}}" />
+            Visibility="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToVisibility}}"
+            DragCompleted="PanelSplitter_DragCompleted" />
 
-        <!-- Quick Properties Panel (Row 3) -->
-        <Border Grid.Row="3"
+        <!--
+             PANEL HEADER (Row 3) — ALWAYS VISIBLE
+             See WPF-TREEVIEW-PATTERNS.md Section 3. The header is a ~28px strip that
+             persists regardless of expanded/collapsed state, with a "PROPERTIES" label
+             and chevron toggle. When collapsed, chevron points UP (click to expand);
+             when expanded, chevron points DOWN (click to collapse).
+        -->
+        <Border Grid.Row="3" Height="28"
+                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="PROPERTIES"
+                           FontSize="11" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="12,0,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <ui:Button Grid.Column="1"
+                           Appearance="Transparent"
+                           Width="24" Height="24"
+                           Padding="0" Margin="0,0,4,0"
+                           Command="{Binding ToggleQuickPropertiesCommand}"
+                           ToolTip="Toggle properties panel">
+                    <ui:SymbolIcon
+                        Symbol="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToChevron}}"
+                        FontSize="12" />
+                </ui:Button>
+            </Grid>
+        </Border>
+
+        <!-- Quick Properties Panel BODY (Row 4) — hidden when collapsed -->
+        <Border Grid.Row="4"
             Background="{DynamicResource ControlFillColorSecondaryBrush}"
             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
             BorderThickness="0,1,0,0"
-            Visibility="{Binding IsQuickPropertiesVisible, Converter={StaticResource BoolToVisibility}}">
-            <DockPanel>
-                <!-- Properties header -->
-                <DockPanel DockPanel.Dock="Top" Height="24" Margin="8,0">
-                    <TextBlock Text="PROPERTIES" FontSize="11"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               VerticalAlignment="Center" />
-                    <ui:Button DockPanel.Dock="Right"
-                        Appearance="Transparent"
-                        Width="20" Height="20"
-                        Padding="0"
-                        HorizontalAlignment="Right"
-                        Command="{Binding ToggleQuickPropertiesCommand}">
-                        <ui:SymbolIcon Symbol="ChevronDown16" FontSize="12" />
-                    </ui:Button>
-                </DockPanel>
-
-                <!-- Properties content area (scrollable) -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            Visibility="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToVisibility}}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <Grid Margin="8,4">
-                    <!-- Connection properties (when connection selected) -->
+                    <!-- Connection properties -->
                     <Grid Visibility="{Binding IsConnectionSelected, Converter={StaticResource BoolToVisibility}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="80" />
@@ -296,7 +400,6 @@
                             <RowDefinition Height="28" />
                         </Grid.RowDefinitions>
 
-                        <!-- Name -->
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -306,7 +409,6 @@
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="ConnectionNameTextBox" LostFocus="QuickProperty_LostFocus" />
 
-                        <!-- Hostname -->
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Hostname"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -316,7 +418,6 @@
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="HostnameTextBox" LostFocus="QuickProperty_LostFocus" />
 
-                        <!-- Port -->
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="Port"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -326,7 +427,6 @@
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="PortTextBox" LostFocus="QuickProperty_LostFocus" />
 
-                        <!-- Username -->
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="Username"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -336,7 +436,6 @@
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="UsernameTextBox" LostFocus="QuickProperty_LostFocus" />
 
-                        <!-- Credentials mode -->
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="Credentials"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -350,7 +449,7 @@
                                   SelectionChanged="CredentialMode_SelectionChanged" />
                     </Grid>
 
-                    <!-- Group properties (when group selected) -->
+                    <!-- Group properties -->
                     <Grid Visibility="{Binding IsGroupSelected, Converter={StaticResource BoolToVisibility}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="80" />
@@ -361,7 +460,6 @@
                             <RowDefinition Height="28" />
                         </Grid.RowDefinitions>
 
-                        <!-- Name -->
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -371,7 +469,6 @@
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  x:Name="GroupNameTextBox" LostFocus="GroupQuickProperty_LostFocus" />
 
-                        <!-- Connections count -->
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Connections"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -381,7 +478,7 @@
                                    VerticalAlignment="Center" />
                     </Grid>
 
-                    <!-- Empty state (nothing selected) -->
+                    <!-- Empty state -->
                     <TextBlock Text="Select a connection" FontSize="12"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -400,8 +497,7 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </Grid>
-                </ScrollViewer>
-            </DockPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </UserControl>
