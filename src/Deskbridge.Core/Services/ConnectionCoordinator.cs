@@ -210,16 +210,19 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
 
         if (_active is { } active && active.Model.Id == evt.Connection.Id)
         {
-            try { active.Host.Dispose(); }
+            var host = active.Host;
+            _active = null;
+            // Unmount FIRST (MainWindow removes from visual tree while Host getter is still valid),
+            // THEN dispose (frees COM resources + nulls _host). Reverse order throws
+            // ObjectDisposedException in MainWindow.OnHostUnmounted's rdp.Host access.
+            HostUnmounted?.Invoke(this, host);
+            try { host.Dispose(); }
             catch (Exception ex)
             {
                 _logger.LogDebug(
                     "Dispose after failed connect threw: {ExceptionType} HResult={HResult:X8}",
                     ex.GetType().Name, ex.HResult);
             }
-            var host = active.Host;
-            _active = null;
-            HostUnmounted?.Invoke(this, host);
         }
     }
 
