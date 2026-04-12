@@ -242,10 +242,10 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />   <!-- Row 0: Search TextBox -->
-            <RowDefinition Height="*" />      <!-- Row 1: TreeView -->
+            <RowDefinition Height="*" MinHeight="100" />      <!-- Row 1: TreeView -->
             <RowDefinition Height="Auto" />   <!-- Row 2: GridSplitter -->
-            <RowDefinition Height="Auto" />   <!-- Row 3: Panel HEADER (always visible) -->
-            <RowDefinition x:Name="QuickPropertiesRow" Height="200" MinHeight="0" MaxHeight="320" /> <!-- Row 4: Panel BODY -->
+            <!-- Row 3: Combined panel (header + body). GridSplitter resizes this row. -->
+            <RowDefinition x:Name="QuickPropertiesRow" Height="200" MinHeight="28" MaxHeight="500" />
         </Grid.RowDefinitions>
 
         <!-- Search filter (Row 0) -->
@@ -344,47 +344,50 @@
             DragCompleted="PanelSplitter_DragCompleted" />
 
         <!--
-             PANEL HEADER (Row 3) — ALWAYS VISIBLE
-             See WPF-TREEVIEW-PATTERNS.md Section 3. The header is a ~28px strip that
-             persists regardless of expanded/collapsed state, with a "PROPERTIES" label
-             and chevron toggle. When collapsed, chevron points UP (click to expand);
-             when expanded, chevron points DOWN (click to collapse).
+             COMBINED QUICK PROPERTIES PANEL (Row 3)
+             See WPF-TREEVIEW-PATTERNS.md Section 3. Header + body share a single
+             Grid row so that the GridSplitter on Row 2 correctly resizes the whole
+             panel (splitter's default ResizeBehavior=PreviousAndNext touches Row 1
+             and Row 3). The header is a 28px strip always visible; the body is
+             toggled via Visibility bound to IsQuickPropertiesExpanded. When the
+             panel is collapsed, the row's Height is set to 28 from code-behind
+             so only the header shows.
         -->
-        <Border Grid.Row="3" Height="28"
-                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+        <Border Grid.Row="3"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="0,1,0,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <DockPanel LastChildFill="True">
+                <!-- Header strip — always visible -->
+                <Border DockPanel.Dock="Top" Height="28"
+                        Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="PROPERTIES"
-                           FontSize="11" FontWeight="SemiBold"
-                           VerticalAlignment="Center" Margin="12,0,0,0"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Grid.Column="0" Text="PROPERTIES"
+                                   FontSize="11" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
-                <ui:Button Grid.Column="1"
-                           Appearance="Transparent"
-                           Width="24" Height="24"
-                           Padding="0" Margin="0,0,4,0"
-                           Command="{Binding ToggleQuickPropertiesCommand}"
-                           ToolTip="Toggle properties panel">
-                    <ui:SymbolIcon
-                        Symbol="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToChevron}}"
-                        FontSize="12" />
-                </ui:Button>
-            </Grid>
-        </Border>
+                        <ui:Button Grid.Column="1"
+                                   Appearance="Transparent"
+                                   Width="24" Height="24"
+                                   Padding="0" Margin="0,0,4,0"
+                                   Command="{Binding ToggleQuickPropertiesCommand}"
+                                   ToolTip="Toggle properties panel">
+                            <ui:SymbolIcon
+                                Symbol="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToChevron}}"
+                                FontSize="12" />
+                        </ui:Button>
+                    </Grid>
+                </Border>
 
-        <!-- Quick Properties Panel BODY (Row 4) — hidden when collapsed -->
-        <Border Grid.Row="4"
-            Background="{DynamicResource ControlFillColorSecondaryBrush}"
-            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-            BorderThickness="0,1,0,0"
-            Visibility="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToVisibility}}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <!-- Body — hidden when collapsed -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Visibility="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToVisibility}}">
                 <Grid Margin="8,4">
                     <!-- Connection properties -->
                     <Grid Visibility="{Binding IsConnectionSelected, Converter={StaticResource BoolToVisibility}}">
@@ -509,7 +512,8 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </Grid>
-            </ScrollViewer>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
     </Grid>
 </UserControl>

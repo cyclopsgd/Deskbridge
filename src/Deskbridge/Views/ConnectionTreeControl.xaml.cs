@@ -14,8 +14,13 @@ public partial class ConnectionTreeControl : UserControl
     // WPF-TREEVIEW-PATTERNS.md Section 3 — GridSplitter writes pixel values
     // with GridUnitType.Star (dotnet/wpf#4392), so we capture ActualHeight
     // in DragCompleted rather than binding RowDefinition.Height directly.
+    //
+    // Row 3 now contains BOTH the 28px header and the body, so heights below
+    // include the header strip. Collapsed = HeaderHeight (28). Expanded min =
+    // HeaderHeight + ~80px of body = 108.
+    private const double HeaderHeight = 28;
+    private const double MinExpandedPanelHeight = 108;
     private GridLength _savedPanelHeight = new(200, GridUnitType.Pixel);
-    private const double MinExpandedPanelHeight = 80;
 
     public ConnectionTreeControl(ConnectionTreeViewModel viewModel)
     {
@@ -85,15 +90,16 @@ public partial class ConnectionTreeControl : UserControl
     }
 
     /// <summary>
-    /// Expand/collapse the quick-properties BODY row. Header row stays always visible
-    /// (see ConnectionTreeControl.xaml Row 3). On collapse we save the current height
-    /// so re-expanding restores the user's preferred size.
+    /// Expand/collapse the combined quick-properties row. Row 3 holds both the
+    /// 28px header (always visible) and the body (toggled via Visibility). On
+    /// collapse we save the current height so re-expanding restores the user's
+    /// preferred size, and shrink the row to HeaderHeight.
     /// </summary>
     private void UpdateQuickPropertiesRowHeight()
     {
         if (_viewModel.IsQuickPropertiesExpanded)
         {
-            QuickPropertiesRow.MinHeight = 0;
+            QuickPropertiesRow.MinHeight = MinExpandedPanelHeight;
             QuickPropertiesRow.Height = _savedPanelHeight;
         }
         else
@@ -103,13 +109,13 @@ public partial class ConnectionTreeControl : UserControl
             if (actual >= MinExpandedPanelHeight)
                 _savedPanelHeight = new GridLength(actual, GridUnitType.Pixel);
 
-            QuickPropertiesRow.MinHeight = 0;
-            QuickPropertiesRow.Height = new GridLength(0);
+            QuickPropertiesRow.MinHeight = HeaderHeight;
+            QuickPropertiesRow.Height = new GridLength(HeaderHeight, GridUnitType.Pixel);
         }
     }
 
     /// <summary>
-    /// Persist user-resized body height after a GridSplitter drag completes.
+    /// Persist user-resized panel height after a GridSplitter drag completes.
     /// Critical: read ActualHeight, not RowDefinition.Height — dotnet/wpf#4392
     /// causes GridSplitter to write GridUnitType.Star values that corrupt the
     /// stored GridLength.
