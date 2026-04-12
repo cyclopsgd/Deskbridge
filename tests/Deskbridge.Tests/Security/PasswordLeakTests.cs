@@ -64,9 +64,9 @@ public sealed class PasswordLeakTests
         };
 
         var modelJson = JsonSerializer.Serialize(connection);
+        // Threat T-04-JSN: ConnectionModel must have no password-bearing field. Enum names like
+        // "CredentialMode" are fine — they carry no secret. Tighten to "password" values.
         modelJson.Should().NotContain("password", "ConnectionModel must have no password-like field");
-        modelJson.Should().NotContain("credential");
-        modelJson.Should().NotContain("Credential");
         modelJson.Should().NotContain("Password");
 
         // ConnectionContext.ResolvedPassword must be [JsonIgnore]'d or otherwise not serialized

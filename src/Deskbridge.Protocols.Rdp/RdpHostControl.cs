@@ -35,8 +35,21 @@ public sealed class RdpHostControl : IProtocolHost
 
     public Guid ConnectionId { get; private set; }
 
-    /// <summary>True iff the underlying ActiveX control reports a non-zero Connected state.</summary>
-    public bool IsConnected => _rdp?.Connected != 0;
+    /// <summary>
+    /// True iff the underlying ActiveX control reports a non-zero Connected state.
+    /// Returns false defensively if the control has not been sited yet or is disposed —
+    /// <c>AxMsRdpClient9.Connected</c> throws <c>InvalidActiveXStateException</c> before siting.
+    /// </summary>
+    public bool IsConnected
+    {
+        get
+        {
+            if (_rdp is null) return false;
+            try { return _rdp.Connected != 0; }
+            catch (AxHost.InvalidActiveXStateException) { return false; }
+            catch (COMException) { return false; }
+        }
+    }
 
     /// <summary>The hosted <see cref="WindowsFormsHost"/>. Throws if disposed.</summary>
     public WindowsFormsHost Host => _host ?? throw new ObjectDisposedException(nameof(RdpHostControl));
