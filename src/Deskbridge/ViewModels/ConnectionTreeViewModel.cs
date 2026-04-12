@@ -58,6 +58,17 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsQuickPropertiesVisible { get; set; } = true;
 
+    // Display-friendly options for the CredentialMode ComboBox in the quick properties
+    // panel. Raw Enum.GetValues() binding rendered as placeholder glyphs ("- - -") under
+    // the WPF-UI ComboBox template, so we expose typed display wrappers. See
+    // ConnectionEditorViewModel.CredentialModes for the same pattern.
+    public IReadOnlyList<CredentialModeOption> CredentialModes { get; } = new[]
+    {
+        new CredentialModeOption(CredentialMode.Inherit, "Inherit"),
+        new CredentialModeOption(CredentialMode.Own, "Own"),
+        new CredentialModeOption(CredentialMode.Prompt, "Prompt"),
+    };
+
     // Quick properties (computed from PrimarySelectedItem)
     public bool IsConnectionSelected => PrimarySelectedItem is ConnectionTreeItemViewModel;
     public bool IsGroupSelected => PrimarySelectedItem is GroupTreeItemViewModel;

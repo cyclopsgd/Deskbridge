@@ -19,9 +19,6 @@ public partial class ConnectionTreeControl : UserControl
         DataContext = viewModel;
         InitializeComponent();
 
-        // Populate CredentialMode ComboBox with enum values
-        CredentialModeCombo.ItemsSource = Enum.GetValues<CredentialMode>();
-
         Loaded += OnLoaded;
     }
 

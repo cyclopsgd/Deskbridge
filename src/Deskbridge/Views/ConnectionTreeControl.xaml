@@ -342,7 +342,10 @@
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
                         <ComboBox Grid.Row="4" Grid.Column="1"
-                                  SelectedItem="{Binding PrimarySelectedItem.CredentialMode}"
+                                  ItemsSource="{Binding CredentialModes}"
+                                  SelectedValue="{Binding PrimarySelectedItem.CredentialMode}"
+                                  SelectedValuePath="Value"
+                                  DisplayMemberPath="DisplayName"
                                   Height="24" FontSize="14"
                                   x:Name="CredentialModeCombo"
                                   SelectionChanged="CredentialMode_SelectionChanged" />
