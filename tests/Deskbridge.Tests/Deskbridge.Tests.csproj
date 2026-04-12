@@ -19,4 +19,15 @@
     <ProjectReference Include="..\..\src\Deskbridge.Core\Deskbridge.Core.csproj" />
     <ProjectReference Include="..\..\src\Deskbridge.Protocols.Rdp\Deskbridge.Protocols.Rdp.csproj" />
   </ItemGroup>
+  <!-- Classic aximp interop DLLs — <Reference> does not flow transitively through
+       ProjectReference, so the test project re-references them directly. See
+       CLAUDE.md "Classic aximp.exe interop only". -->
+  <ItemGroup>
+    <Reference Include="AxMSTSCLib">
+      <HintPath>..\..\src\Deskbridge.Protocols.Rdp\Interop\AxMSTSCLib.dll</HintPath>
+    </Reference>
+    <Reference Include="MSTSCLib">
+      <HintPath>..\..\src\Deskbridge.Protocols.Rdp\Interop\MSTSCLib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>
