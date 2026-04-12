@@ -57,7 +57,30 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConnectionSelected))]
     [NotifyPropertyChangedFor(nameof(IsGroupSelected))]
+    [NotifyPropertyChangedFor(nameof(SelectedItemCredentialMode))]
     public partial TreeItemViewModel? PrimarySelectedItem { get; set; }
+
+    /// <summary>
+    /// Bridge property for the quick properties CredentialMode ComboBox.
+    /// Binding directly to <c>PrimarySelectedItem.CredentialMode</c> caused the
+    /// ComboBox's SelectionBoxItem to render placeholder glyphs ("- - -") when
+    /// collapsed; the ViewModel-owned bridge mirrors the pattern used by the
+    /// editor dialog ComboBox and renders the selected display text correctly.
+    /// </summary>
+    public CredentialMode SelectedItemCredentialMode
+    {
+        get => (PrimarySelectedItem as ConnectionTreeItemViewModel)?.CredentialMode
+            ?? CredentialMode.Inherit;
+        set
+        {
+            if (PrimarySelectedItem is ConnectionTreeItemViewModel item && item.CredentialMode != value)
+            {
+                item.CredentialMode = value;
+                SaveConnectionFromQuickEdit(item);
+                OnPropertyChanged();
+            }
+        }
+    }
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;

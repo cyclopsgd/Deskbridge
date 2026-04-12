@@ -351,14 +351,6 @@ public partial class ConnectionTreeControl : UserControl
         }
     }
 
-    private void CredentialMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_viewModel.PrimarySelectedItem is ConnectionTreeItemViewModel connVm)
-        {
-            _viewModel.SaveConnectionFromQuickEdit(connVm);
-        }
-    }
-
     // --- Visual tree helper ---
 
     private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
