@@ -117,7 +117,7 @@
             <RowDefinition Height="Auto" />   <!-- Row 0: Search TextBox -->
             <RowDefinition Height="*" />      <!-- Row 1: TreeView -->
             <RowDefinition Height="Auto" />   <!-- Row 2: GridSplitter -->
-            <RowDefinition x:Name="QuickPropertiesRow" Height="120" MinHeight="0" MaxHeight="200" /> <!-- Row 3: Quick properties -->
+            <RowDefinition x:Name="QuickPropertiesRow" Height="200" MinHeight="0" MaxHeight="320" /> <!-- Row 3: Quick properties -->
         </Grid.RowDefinitions>
 
         <!-- Search filter (Row 0) -->
