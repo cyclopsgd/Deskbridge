@@ -120,12 +120,36 @@ public partial class ConnectionTreeViewModel : ObservableObject
             });
         }
 
-        // Nest groups into parent groups
+        // Nest groups into parent groups. Detect cycles (hand-edited JSON with
+        // A.Parent=A or A->B->A loops) by walking each group's parent chain
+        // before deciding its placement. A group participating in a cycle is
+        // promoted to root so it remains reachable in the UI.
         var rootItems = new ObservableCollection<TreeItemViewModel>();
         foreach (var kvp in groupMap)
         {
             var groupVm = kvp.Value;
-            if (groupVm.ParentGroupId is not null && groupMap.TryGetValue(groupVm.ParentGroupId.Value, out var parentGroup))
+            bool participatesInCycle = false;
+            if (groupVm.ParentGroupId is not null)
+            {
+                var visited = new HashSet<Guid> { groupVm.Id };
+                var cursor = groupVm.ParentGroupId;
+                while (cursor is not null)
+                {
+                    if (!visited.Add(cursor.Value))
+                    {
+                        participatesInCycle = true;
+                        Serilog.Log.Warning("Cycle detected in group parent chain at {GroupId}; promoting to root", groupVm.Id);
+                        break;
+                    }
+                    if (!groupMap.TryGetValue(cursor.Value, out var next))
+                        break;
+                    cursor = next.ParentGroupId;
+                }
+            }
+
+            if (!participatesInCycle
+                && groupVm.ParentGroupId is not null
+                && groupMap.TryGetValue(groupVm.ParentGroupId.Value, out var parentGroup))
             {
                 parentGroup.Children.Add(groupVm);
             }
@@ -256,6 +280,10 @@ public partial class ConnectionTreeViewModel : ObservableObject
             childLookup[parentKey].Add(g);
         }
 
+        // Cycle-safe walk: hand-edited JSON can contain A.Parent=A or A->B->A loops
+        // (see WPF-TREEVIEW-PATTERNS.md — always operate on model with cycle guard).
+        var visited = new HashSet<Guid>();
+
         void WalkGroups(Guid? parentId, int depth)
         {
             var key = parentId?.ToString() ?? string.Empty;
@@ -264,6 +292,11 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
             foreach (var child in children.OrderBy(c => c.SortOrder).ThenBy(c => c.Name))
             {
+                if (!visited.Add(child.Id))
+                {
+                    Serilog.Log.Warning("Cycle detected in group parent chain at {GroupId}", child.Id);
+                    continue;
+                }
                 result.Add((child.Id, child.Name, depth));
                 WalkGroups(child.Id, depth + 1);
             }

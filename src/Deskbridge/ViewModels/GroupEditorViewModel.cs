@@ -168,7 +168,11 @@ public partial class GroupEditorViewModel : ObservableValidator
             childLookup[parentKey].Add(g);
         }
 
-        // Walk tree depth-first to produce indented display
+        // Cycle-safe walk. CollectDescendantIds already excludes this group's
+        // descendants, but a sibling branch could still contain A.Parent=A loops
+        // from hand-edited JSON and stack-overflow WalkGroups otherwise.
+        var visited = new HashSet<Guid>();
+
         void WalkGroups(Guid? parentId, int depth)
         {
             var key = parentId?.ToString() ?? string.Empty;
@@ -177,6 +181,11 @@ public partial class GroupEditorViewModel : ObservableValidator
 
             foreach (var child in children.OrderBy(c => c.SortOrder).ThenBy(c => c.Name))
             {
+                if (!visited.Add(child.Id))
+                {
+                    Serilog.Log.Warning("Cycle detected in group parent chain at {GroupId}", child.Id);
+                    continue;
+                }
                 var indent = new string(' ', depth * 3);
                 items.Add(new GroupDisplayItem(child.Id, $"{indent}{child.Name}", depth));
                 WalkGroups(child.Id, depth + 1);

@@ -249,7 +249,10 @@ public partial class ConnectionEditorViewModel : ObservableValidator
             childLookup[parentKey].Add(g);
         }
 
-        // Walk tree depth-first to produce indented display
+        // Cycle-safe walk: hand-edited JSON can produce A.Parent=A loops that would
+        // otherwise stack-overflow. Track visited IDs.
+        var visited = new HashSet<Guid>();
+
         void WalkGroups(Guid? parentId, int depth)
         {
             var key = parentId?.ToString() ?? string.Empty;
@@ -258,6 +261,11 @@ public partial class ConnectionEditorViewModel : ObservableValidator
 
             foreach (var child in children.OrderBy(c => c.SortOrder).ThenBy(c => c.Name))
             {
+                if (!visited.Add(child.Id))
+                {
+                    Serilog.Log.Warning("Cycle detected in group parent chain at {GroupId}", child.Id);
+                    continue;
+                }
                 var indent = new string(' ', depth * 3);
                 items.Add(new GroupDisplayItem(child.Id, $"{indent}{child.Name}", depth));
                 WalkGroups(child.Id, depth + 1);
