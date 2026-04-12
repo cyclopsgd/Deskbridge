@@ -42,7 +42,13 @@ public static class TreeViewDragDropBehavior
         if ((bool)e.NewValue)
         {
             treeView.AllowDrop = true;
-            treeView.PreviewMouseLeftButtonDown += TreeView_PreviewMouseLeftButtonDown;
+            // TreeViewMultiSelectBehavior marks PreviewMouseLeftButtonDown as handled
+            // after it updates selection; we still need to see the event to arm a
+            // pending drag, so register with handledEventsToo: true.
+            treeView.AddHandler(
+                UIElement.PreviewMouseLeftButtonDownEvent,
+                new MouseButtonEventHandler(TreeView_PreviewMouseLeftButtonDown),
+                handledEventsToo: true);
             treeView.PreviewMouseMove += TreeView_PreviewMouseMove;
             treeView.PreviewMouseLeftButtonUp += TreeView_PreviewMouseLeftButtonUp;
             treeView.DragOver += TreeView_DragOver;
@@ -53,7 +59,9 @@ public static class TreeViewDragDropBehavior
         else
         {
             treeView.AllowDrop = false;
-            treeView.PreviewMouseLeftButtonDown -= TreeView_PreviewMouseLeftButtonDown;
+            treeView.RemoveHandler(
+                UIElement.PreviewMouseLeftButtonDownEvent,
+                new MouseButtonEventHandler(TreeView_PreviewMouseLeftButtonDown));
             treeView.PreviewMouseMove -= TreeView_PreviewMouseMove;
             treeView.PreviewMouseLeftButtonUp -= TreeView_PreviewMouseLeftButtonUp;
             treeView.DragOver -= TreeView_DragOver;
