@@ -439,14 +439,26 @@
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="Credentials"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
+                        <!--
+                             Explicit ItemTemplate is required so SelectionBoxItem
+                             renders via the same template as dropdown items. With
+                             SelectedValuePath="Value", SelectionBoxItem is otherwise
+                             the raw enum and WPF-UI's ComboBox template renders it
+                             as "-" placeholder glyphs.
+                        -->
                         <ComboBox Grid.Row="4" Grid.Column="1"
                                   ItemsSource="{Binding CredentialModes}"
                                   SelectedValue="{Binding PrimarySelectedItem.CredentialMode}"
                                   SelectedValuePath="Value"
-                                  DisplayMemberPath="DisplayName"
                                   Height="24" FontSize="14"
                                   x:Name="CredentialModeCombo"
-                                  SelectionChanged="CredentialMode_SelectionChanged" />
+                                  SelectionChanged="CredentialMode_SelectionChanged">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </Grid>
 
                     <!-- Group properties -->
