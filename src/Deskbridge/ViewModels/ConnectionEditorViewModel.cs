@@ -8,7 +8,10 @@ namespace Deskbridge.ViewModels;
 
 public record GroupDisplayItem(Guid? Id, string DisplayName, int Depth);
 
-public record CredentialModeOption(CredentialMode Value, string DisplayName);
+public record CredentialModeOption(CredentialMode Value, string DisplayName)
+{
+    public override string ToString() => DisplayName;
+}
 
 public partial class ConnectionEditorViewModel : ObservableValidator
 {
