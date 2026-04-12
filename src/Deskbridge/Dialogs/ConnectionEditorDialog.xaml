@@ -106,15 +106,15 @@
                         PlaceholderText="username"
                         IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="0,0,0,12" />
 
+                    <TextBlock Text="Password" FontSize="14"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                    <PasswordBox x:Name="PasswordBox"
+                        IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="0,0,0,12" />
+
                     <TextBlock Text="Domain" FontSize="14"
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                     <ui:TextBox Text="{Binding Domain}"
                         PlaceholderText="domain (optional)"
-                        IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="0,0,0,12" />
-
-                    <TextBlock Text="Password" FontSize="14"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                    <PasswordBox x:Name="PasswordBox"
                         IsEnabled="{Binding IsCredentialFieldsEnabled}" />
                 </StackPanel>
             </StackPanel>
