@@ -317,11 +317,14 @@ public static class TreeViewDragDropBehavior
 
 /// <summary>
 /// Adorner that renders a drop indicator in one of three positions:
-/// Before (line at top), Into (row highlight), After (line at bottom).
+/// Before (line at top), Into (row highlight + border), After (line at bottom).
+/// Lines extend the full width of the host TreeView (not just the adorned row)
+/// so the insertion point is obvious regardless of item indentation.
 /// </summary>
 internal sealed class DropInsertionAdorner : Adorner
 {
     private readonly double _headerHeight;
+    private readonly TreeView? _hostTree;
 
     public DropPosition Position { get; }
 
@@ -331,29 +334,72 @@ internal sealed class DropInsertionAdorner : Adorner
         Position = position;
         _headerHeight = headerHeight;
         IsHitTestVisible = false;
+        _hostTree = FindHostTree(adornedElement);
     }
 
     protected override void OnRender(DrawingContext drawingContext)
     {
         var size = AdornedElement.RenderSize;
-        var width = size.Width;
+        // Extend lines across the full TreeView width so indented children still
+        // show a clear insertion line; fall back to the row width when we can't
+        // compute a wider extent.
+        double width = Math.Max(size.Width, ComputeFullWidth());
+
+        var accentBrush = TryFindBrush("SystemAccentColorPrimaryBrush")
+            ?? new SolidColorBrush(Color.FromRgb(0x00, 0x7A, 0xCC));
 
         if (Position == DropPosition.Into)
         {
-            var brush = TryFindBrush("SubtleFillColorSecondaryBrush")
-                ?? new SolidColorBrush(Color.FromArgb(0x30, 0x00, 0x7A, 0xCC));
-            // Highlight just the header row, not the full (expanded) subtree.
-            drawingContext.DrawRectangle(brush, null, new Rect(0, 0, width, _headerHeight));
+            // Semi-transparent fill (30% of accent) + 2px accent border around header.
+            var fill = TryFindBrush("SystemAccentColorSecondaryBrush")
+                ?? new SolidColorBrush(Color.FromArgb(0x4D, 0x00, 0x7A, 0xCC));
+            if (fill is SolidColorBrush solid && solid.Opacity >= 1.0)
+            {
+                fill = new SolidColorBrush(solid.Color) { Opacity = 0.3 };
+            }
+
+            var borderPen = new Pen(accentBrush, 2) { DashCap = PenLineCap.Flat };
+            // Inset by 1px so the 2px stroke draws entirely inside the row bounds.
+            var rect = new Rect(1, 1, Math.Max(0, width - 2), Math.Max(0, _headerHeight - 2));
+            drawingContext.DrawRectangle(fill, borderPen, rect);
         }
         else
         {
-            var brush = TryFindBrush("SystemAccentColorPrimaryBrush")
-                ?? new SolidColorBrush(Color.FromRgb(0x00, 0x7A, 0xCC));
-
-            var pen = new Pen(brush, 2);
-            double y = Position == DropPosition.Before ? 0 : _headerHeight;
+            var pen = new Pen(accentBrush, 2);
+            double y = Position == DropPosition.Before ? 1 : _headerHeight - 1;
             drawingContext.DrawLine(pen, new Point(0, y), new Point(width, y));
         }
+    }
+
+    /// <summary>
+    /// Width of the host TreeView expressed in the adorned element's coordinate
+    /// space. Lets the insertion line extend past the row's measured width so the
+    /// target is obvious even when the adorned row is narrow (indented children).
+    /// </summary>
+    private double ComputeFullWidth()
+    {
+        if (_hostTree is null || !_hostTree.IsLoaded) return 0;
+        try
+        {
+            // Transform the TreeView's right edge into adorned-element coordinates.
+            var transform = _hostTree.TransformToVisual((Visual)AdornedElement);
+            var leftInAdorned = transform.Transform(new Point(0, 0)).X;
+            return _hostTree.ActualWidth - leftInAdorned;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static TreeView? FindHostTree(DependencyObject? current)
+    {
+        while (current is not null)
+        {
+            if (current is TreeView tv) return tv;
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return null;
     }
 
     private Brush? TryFindBrush(string resourceKey)
