@@ -120,15 +120,16 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
         catch (Exception ex)
         {
-            var safeMessage = ex is System.Runtime.InteropServices.COMException
-                                or System.Runtime.InteropServices.ExternalException
-                                or System.Security.Authentication.AuthenticationException
-                                or System.Net.WebException
-                ? "<redacted: sensitive exception type>"
-                : ex.Message;
+            // WR-05: drop ex.Message unconditionally. The prior allow-list omitted
+            // InvalidOperationException (AxHost.InvalidActiveXStateException derives
+            // from it), SocketException, HttpRequestException, etc — any of which
+            // could carry RDP state detail or network target metadata. T-04-EXC and
+            // RDP-ACTIVEX-PITFALLS §3 mandate type + HResult only for COM-family
+            // errors, and ConnectStage's catch filters already follow that pattern;
+            // match it here rather than trying to classify per exception type.
             _logger.LogError(
-                "Connection pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8} Message={Message}",
-                model.Hostname, ex.GetType().Name, ex.HResult, safeMessage);
+                "Connection pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8}",
+                model.Hostname, ex.GetType().Name, ex.HResult);
             _bus.Publish(new ConnectionFailedEvent(
                 model,
                 $"{ex.GetType().Name} (HResult 0x{ex.HResult:X8})",
@@ -144,15 +145,10 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
         catch (Exception ex)
         {
-            var safeMessage = ex is System.Runtime.InteropServices.COMException
-                                or System.Runtime.InteropServices.ExternalException
-                                or System.Security.Authentication.AuthenticationException
-                                or System.Net.WebException
-                ? "<redacted: sensitive exception type>"
-                : ex.Message;
+            // WR-05: drop ex.Message unconditionally (see RunConnectSafely above).
             _logger.LogError(
-                "Disconnect pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8} Message={Message}",
-                ctx.Connection.Hostname, ex.GetType().Name, ex.HResult, safeMessage);
+                "Disconnect pipeline threw for {Hostname}: {ExceptionType} HResult={HResult:X8}",
+                ctx.Connection.Hostname, ex.GetType().Name, ex.HResult);
         }
     }
 
