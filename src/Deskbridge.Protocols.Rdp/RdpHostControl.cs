@@ -107,6 +107,14 @@ public sealed class RdpHostControl : IProtocolHost
 
         RdpConnectionConfigurator.Apply(_rdp, context);
 
+        _logger.LogInformation(
+            "[diag] RDP settings applied: EnableCredSspSupport={CredSsp} AuthenticationLevel={AuthLevel} " +
+            "SmartSizing={SmartSizing} ColorDepth={ColorDepth}",
+            _rdp.AdvancedSettings9.EnableCredSspSupport,
+            _rdp.AdvancedSettings9.AuthenticationLevel,
+            _rdp.AdvancedSettings9.SmartSizing,
+            _rdp.ColorDepth);
+
         // [CITED: RDP-ACTIVEX-PITFALLS §4] IMsTscNonScriptable password — sited + not-connected.
         // GetOcxForPasswordSet is an internal virtual seam for ErrorIsolationTests to stub the cast.
         if (!string.IsNullOrEmpty(context.ResolvedPassword))
