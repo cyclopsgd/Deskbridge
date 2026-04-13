@@ -187,6 +187,22 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
+        // WR-01 fix: the replace-active-host branch in OnConnectionRequested fires both
+        // RunDisconnectSafely(A) and RunConnectSafely(B) fire-and-forget. CreateHostStage
+        // for B is synchronous while A's disconnect pipeline awaits DisconnectAsync, so
+        // B's HostCreatedEvent typically lands BEFORE A's ConnectionClosedEvent. Without
+        // this handoff, _active overwrites to B while A's WFH is still mounted in
+        // ViewportGrid, and A's later ConnectionClosedEvent no-ops because Model.Id no
+        // longer matches. Result: two WFHs parented, A's covering B's viewport. Unmount
+        // + unsubscribe the previous host explicitly before overwriting.
+        if (_active is { } previous && !ReferenceEquals(previous.Host, evt.Host))
+        {
+            try { previous.Host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
+            catch { /* disposed host may throw */ }
+            HostUnmounted?.Invoke(this, previous.Host);
+            _active = null;
+        }
+
         _active = (evt.Host, evt.Connection);
 
         // Plan 04-03: subscribe to the post-connect disconnect stream so we can drive
