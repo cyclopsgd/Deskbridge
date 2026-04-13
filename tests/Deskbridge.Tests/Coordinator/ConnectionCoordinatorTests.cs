@@ -218,6 +218,59 @@ public sealed class ConnectionCoordinatorTests
         });
     }
 
+    /// <summary>
+    /// Rapid-double-click guard: a second <see cref="ConnectionRequestedEvent"/> for the
+    /// SAME <see cref="ConnectionModel.Id"/> while the first host is still active must be
+    /// dropped silently. Without this, the replace-active-host branch tears down the
+    /// in-flight <c>RdpHostControl</c> mid-<c>Connect()</c>, producing the
+    /// <c>RdpConnectFailedException discReason=1</c> → <c>COMException 0x83450003</c>
+    /// cascade observed in the field. Auto-reconnect (driven by
+    /// <see cref="RdpReconnectCoordinator"/>) is unaffected because it bypasses
+    /// <see cref="ConnectionRequestedEvent"/> entirely.
+    /// </summary>
+    [Fact]
+    public void OnConnectionRequested_IgnoresDuplicateRequestForSameActiveModel()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            Action<ConnectionRequestedEvent>? reqHandler = null;
+            Action<HostCreatedEvent>? hostCreatedHandler = null;
+            var bus = Substitute.For<IEventBus>();
+            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<ConnectionRequestedEvent>>()))
+                .Do(ci => reqHandler = ci.Arg<Action<ConnectionRequestedEvent>>());
+            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<HostCreatedEvent>>()))
+                .Do(ci => hostCreatedHandler = ci.Arg<Action<HostCreatedEvent>>());
+            var connect = Substitute.For<IConnectionPipeline>();
+            connect.ConnectAsync(Arg.Any<ConnectionModel>()).Returns(Task.FromResult(new PipelineResult(true)));
+            var disconnect = Substitute.For<IDisconnectPipeline>();
+            var dispatcher = Dispatcher.CurrentDispatcher;
+
+            using var coord = new ConnectionCoordinator(
+                bus, connect, disconnect, NullLogger<ConnectionCoordinator>.Instance, dispatcher);
+
+            var model = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
+            var host = Substitute.For<IProtocolHost>();
+
+            // Fire #1: legitimate connect → pipeline invoked → host created → _active set.
+            reqHandler!(new ConnectionRequestedEvent(model));
+            hostCreatedHandler!(new HostCreatedEvent(model, host));
+            coord.ActiveHost.Should().BeSameAs(host);
+
+            // Fire #2: duplicate (same model.Id) while host still active → must be dropped.
+            // Use the SAME model instance so model.Id matches exactly (rapid-double-click case).
+            reqHandler!(new ConnectionRequestedEvent(model));
+
+            // Connect must have been called exactly once (the first request only); the
+            // duplicate must NOT have triggered another ConnectAsync. Disconnect must NOT
+            // have been called either — the in-flight host stays untouched.
+            connect.Received(1).ConnectAsync(Arg.Any<ConnectionModel>());
+            disconnect.DidNotReceive().DisconnectAsync(Arg.Any<DisconnectContext>());
+            host.DidNotReceive().Dispose();
+            coord.ActiveHost.Should().BeSameAs(host);
+        });
+    }
+
     [Fact]
     public void DisposesAndReplaces_ActiveHost_OnSecondConnectionRequestedEvent()
     {

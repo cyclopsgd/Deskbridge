@@ -70,8 +70,26 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        // Single-host replacement policy (Phase 4, Open Question #2). If a host is active,
-        // dispatch disconnect first. Phase 5 replaces this with tab-keyed storage.
+        // Rapid-double-click guard. If the user clicks the SAME connection again while
+        // a host for that model is still active (in-flight Connect or already connected),
+        // drop the duplicate request. Without this, the replace-active-host branch below
+        // would dispose the in-flight RdpHostControl mid-Connect(), causing the
+        // RdpConnectFailedException discReason=1 → COMException 0x83450003 cascade observed
+        // in the field. Auto-reconnect is unaffected: RdpReconnectCoordinator (and the
+        // manual-reconnect handler) call _connect.ConnectAsync directly, never going
+        // through ConnectionRequestedEvent, and OnDisconnectedAfterConnect clears _active
+        // before kicking off the loop anyway.
+        if (_active is { } current && current.Model.Id == evt.Connection.Id)
+        {
+            _logger.LogInformation(
+                "Ignoring duplicate connect request for {Hostname} — host for connection id {ConnectionId} still active",
+                evt.Connection.Hostname, evt.Connection.Id);
+            return;
+        }
+
+        // Single-host replacement policy (Phase 4, Open Question #2). If a host is active
+        // for a DIFFERENT model, dispatch disconnect first. Phase 5 replaces this with
+        // tab-keyed storage.
         if (_active is { } active)
         {
             _logger.LogInformation(
