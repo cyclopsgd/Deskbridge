@@ -22,6 +22,7 @@
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
             <converters:TreeViewItemIndentConverter x:Key="TreeViewItemIndent" IndentSize="19" />
             <converters:BoolToChevronConverter x:Key="BoolToChevron" />
+            <converters:EnumToVisibilityConverter x:Key="EnumToVisibility" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
