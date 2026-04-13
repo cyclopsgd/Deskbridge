@@ -1,0 +1,51 @@
+<UserControl x:Class="Deskbridge.Views.ReconnectOverlay"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vm="clr-namespace:Deskbridge.ViewModels"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:ReconnectOverlayViewModel}"
+    Background="#99000000"
+    HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+    <!--
+        Plan 04-03 D-07 overlay. Rendered on top of a collapsed WindowsFormsHost
+        (AirspaceSwapper.HideWithoutSnapshot) so WPF wins airspace unambiguously.
+        Visual design is intentionally minimal — Phase 6 ui-phase refines.
+    -->
+    <ui:Card HorizontalAlignment="Center" VerticalAlignment="Center"
+             Padding="24" MaxWidth="420">
+        <StackPanel>
+            <TextBlock Text="{Binding ConnectionName}" FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Margin="0,0,0,4" />
+            <TextBlock Text="{Binding AttemptText}" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                       Margin="0,0,0,12" />
+
+            <!-- Auto mode: spinner + countdown -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"
+                        Visibility="{Binding Mode, Converter={StaticResource EnumToVisibility}, ConverterParameter=Auto}">
+                <ui:ProgressRing IsIndeterminate="True" Width="20" Height="20" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding Delay, StringFormat='next attempt in {0:%s}s'}"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Button row -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <!-- Auto mode: Cancel only -->
+                <ui:Button Content="Cancel" Command="{Binding CancelCommand}"
+                           Visibility="{Binding Mode, Converter={StaticResource EnumToVisibility}, ConverterParameter=Auto}" />
+                <!-- Manual mode: Reconnect (primary) + Close -->
+                <ui:Button Content="Reconnect" Appearance="Primary"
+                           Command="{Binding ReconnectCommand}"
+                           Visibility="{Binding Mode, Converter={StaticResource EnumToVisibility}, ConverterParameter=Manual}"
+                           Margin="0,0,8,0" />
+                <ui:Button Content="Close" Command="{Binding CloseCommand}"
+                           Visibility="{Binding Mode, Converter={StaticResource EnumToVisibility}, ConverterParameter=Manual}" />
+            </StackPanel>
+        </StackPanel>
+    </ui:Card>
+</UserControl>
