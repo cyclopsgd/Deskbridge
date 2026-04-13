@@ -9,12 +9,26 @@ namespace Deskbridge.Core.Services;
 
 public sealed class WindowsCredentialService : ICredentialService
 {
+    // Windows Credential Manager reserves the TERMSRV/* target prefix for
+    // CRED_TYPE_DOMAIN_PASSWORD (the RDP SSO convention used by mstsc). The
+    // AdysTech wrapper exposes this as CredentialType.Windows (underlying value 2,
+    // which is CRED_TYPE_DOMAIN_PASSWORD in Wincred.h). Writing Generic to a fresh
+    // TERMSRV/* target fails with 0x8 (ERROR_NOT_ENOUGH_MEMORY) because Windows
+    // masks the type-conflict behind that misleading code.
+    private const CredentialType RdpTargetType = CredentialType.Windows;
+
+    // Older installs or cmdkey /generic invocations may have left Generic-type
+    // entries under TERMSRV/*. Read path falls back to this so existing users
+    // don't lose saved credentials after the fix.
+    private const CredentialType LegacyRdpTargetType = CredentialType.Generic;
+
     public NetworkCredential? GetForConnection(ConnectionModel connection)
     {
         var target = $"TERMSRV/{connection.Hostname}";
         try
         {
-            return CredentialManager.GetCredentials(target, CredentialType.Generic);
+            return CredentialManager.GetCredentials(target, RdpTargetType)
+                ?? CredentialManager.GetCredentials(target, LegacyRdpTargetType);
         }
         catch (Exception ex)
         {
@@ -29,7 +43,7 @@ public sealed class WindowsCredentialService : ICredentialService
         try
         {
             var cred = new NetworkCredential(username, password, domain ?? string.Empty);
-            CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
+            CredentialManager.SaveCredentials(target, cred, RdpTargetType);
         }
         catch (Exception ex)
         {
@@ -43,11 +57,19 @@ public sealed class WindowsCredentialService : ICredentialService
         var target = $"TERMSRV/{connection.Hostname}";
         try
         {
-            CredentialManager.RemoveCredentials(target, CredentialType.Generic);
+            CredentialManager.RemoveCredentials(target, RdpTargetType);
         }
         catch
         {
             // Credential may not exist -- swallow
+        }
+        try
+        {
+            CredentialManager.RemoveCredentials(target, LegacyRdpTargetType);
+        }
+        catch
+        {
+            // Legacy Generic entry may not exist -- swallow
         }
     }
 
