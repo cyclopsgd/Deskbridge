@@ -50,6 +50,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _bus.Subscribe<ConnectionEstablishedEvent>(this, OnConnectionEstablished);
         _bus.Subscribe<ConnectionFailedEvent>(this, OnConnectionFailed);
         _bus.Subscribe<ConnectionClosedEvent>(this, OnConnectionClosed);
+        _bus.Subscribe<CredentialRequestedEvent>(this, OnCredentialRequested);
     }
 
     public IProtocolHost? ActiveHost => _active?.Host;
@@ -244,6 +245,32 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
     }
 
+    /// <summary>
+    /// Phase 4 stop-gap (Phase 6 scope: real prompt dialog). <c>CredentialMode.Prompt</c> and
+    /// unresolved Own/Inherit cases publish <see cref="CredentialRequestedEvent"/>, but there's
+    /// no prompt UI yet. Before this handler existed the event vanished silently and the user
+    /// saw nothing. Log a warning and surface a <see cref="ConnectionFailedEvent"/> so the
+    /// existing failure UI path shows feedback.
+    /// </summary>
+    private void OnCredentialRequested(CredentialRequestedEvent evt)
+    {
+        if (_disposed) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            _dispatcher.InvokeAsync(() => OnCredentialRequested(evt));
+            return;
+        }
+
+        _logger.LogWarning(
+            "CredentialRequestedEvent for {Hostname} — prompt mode not yet implemented. " +
+            "Use CredentialMode.Own with stored password for now.",
+            evt.Connection.Hostname);
+        _bus.Publish(new ConnectionFailedEvent(
+            evt.Connection,
+            "Prompt mode not yet implemented — use Own mode with stored password (Phase 6 scope).",
+            null));
+    }
+
     private void OnConnectionClosed(ConnectionClosedEvent evt)
     {
         if (_disposed) return;
@@ -424,6 +451,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _bus.Unsubscribe<ConnectionEstablishedEvent>(this);
         _bus.Unsubscribe<ConnectionFailedEvent>(this);
         _bus.Unsubscribe<ConnectionClosedEvent>(this);
+        _bus.Unsubscribe<CredentialRequestedEvent>(this);
 
         if (_active is { } active)
         {
