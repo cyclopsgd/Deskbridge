@@ -84,6 +84,20 @@ public partial class MainWindow : FluentWindow
             // so the new session is visible. No-op if no overlay is showing.
             CloseOverlay();
 
+            // WR-02 defense-in-depth: walk any existing WindowsFormsHost children and
+            // remove them before adding the new host. Guards against the replacement
+            // race in ConnectionCoordinator.OnHostCreated where a stale WFH might still
+            // be parented (the Core-side WR-01 fix handles coordinator state; this
+            // handles the visual tree side in case HostUnmounted ordering ever drifts
+            // or a disposed host's WFH lingers post-OnConnectionFailed).
+            for (int i = ViewportGrid.Children.Count - 1; i >= 0; i--)
+            {
+                if (ViewportGrid.Children[i] is System.Windows.Forms.Integration.WindowsFormsHost)
+                {
+                    ViewportGrid.Children.RemoveAt(i);
+                }
+            }
+
             // D-12 single live host: swap the WFH into the viewport.
             ViewportGrid.Children.Add(rdp.Host);
 
