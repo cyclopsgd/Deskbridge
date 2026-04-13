@@ -32,7 +32,12 @@ public static class RdpConnectionConfigurator
         if (c.DisplaySettings?.Height is > 0) rdp.DesktopHeight = c.DisplaySettings.Height.Value;
         rdp.ColorDepth = 32;
 
-        rdp.AdvancedSettings9.EnableCredSspSupport = true;
+        // CredSSP / NLA: default true for Windows RDP servers. xrdp and other non-Windows RDP
+        // implementations don't support CredSSP; forcing it causes an indefinite stall during
+        // negotiation. Exposed on ConnectionModel so users can opt out per-connection.
+        rdp.AdvancedSettings9.EnableCredSspSupport = c.EnableCredSspSupport;
+        // Server auth level: 0=no auth required (xrdp / self-signed), 1=must auth, 2=warn (default).
+        rdp.AdvancedSettings9.AuthenticationLevel = c.AuthenticationLevel;
         rdp.AdvancedSettings9.CachePersistenceActive = 0;
         // NOTE: "BitmapPeristence" (no 's') — COM typelib misspelling; MUST match exactly.
         rdp.AdvancedSettings9.BitmapPeristence = 0;
