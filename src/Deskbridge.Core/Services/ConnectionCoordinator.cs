@@ -24,7 +24,10 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     private readonly IDisconnectPipeline _disconnect;
     private readonly Dispatcher _dispatcher;
     private readonly ILogger<ConnectionCoordinator> _logger;
+    private readonly RdpReconnectCoordinator _reconnectCoordinator;
     private (IProtocolHost Host, ConnectionModel Model)? _active;
+    private IProtocolHost? _suppressedHost;
+    private CancellationTokenSource? _reconnectCts;
     private bool _disposed;
 
     public ConnectionCoordinator(
@@ -32,13 +35,15 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         IConnectionPipeline connect,
         IDisconnectPipeline disconnect,
         ILogger<ConnectionCoordinator> logger,
-        Dispatcher? dispatcher = null)
+        Dispatcher? dispatcher = null,
+        RdpReconnectCoordinator? reconnectCoordinator = null)
     {
         _bus = bus;
         _connect = connect;
         _disconnect = disconnect;
         _logger = logger;
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
+        _reconnectCoordinator = reconnectCoordinator ?? new RdpReconnectCoordinator();
 
         _bus.Subscribe<ConnectionRequestedEvent>(this, OnConnectionRequested);
         _bus.Subscribe<HostCreatedEvent>(this, OnHostCreated);
@@ -51,6 +56,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
 
     public event EventHandler<IProtocolHost>? HostMounted;
     public event EventHandler<IProtocolHost>? HostUnmounted;
+    public event EventHandler<ReconnectUiRequest>? ReconnectOverlayRequested;
 
     private void OnConnectionRequested(ConnectionRequestedEvent evt)
     {
@@ -163,6 +169,13 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
 
         _active = (evt.Host, evt.Connection);
+
+        // Plan 04-03: subscribe to the post-connect disconnect stream so we can drive
+        // the reconnect loop. IProtocolHost exposes the event abstractly (D-10);
+        // RdpHostControl raises it from its OnDisconnectedAfterConnectHandler after
+        // OnLoginComplete swaps the OnDisconnected handler.
+        evt.Host.DisconnectedAfterConnect += OnDisconnectedAfterConnect;
+
         HostMounted?.Invoke(this, evt.Host);
     }
 
@@ -212,6 +225,11 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         {
             var host = active.Host;
             _active = null;
+            // Defense-in-depth: unsubscribe the reconnect handler BEFORE dispose so a
+            // late-firing OnDisconnected (mid-teardown COM event) cannot re-enter the
+            // reconnect path with a partially-disposed host.
+            try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
+            catch { /* disposed host may throw */ }
             // Unmount FIRST (MainWindow removes from visual tree while Host getter is still valid),
             // THEN dispose (frees COM resources + nulls _host). Reverse order throws
             // ObjectDisposedException in MainWindow.OnHostUnmounted's rdp.Host access.
@@ -239,14 +257,167 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         {
             var host = active.Host;
             _active = null;
+            try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
+            catch { /* disposed host may throw */ }
             HostUnmounted?.Invoke(this, host);
         }
+    }
+
+    /// <summary>
+    /// Plan 04-03 D-03/D-04/D-06/D-07 entry point. Fires when an established session
+    /// drops. Classifies the discReason; for retriable categories we run the
+    /// <see cref="RdpReconnectCoordinator"/> backoff loop, for auth/licensing we go
+    /// straight to the manual overlay. Either way we first dispose the current host
+    /// (D-04 fresh instance per attempt).
+    /// </summary>
+    internal void OnDisconnectedAfterConnect(object? sender, int discReason)
+    {
+        if (_disposed) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            _dispatcher.InvokeAsync(() => OnDisconnectedAfterConnect(sender, discReason));
+            return;
+        }
+
+        if (sender is not IProtocolHost host) return;
+        if (_active is not { } active || !ReferenceEquals(active.Host, host)) return;
+
+        var model = active.Model;
+        var category = DisconnectReasonClassifier.Classify(discReason);
+        _logger.LogInformation(
+            "Post-connect disconnect for {Hostname}: discReason={DiscReason} category={Category}",
+            model.Hostname, discReason, category);
+
+        // Suppress the HostUnmounted/Dispose that the normal failure / closed pipeline
+        // would trigger — we want the overlay to stay visible over the viewport until
+        // either a fresh host mounts (success) or the user closes the overlay.
+        _suppressedHost = host;
+        _active = null;
+        try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
+        catch { /* disposed host may throw */ }
+
+        try { host.Dispose(); }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                "Host dispose during reconnect threw: {ExceptionType} HResult={HResult:X8}",
+                ex.GetType().Name, ex.HResult);
+        }
+
+        var handle = new ReconnectOverlayHandle();
+        ReconnectOverlayRequested?.Invoke(this, new ReconnectUiRequest(model, handle));
+
+        if (!DisconnectReasonClassifier.ShouldAutoRetry(category))
+        {
+            // D-06: auth or licensing -> manual overlay only.
+            handle.SwitchToManual?.Invoke();
+            WireManualHandlers(handle, model);
+            return;
+        }
+
+        _reconnectCts?.Cancel();
+        _reconnectCts = new CancellationTokenSource();
+        handle.CancelRequested += (_, _) =>
+        {
+            try { _reconnectCts?.Cancel(); } catch { /* already disposed */ }
+        };
+        _ = RunAutoReconnectAsync(model, handle, _reconnectCts.Token);
+    }
+
+    private async Task RunAutoReconnectAsync(ConnectionModel model, ReconnectOverlayHandle handle, CancellationToken ct)
+    {
+        try
+        {
+            var success = await _reconnectCoordinator.RunAsync(
+                model,
+                reconnect: async m =>
+                {
+                    try
+                    {
+                        var result = await _connect.ConnectAsync(m);
+                        return result.Success;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            "Reconnect attempt for {Hostname} threw: {ExceptionType} HResult={HResult:X8}",
+                            m.Hostname, ex.GetType().Name, ex.HResult);
+                        return false;
+                    }
+                },
+                notifyAttempt: (attempt, delay) =>
+                {
+                    handle.UpdateAttempt?.Invoke(attempt, delay);
+                    _bus.Publish(new ReconnectingEvent(model, attempt, delay));
+                    return Task.CompletedTask;
+                },
+                ct);
+
+            if (success)
+            {
+                // ConnectStage already published ConnectionEstablishedEvent on success,
+                // which landed via OnHostCreated -> _active reset + HostMounted. Close
+                // the overlay so the fresh session is visible.
+                handle.Close?.Invoke();
+            }
+            else if (ct.IsCancellationRequested)
+            {
+                handle.Close?.Invoke();
+                _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.UserInitiated));
+            }
+            else
+            {
+                // D-05 cap hit -> manual overlay.
+                handle.SwitchToManual?.Invoke();
+                WireManualHandlers(handle, model);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                "RunAutoReconnectAsync for {Hostname} threw: {ExceptionType} HResult={HResult:X8}",
+                model.Hostname, ex.GetType().Name, ex.HResult);
+            handle.Close?.Invoke();
+            _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.Error));
+        }
+        finally
+        {
+            _suppressedHost = null;
+        }
+    }
+
+    private void WireManualHandlers(ReconnectOverlayHandle handle, ConnectionModel model)
+    {
+        handle.ManualReconnectRequested += async (_, _) =>
+        {
+            handle.Close?.Invoke();
+            try
+            {
+                await _connect.ConnectAsync(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    "Manual reconnect for {Hostname} threw: {ExceptionType} HResult={HResult:X8}",
+                    model.Hostname, ex.GetType().Name, ex.HResult);
+            }
+        };
+        handle.ManualCloseRequested += (_, _) =>
+        {
+            handle.Close?.Invoke();
+            _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.UserInitiated));
+            _suppressedHost = null;
+        };
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+
+        try { _reconnectCts?.Cancel(); } catch { /* already disposed */ }
+        try { _reconnectCts?.Dispose(); } catch { /* best-effort */ }
+        _reconnectCts = null;
 
         _bus.Unsubscribe<ConnectionRequestedEvent>(this);
         _bus.Unsubscribe<HostCreatedEvent>(this);
@@ -256,6 +427,8 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
 
         if (_active is { } active)
         {
+            try { active.Host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
+            catch { /* disposed host may throw */ }
             try
             {
                 _disconnect.DisconnectAsync(new DisconnectContext
@@ -273,5 +446,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             }
             _active = null;
         }
+
+        _suppressedHost = null;
     }
 }
