@@ -335,27 +335,54 @@ public partial class ConnectionTreeControl : UserControl
     }
 
     // Quick properties inline edit handlers -- save on focus loss
+    //
+    // Defensive guard: exceptions from these handlers propagate back into the WPF
+    // input pipeline (PasswordBox.OnLostFocus → InputManager → Dispatcher) and
+    // terminate the process. A misconfigured credential store must not kill the
+    // UI thread. Log and swallow — the ViewModel is responsible for state, and
+    // the user can retry via the editor dialog.
     private void QuickProperty_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (_viewModel.PrimarySelectedItem is ConnectionTreeItemViewModel connVm)
+        try
         {
-            _viewModel.SaveConnectionFromQuickEdit(connVm);
+            if (_viewModel.PrimarySelectedItem is ConnectionTreeItemViewModel connVm)
+            {
+                _viewModel.SaveConnectionFromQuickEdit(connVm);
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "QuickProperty_LostFocus handler threw");
         }
     }
 
     private void QuickPassword_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (sender is System.Windows.Controls.PasswordBox pb)
+        try
         {
-            _viewModel.SaveQuickPassword(pb.Password);
+            if (sender is System.Windows.Controls.PasswordBox pb)
+            {
+                _viewModel.SaveQuickPassword(pb.Password);
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "QuickPassword_LostFocus handler threw");
         }
     }
 
     private void GroupQuickProperty_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (_viewModel.PrimarySelectedItem is GroupTreeItemViewModel groupVm)
+        try
         {
-            _viewModel.SaveGroupFromQuickEdit(groupVm);
+            if (_viewModel.PrimarySelectedItem is GroupTreeItemViewModel groupVm)
+            {
+                _viewModel.SaveGroupFromQuickEdit(groupVm);
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "GroupQuickProperty_LostFocus handler threw");
         }
     }
 
