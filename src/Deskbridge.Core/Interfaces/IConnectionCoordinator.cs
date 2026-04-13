@@ -1,3 +1,5 @@
+using Deskbridge.Core.Services;
+
 namespace Deskbridge.Core.Interfaces;
 
 /// <summary>
@@ -16,4 +18,12 @@ public interface IConnectionCoordinator
 
     /// <summary>Raised when the active host is disconnected; MainWindow unmounts the WFH.</summary>
     event EventHandler<IProtocolHost>? HostUnmounted;
+
+    /// <summary>
+    /// Raised when a post-connect disconnect triggers a reconnect episode (Plan 04-03).
+    /// MainWindow creates a <c>ReconnectOverlayViewModel</c>, bridges it to the
+    /// supplied <see cref="ReconnectOverlayHandle"/>, and mounts the overlay via
+    /// <see cref="Deskbridge.Protocols.Rdp.AirspaceSwapper.HideWithoutSnapshot"/>.
+    /// </summary>
+    event EventHandler<ReconnectUiRequest>? ReconnectOverlayRequested;
 }

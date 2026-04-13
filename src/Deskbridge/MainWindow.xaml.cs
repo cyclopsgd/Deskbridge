@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using Deskbridge.Core.Interfaces;
+using Deskbridge.Core.Services;
 using Deskbridge.Protocols.Rdp;
+using Deskbridge.ViewModels;
+using Deskbridge.Views;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -11,6 +14,9 @@ public partial class MainWindow : FluentWindow
     private readonly IConnectionCoordinator _coordinator;
     private readonly AirspaceSwapper _airspace;
     private IProtocolHost? _activeRdpHost;
+    private ReconnectOverlay? _overlayControl;
+    private ReconnectOverlayViewModel? _overlayVm;
+    private IDisposable? _overlayAirspaceToken;
 
     public MainWindow(
         ViewModels.MainWindowViewModel viewModel,
@@ -33,6 +39,7 @@ public partial class MainWindow : FluentWindow
         _airspace = airspace;
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
+        _coordinator.ReconnectOverlayRequested += OnReconnectOverlayRequested;
     }
 
     /// <summary>
@@ -52,6 +59,10 @@ public partial class MainWindow : FluentWindow
     /// </summary>
     protected override void OnClosing(CancelEventArgs e)
     {
+        // Plan 04-03: close any live reconnect overlay first so the AirspaceSwapper
+        // restore token runs before the host disappears.
+        try { CloseOverlay(); } catch { /* best-effort */ }
+
         try
         {
             _activeRdpHost?.Dispose();
@@ -69,6 +80,10 @@ public partial class MainWindow : FluentWindow
         if (host is not RdpHostControl rdp) return;
         Dispatcher.Invoke(() =>
         {
+            // A fresh host mounting means the reconnect succeeded — close the overlay
+            // so the new session is visible. No-op if no overlay is showing.
+            CloseOverlay();
+
             // D-12 single live host: swap the WFH into the viewport.
             ViewportGrid.Children.Add(rdp.Host);
 
@@ -97,6 +112,70 @@ public partial class MainWindow : FluentWindow
             {
                 _activeRdpHost = null;
             }
+        });
+    }
+
+    /// <summary>
+    /// Plan 04-03 D-07 bridge: wires the Core <see cref="ReconnectOverlayHandle"/> to a
+    /// freshly created <see cref="ReconnectOverlayViewModel"/> + <see cref="ReconnectOverlay"/>,
+    /// mounts the overlay into <c>ViewportGrid</c>, and collapses the current
+    /// WindowsFormsHost via <see cref="AirspaceSwapper.HideWithoutSnapshot"/> so the
+    /// WPF overlay is not obscured by the WinForms airspace.
+    /// </summary>
+    private void OnReconnectOverlayRequested(object? sender, ReconnectUiRequest req)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            // Replace any existing overlay (edge case: rapid successive drops).
+            CloseOverlay();
+
+            _overlayVm = new ReconnectOverlayViewModel { ConnectionName = req.Connection.Hostname };
+            _overlayControl = new ReconnectOverlay { DataContext = _overlayVm };
+
+            // Core -> UI: coordinator pushes updates through these actions.
+            req.Handle.UpdateAttempt = (attempt, delay) =>
+                Dispatcher.Invoke(() => _overlayVm?.Update(attempt, delay));
+            req.Handle.SwitchToManual = () =>
+                Dispatcher.Invoke(() => _overlayVm?.SwitchToManual());
+            req.Handle.Close = () =>
+                Dispatcher.Invoke(CloseOverlay);
+
+            // UI -> Core: user intents fan out through the handle.
+            _overlayVm.Cancelled += (_, _) => req.Handle.RaiseCancel();
+            _overlayVm.ReconnectRequested += (_, _) => req.Handle.RaiseManualReconnect();
+            _overlayVm.CloseRequested += (_, _) => req.Handle.RaiseManualClose();
+
+            // Hide the WFH behind the overlay (D-07) — session is already gone so no
+            // snapshot is meaningful; just collapse Visibility. Airspace helper returns a
+            // token that restores Visible on dispose when the overlay closes.
+            if (_activeRdpHost is RdpHostControl rdp)
+            {
+                try { _overlayAirspaceToken = _airspace.HideWithoutSnapshot(rdp.Host); }
+                catch
+                {
+                    // Best-effort: if the host is already disposed the airspace hide fails;
+                    // the overlay still renders on top of the viewport grid regardless.
+                }
+            }
+
+            ViewportGrid.Children.Add(_overlayControl);
+            System.Windows.Controls.Panel.SetZIndex(_overlayControl, 1000);
+        });
+    }
+
+    private void CloseOverlay()
+    {
+        if (_overlayControl is null && _overlayVm is null && _overlayAirspaceToken is null) return;
+        Dispatcher.Invoke(() =>
+        {
+            try { _overlayAirspaceToken?.Dispose(); } catch { /* best-effort */ }
+            _overlayAirspaceToken = null;
+            if (_overlayControl is not null && ViewportGrid.Children.Contains(_overlayControl))
+            {
+                ViewportGrid.Children.Remove(_overlayControl);
+            }
+            _overlayControl = null;
+            _overlayVm = null;
         });
     }
 }

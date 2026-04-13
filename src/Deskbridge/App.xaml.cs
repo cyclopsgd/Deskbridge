@@ -95,6 +95,15 @@ public partial class App : Application
         // Connection coordinator (event-bus bridge — D-11 STA marshal + D-12 single-host policy)
         services.AddSingleton<IConnectionCoordinator, ConnectionCoordinator>();
 
+        // Reconnect coordinator (Plan 04-03 — D-03 backoff + D-05 cap). Injected into
+        // ConnectionCoordinator via optional ctor parameter (DI resolves the concrete class).
+        services.AddSingleton<RdpReconnectCoordinator>();
+
+        // Reconnect overlay ViewModel is transient — one instance per reconnect episode,
+        // constructed by MainWindow.OnReconnectOverlayRequested directly rather than DI
+        // (needs per-request ConnectionName). Registration retained for future DI consumers.
+        services.AddTransient<ViewModels.ReconnectOverlayViewModel>();
+
         // Airspace swapper (WM_ENTERSIZEMOVE bitmap-swap per D-13 + D-14)
         services.AddSingleton<AirspaceSwapper>();
         // ---- end Phase 4 ----
