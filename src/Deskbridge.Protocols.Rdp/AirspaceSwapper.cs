@@ -5,6 +5,8 @@ using System.Windows.Forms.Integration;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 // Disambiguate between System.Drawing.Image (pulled via UseWindowsForms) and WPF's Image control.
 using Image = System.Windows.Controls.Image;
@@ -32,8 +34,16 @@ public sealed class AirspaceSwapper : IDisposable
 
     private readonly Dictionary<WindowsFormsHost, Image> _hosts = new();
     private readonly List<HwndSource> _hookedSources = new();
+    private readonly ILogger<AirspaceSwapper> _logger;
     private bool _inSizeMove;
     private bool _disposed;
+
+    public AirspaceSwapper() : this(NullLogger<AirspaceSwapper>.Instance) { }
+
+    public AirspaceSwapper(ILogger<AirspaceSwapper> logger)
+    {
+        _logger = logger;
+    }
 
     public void AttachToWindow(Window window)
     {
@@ -116,8 +126,15 @@ public sealed class AirspaceSwapper : IDisposable
                     overlay.Source = snapshot;
                     overlay.Visibility = Visibility.Visible;
                 }
-                host.Visibility = Visibility.Hidden;
+                // Use Collapsed (not Hidden) — Hidden has been observed to cause the
+                // hosted AxHost child HWND to be torn down on some servers (e.g. xrdp),
+                // which raises OnDisconnected with discReason=2 (exDiscReasonAPIInitiatedLogoff)
+                // and ends the live RDP session. Collapsed removes the WFH from the
+                // layout pass without destroying its child HWND, so the AxRdp session
+                // (and its keep-alive ping stream) survives the drag/resize gesture.
+                host.Visibility = Visibility.Collapsed;
             }
+            _logger.LogDebug("[airspace] ENTERSIZEMOVE: snapshot taken, WFH visibility -> Collapsed (hosts={Count})", _hosts.Count);
         }
         else if (msg == WM_EXITSIZEMOVE && _inSizeMove)
         {
@@ -128,6 +145,7 @@ public sealed class AirspaceSwapper : IDisposable
                 overlay.Visibility = Visibility.Collapsed;
                 overlay.Source = null;
             }
+            _logger.LogDebug("[airspace] EXITSIZEMOVE: snapshot hidden, WFH visibility -> Visible (hosts={Count})", _hosts.Count);
         }
         return IntPtr.Zero;
     }
