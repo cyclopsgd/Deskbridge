@@ -1271,24 +1271,24 @@ private void SetActiveHostVisibility(Guid activeId)
 
 **Items in this table that appear in `[ASSUMED]` tags in the research body:** None above — the claims here derive from cited docs or existing code reads; they are labeled "Assumption" because they have residual empirical risk (usually "need UAT to confirm"), not because they lack source attribution.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does Ctrl+Tab reliably fire `PreviewKeyDown` on the FluentWindow when the AxHost has focus?** (Assumption A1)
+1. **Does Ctrl+Tab reliably fire `PreviewKeyDown` on the FluentWindow when the AxHost has focus?** (Assumption A1) — RESOLVED: Deferred to UAT at Plan 03 Task 3. Fallback documented: if A1 fails, Phase 6 global shortcut service pulls forward (RegisterHotKey-based).
    - What we know: `KeyboardHookMode=0` disables the RDP low-level hook (RDP-ACTIVEX-PITFALLS §5 docs).
    - What's unclear: Whether the WFH's IKeyboardInputSink bridge correctly tunnels Ctrl+Tab to the WPF input manager.
    - Recommendation: Add a UAT acceptance check specifically for "Ctrl+Tab with RDP focused." If it fails, Phase 6 shortcut service pulls forward (2-day slip).
 
-2. **What happens to auto-reconnect when the user closes the tab during a backoff delay?**
+2. **What happens to auto-reconnect when the user closes the tab during a backoff delay?** — RESOLVED: New `IConnectionCoordinator.CancelReconnect(Guid)` API added; `TabHostManager.CloseTabAsync` / `CloseOthersAsync` / `CloseAllAsync` all invoke it before `DisconnectAsync`. Wired in Plan 01 Task 2 (TabHostManager close paths) and Plan 01 Task 3 (ConnectionCoordinator + IConnectionCoordinator interface).
    - What we know: Phase 4 `RdpReconnectCoordinator.RunAsync` takes a `CancellationToken` which is cancelled on user Cancel.
    - What's unclear: Does `CloseTabAsync` from TabHostManager cancel any in-flight reconnect token?
    - Recommendation: `TabHostManager.CloseTabAsync` must find the active reconnect CTS for that connection and cancel it before `DisconnectAsync`. Plumb via `ConnectionCoordinator.CancelReconnect(Guid)` helper or expose the CTS dict on the coordinator.
 
-3. **If the user clicks Reopen Last Closed (Ctrl+Shift+T) while the connection has been deleted from the store, what happens?**
+3. **If the user clicks Reopen Last Closed (Ctrl+Shift+T) while the connection has been deleted from the store, what happens?** — RESOLVED: Plan 02 Task 2 step 2d implements null-check via `IConnectionStore.GetById`; silent no-op if missing, no re-surfaced entry in LRU.
    - What we know: UI-SPEC line 345 locks silent failure ("no toast, no beep").
    - What's unclear: Where the null-check happens — in MainWindow's PreviewKeyDown handler (consult store) or in TabHostManager.PopLastClosed (which only returns Guid, no store lookup).
    - Recommendation: Null-check in MainWindow: `_connectionStore.GetById(id) ?? return;`. Matches the D-16 spec and keeps TabHostManager dependency-light.
 
-4. **Does `HostContainer.Children.Add(wfh)` from multiple incoming HostCreatedEvents in quick succession cause ordering issues?**
+4. **Does `HostContainer.Children.Add(wfh)` from multiple incoming HostCreatedEvents in quick succession cause ordering issues?** — RESOLVED: STA dispatcher serializes all `MainWindow.OnHostMounted` invocations; verified in `tests/Deskbridge.Tests/Integration/HostContainerPersistenceTests.cs` (Plan 02 Task 3).
    - What we know: STA single-thread prevents parallel Add.
    - What's unclear: If MainWindow's `OnHostMounted` fires while a previous Add is mid-layout, does the second Add see a stale `HostContainer.Children.Count`?
    - Recommendation: No — the dispatcher serializes all handlers; the second handler sees the post-first-Add state. Verify in unit test "rapid 3-open" scenario.
