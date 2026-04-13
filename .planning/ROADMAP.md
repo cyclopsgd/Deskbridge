@@ -101,11 +101,12 @@ Plans:
   2. Switching tabs shows the active RDP session live while inactive tabs reduce GDI usage (BitmapPersistence = 0)
   3. Ctrl+Tab/Ctrl+Shift+Tab cycles through tabs, Ctrl+W closes the active tab, and middle-clicking a tab closes it
   4. Opening a 15th simultaneous connection shows a warning about GDI handle limits
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Core multi-host plumbing: TabHostManager + Tab events + TabState + ConnectionCoordinator cleanup + publisher-side switch-to-existing + AirspaceSwapper per-host visibility fix + unit tests
+- [ ] 05-02-PLAN.md -- Persistent HostContainer in MainWindow + per-tab reconnect overlays + DI wiring + MainWindowViewModel commands + TabSwitchedEvent status bar + STA integration tests
+- [ ] 05-03-PLAN.md -- Tab DataTemplate state indicators + ContextMenu + TabReorderBehavior + PreviewKeyDown shortcuts (Ctrl+Tab/1-9/F4/Shift+T) + UAT checkpoint (A1 gate + GDI + drag + state matrix)
 
 ### Phase 6: Cross-Cutting Features
 **Goal**: Users have keyboard-first workflows (command palette, global shortcuts), visual feedback (toast notifications), operational visibility (logging, audit trail), and security controls (master password, auto-lock) -- all features that consume the event bus
