@@ -28,8 +28,12 @@ public static class RdpConnectionConfigurator
         rdp.Domain = c.Domain ?? "";
 
         rdp.AdvancedSettings9.SmartSizing = c.DisplaySettings?.SmartSizing ?? true;
-        if (c.DisplaySettings?.Width is > 0) rdp.DesktopWidth = c.DisplaySettings.Width.Value;
-        if (c.DisplaySettings?.Height is > 0) rdp.DesktopHeight = c.DisplaySettings.Height.Value;
+        // Always set a non-zero desktop size. AxMsRdpClient9 defaults to 0x0 which renders a black
+        // viewport even when the session is otherwise live (mouse events flow, but no display). Use
+        // explicit model dimensions if provided; otherwise 1920x1080 as a safe default — SmartSizing=true
+        // scales to actual viewport at render time.
+        rdp.DesktopWidth = c.DisplaySettings?.Width is > 0 ? c.DisplaySettings.Width.Value : 1920;
+        rdp.DesktopHeight = c.DisplaySettings?.Height is > 0 ? c.DisplaySettings.Height.Value : 1080;
         rdp.ColorDepth = 32;
 
         // CredSSP / NLA: default true for Windows RDP servers. xrdp and other non-Windows RDP
