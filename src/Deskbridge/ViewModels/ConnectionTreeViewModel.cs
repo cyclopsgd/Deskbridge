@@ -355,11 +355,23 @@ public partial class ConnectionTreeViewModel : ObservableObject
         var model = _connectionStore.GetById(connVm.Id);
         if (model is null) return;
 
-        _credentialService.StoreForConnection(
-            model,
-            connVm.Username ?? string.Empty,
-            connVm.Domain,
-            password);
+        // Matches ConnectionEditorViewModel.Save (line 217-224): credential-store
+        // failures here are reached via PasswordBox.LostFocus → Dispatcher, and an
+        // unhandled CredentialAPIException on that path terminates the process
+        // (observed in Windows Event Log as 0xe0434352 CLR fatal). Quick-props is a
+        // convenience path — log and swallow; the user can retry via the editor.
+        try
+        {
+            _credentialService.StoreForConnection(
+                model,
+                connVm.Username ?? string.Empty,
+                connVm.Domain,
+                password);
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to store credentials for connection {ConnectionId} via quick-properties", model.Id);
+        }
     }
 
     public void SaveGroupFromQuickEdit(GroupTreeItemViewModel groupVm)
