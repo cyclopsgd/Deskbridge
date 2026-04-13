@@ -129,19 +129,21 @@ public sealed class RdpSmokeHost : IDisposable
         }
         catch (COMException ex)
         {
-            ErrorOccurred?.Invoke(this, "ClearTextPassword COMException: " + ex.Message);
+            // T-04-EXC: COM exceptions may embed credential material in Message; log
+            // type + HResult only (matches RdpHostControl.ConnectAsync sanitization).
+            ErrorOccurred?.Invoke(this, $"ClearTextPassword failed: {ex.GetType().Name} HResult=0x{ex.HResult:X8}");
             _loginTcs.TrySetException(ex);
             return _loginTcs.Task;
         }
         catch (InvalidCastException ex)
         {
-            ErrorOccurred?.Invoke(this, "ClearTextPassword InvalidCastException: " + ex.Message);
+            ErrorOccurred?.Invoke(this, $"ClearTextPassword failed: {ex.GetType().Name} HResult=0x{ex.HResult:X8}");
             _loginTcs.TrySetException(ex);
             return _loginTcs.Task;
         }
         catch (NullReferenceException ex)
         {
-            ErrorOccurred?.Invoke(this, "ClearTextPassword NullReferenceException (OCX null?): " + ex.Message);
+            ErrorOccurred?.Invoke(this, $"ClearTextPassword failed (OCX null?): {ex.GetType().Name} HResult=0x{ex.HResult:X8}");
             _loginTcs.TrySetException(ex);
             return _loginTcs.Task;
         }
@@ -156,12 +158,13 @@ public sealed class RdpSmokeHost : IDisposable
         }
         catch (COMException ex)
         {
-            ErrorOccurred?.Invoke(this, "Connect COMException: " + ex.Message);
+            // T-04-EXC: type + HResult only.
+            ErrorOccurred?.Invoke(this, $"Connect failed: {ex.GetType().Name} HResult=0x{ex.HResult:X8}");
             _loginTcs.TrySetException(ex);
         }
         catch (AxHost.InvalidActiveXStateException ex)
         {
-            ErrorOccurred?.Invoke(this, "Connect InvalidActiveXStateException: " + ex.Message);
+            ErrorOccurred?.Invoke(this, $"Connect failed: {ex.GetType().Name} HResult=0x{ex.HResult:X8}");
             _loginTcs.TrySetException(ex);
         }
 
