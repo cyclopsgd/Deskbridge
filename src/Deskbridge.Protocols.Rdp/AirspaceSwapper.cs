@@ -211,7 +211,12 @@ public sealed class AirspaceSwapper : IDisposable
         {
             if (_disposed) return;
             _disposed = true;
-            _host.Visibility = _previous == Visibility.Collapsed ? Visibility.Visible : _previous;
+            // WR-03 fix: restore to the actual captured previous value, not a forced
+            // Visible. If the caller had a legitimate reason for Collapsed before
+            // (e.g. a WM_ENTERSIZEMOVE drag in progress, or D-12 single-host policy),
+            // flipping back to Visible would briefly expose the live RDP surface on
+            // top of the snapshot overlay. Preserve the original state instead.
+            _host.Visibility = _previous;
         }
     }
 
