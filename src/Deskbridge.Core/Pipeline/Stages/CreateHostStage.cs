@@ -21,7 +21,7 @@ public sealed class CreateHostStage(IProtocolHostFactory factory, IEventBus bus)
 
     public Task<PipelineResult> ExecuteAsync(ConnectionContext ctx)
     {
-        ctx.Host = factory.Create(ctx.Connection.Protocol);
+        ctx.Host = factory.Create(ctx.Connection.Protocol, ctx.Connection.Id);
 
         // Publish synchronously — WeakReferenceMessenger.Send dispatches inline, so by
         // the time Publish returns the coordinator has already (a) marshaled to STA and

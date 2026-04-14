@@ -10,5 +10,5 @@ namespace Deskbridge.Core.Interfaces;
 /// </summary>
 public interface IProtocolHostFactory
 {
-    IProtocolHost Create(Protocol protocol);
+    IProtocolHost Create(Protocol protocol, Guid connectionId);
 }

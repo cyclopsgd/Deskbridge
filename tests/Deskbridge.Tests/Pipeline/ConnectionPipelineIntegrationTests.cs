@@ -22,7 +22,7 @@ public sealed class ConnectionPipelineIntegrationTests
         var host = Substitute.For<IProtocolHost>();
         host.ConnectAsync(Arg.Any<ConnectionContext>()).Returns(Task.CompletedTask);
         var factory = Substitute.For<IProtocolHostFactory>();
-        factory.Create(Protocol.Rdp).Returns(host);
+        factory.Create(Protocol.Rdp, Arg.Any<Guid>()).Returns(host);
 
         // Wrap stages to trace execution
         var resolve = new TracingConnectStage(

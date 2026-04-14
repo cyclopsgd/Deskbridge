@@ -41,7 +41,7 @@ public sealed class RdpHostControl : IProtocolHost
     // reboot, session timeout) still fire the event and trigger the overlay.
     private bool _userInitiatedClose;
 
-    public Guid ConnectionId { get; private set; }
+    public Guid ConnectionId { get; }
 
     /// <summary>
     /// True iff the underlying ActiveX control reports a non-zero Connected state.
@@ -90,7 +90,7 @@ public sealed class RdpHostControl : IProtocolHost
     /// </summary>
     public event EventHandler<int>? DisconnectedAfterConnect;
 
-    public RdpHostControl(ILogger<RdpHostControl> logger)
+    public RdpHostControl(ILogger<RdpHostControl> logger, Guid connectionId)
     {
         // [CITED: RDP-ACTIVEX-PITFALLS §6] STA assertion — defensive guard (D-11).
         if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
@@ -100,6 +100,7 @@ public sealed class RdpHostControl : IProtocolHost
         }
 
         _logger = logger;
+        ConnectionId = connectionId;
         _host = new WindowsFormsHost { Background = System.Windows.Media.Brushes.Black };
         _rdp = new AxMsRdpClient9NotSafeForScripting();
         // [CITED: RDP-ACTIVEX-PITFALLS §1] Pre-wire AxHost as WFH.Child so that when the
@@ -114,7 +115,6 @@ public sealed class RdpHostControl : IProtocolHost
     public Task ConnectAsync(ConnectionContext context)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        ConnectionId = context.Connection.Id;
 
         // [CITED: RDP-ACTIVEX-PITFALLS §1] Site BEFORE configure. Runtime Handle guard — if
         // the caller (MainWindow) has not yet added _host to the visual tree, Handle stays 0.

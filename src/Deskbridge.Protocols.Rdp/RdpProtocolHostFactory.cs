@@ -18,7 +18,7 @@ public sealed class RdpProtocolHostFactory : IProtocolHostFactory
         _loggerFactory = loggerFactory;
     }
 
-    public IProtocolHost Create(Protocol protocol)
+    public IProtocolHost Create(Protocol protocol, Guid connectionId)
     {
         if (protocol != Protocol.Rdp)
         {
@@ -26,6 +26,6 @@ public sealed class RdpProtocolHostFactory : IProtocolHostFactory
                 $"Protocol '{protocol}' is not supported in Phase 4. Only Protocol.Rdp is implemented.");
         }
 
-        return new RdpHostControl(_loggerFactory.CreateLogger<RdpHostControl>());
+        return new RdpHostControl(_loggerFactory.CreateLogger<RdpHostControl>(), connectionId);
     }
 }

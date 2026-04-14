@@ -14,7 +14,7 @@ public sealed class CreateHostStageTests
         var connection = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
         var fakeHost = Substitute.For<IProtocolHost>();
         var factory = Substitute.For<IProtocolHostFactory>();
-        factory.Create(Protocol.Rdp).Returns(fakeHost);
+        factory.Create(Protocol.Rdp, connection.Id).Returns(fakeHost);
         var bus = Substitute.For<IEventBus>();
         var stage = new CreateHostStage(factory, bus);
         var ctx = new ConnectionContext { Connection = connection };
@@ -23,7 +23,7 @@ public sealed class CreateHostStageTests
 
         result.Success.Should().BeTrue();
         ctx.Host.Should().BeSameAs(fakeHost);
-        factory.Received(1).Create(Protocol.Rdp);
+        factory.Received(1).Create(Protocol.Rdp, connection.Id);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public sealed class CreateHostStageTests
         var connection = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
         var fakeHost = Substitute.For<IProtocolHost>();
         var factory = Substitute.For<IProtocolHostFactory>();
-        factory.Create(Arg.Any<Protocol>()).Returns(fakeHost);
+        factory.Create(Arg.Any<Protocol>(), Arg.Any<Guid>()).Returns(fakeHost);
         var bus = Substitute.For<IEventBus>();
         var stage = new CreateHostStage(factory, bus);
         var ctx = new ConnectionContext { Connection = connection };
@@ -65,7 +65,7 @@ public sealed class CreateHostStageTests
         var connection = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
         var fakeHost = Substitute.For<IProtocolHost>();
         var factory = Substitute.For<IProtocolHostFactory>();
-        factory.Create(Protocol.Rdp).Returns(fakeHost);
+        factory.Create(Protocol.Rdp, connection.Id).Returns(fakeHost);
         var bus = Substitute.For<IEventBus>();
 
         HostCreatedEvent? captured = null;

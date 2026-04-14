@@ -32,7 +32,7 @@ public sealed class RdpHostControlShapeTests
         Exception? captured = null;
         var thread = new Thread(() =>
         {
-            try { _ = new RdpHostControl(NullLogger<RdpHostControl>.Instance); }
+            try { _ = new RdpHostControl(NullLogger<RdpHostControl>.Instance, Guid.NewGuid()); }
             catch (Exception ex) { captured = ex; }
         });
         thread.SetApartmentState(ApartmentState.MTA);
@@ -48,7 +48,7 @@ public sealed class RdpHostControlShapeTests
         _ = _fixture;
         StaRunner.Run(() =>
         {
-            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance);
+            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance, Guid.NewGuid());
             try
             {
                 host.IsConnected.Should().BeFalse();
@@ -66,7 +66,7 @@ public sealed class RdpHostControlShapeTests
         _ = _fixture;
         StaRunner.Run(() =>
         {
-            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance);
+            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance, Guid.NewGuid());
             host.Dispose();
             Assert.Throws<ObjectDisposedException>(() => { var _ = host.Host; });
         });
@@ -81,7 +81,7 @@ public sealed class RdpHostControlShapeTests
         // RDP-ACTIVEX-PITFALLS §1 requires host.Child = rdp BEFORE the WFH is parented.
         StaRunner.Run(() =>
         {
-            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance);
+            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance, Guid.NewGuid());
             try
             {
                 host.Host.Child.Should().NotBeNull(
