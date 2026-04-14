@@ -8,6 +8,9 @@
     <Page Include="App.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Deskbridge.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <RuntimeHostConfigurationOption Include="Switch.System.Windows.Appearance.DisableFluentThemeWindowBackdrop" Value="true" />
   </ItemGroup>
   <ItemGroup>
