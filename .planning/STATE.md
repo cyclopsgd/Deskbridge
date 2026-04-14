@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-01-PLAN.md (multi-host coordination core)
-last_updated: "2026-04-14T05:51:46.964Z"
+stopped_at: Completed 05-02-PLAN.md (multi-host HostContainer refactor)
+last_updated: "2026-04-14T06:12:23.639Z"
 last_activity: 2026-04-14
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 15
-  completed_plans: 13
-  percent: 87
+  completed_plans: 14
+  percent: 93
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 5 (Tab Management) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-14
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P03 | 5min | 2 tasks | 7 files |
 | Phase 03 P04 | 14min | 2 tasks | 9 files |
 | Phase 05 P01 | 18min | 3 tasks | 18 files |
+| Phase 05-tab-management P02 | 35min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 05]: [Phase 05-01]: WPF-UI added to Deskbridge.Core for ISnackbarService + ControlAppearance; TabState enum placed in Core.Models to keep TabStateChangedEvent free of reverse WPF dep; Tab*Event records consolidated into TabEvents.cs
 - [Phase 05]: [Phase 05-01]: ActiveHost shim on IConnectionCoordinator retained (backed by _coordinatorHosts dict + _activeId); Phase 4 tests unchanged; new code should prefer ITabHostManager.GetHost / ActiveId
 - [Phase 05]: [Phase 05-01]: Q2 CancelReconnect invoked at each close path (CloseTabAsync + CloseOthersAsync + CloseAllAsync) BEFORE IDisconnectPipeline.DisconnectAsync; single-CTS design preserved (per-connection CTS deferred until multiple concurrent backoff loops are actually possible)
+- [Phase 05-tab-management]: Plan 02: Integration tests use Grid-harness + XAML-text-parse rather than full MainWindow XAML instantiation — cross-thread Freezable exceptions with shared Application resources made per-STA-thread MainWindow construction unviable. Production logic exercised via standalone Grid mirror.
+- [Phase 05-tab-management]: Plan 02: MainWindowViewModel.Dispatch uses synchronous Dispatcher.FromThread check rather than Application.Current.Dispatcher.Invoke — Tab*Events are always published from the UI dispatcher in production, and cross-thread Invoke caused TaskCanceledException in tests.
 
 ### Pending Todos
 
@@ -115,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T05:51:46.960Z
-Stopped at: Completed 05-01-PLAN.md (multi-host coordination core)
+Last session: 2026-04-14T06:12:15.260Z
+Stopped at: Completed 05-02-PLAN.md (multi-host HostContainer refactor)
 Resume file: None
