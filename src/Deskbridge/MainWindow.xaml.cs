@@ -70,50 +70,6 @@ public partial class MainWindow : FluentWindow
         // showing through the viewport, blocking the "Ctrl+N to create" empty-
         // state placeholder from being visible.
         _eventBus.Subscribe<TabClosedEvent>(this, OnTabClosedSync);
-
-        // Hotfix (2026-04-14): first-connect black-screen fix. Subscribe to
-        // ConnectionEstablishedEvent — when a session logs in, force a WPF
-        // layout + visual invalidation on the HostContainer + a Win32 resize
-        // nudge on the active WFH. Explanation of why this is needed: on
-        // FIRST-ever WFH mount, WPF's airspace composition hasn't finalized
-        // the region for the new HwndSource when the Ax control's first
-        // post-login frames arrive — the frames paint to a region WPF is
-        // still about to overwrite. Subsequent mounts reuse the established
-        // airspace region and don't have this issue (which is why reconnect
-        // and close+reopen work instantly). The resize nudge (1px toggle)
-        // forces the compositor to re-integrate the airspace region around
-        // the valid frames.
-        _eventBus.Subscribe<ConnectionEstablishedEvent>(this, OnConnectionEstablishedSync);
-    }
-
-    private void OnConnectionEstablishedSync(ConnectionEstablishedEvent evt)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            foreach (var child in HostContainer.Children)
-            {
-                if (child is WindowsFormsHost wfh &&
-                    wfh.Tag is Guid id && id == evt.Connection.Id)
-                {
-                    try
-                    {
-                        // Force WPF to re-measure + re-arrange this WFH so the
-                        // airspace region is re-computed with the valid post-
-                        // login state.
-                        wfh.InvalidateMeasure();
-                        wfh.InvalidateArrange();
-                        wfh.InvalidateVisual();
-                        HostContainer.InvalidateVisual();
-                        UpdateLayout();
-                    }
-                    catch
-                    {
-                        // Best-effort; any failure here is logged by the Ax event path.
-                    }
-                    break;
-                }
-            }
-        }), DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>
@@ -147,7 +103,6 @@ public partial class MainWindow : FluentWindow
             // Second invocation (after our async continuation calls Close()). Let it close.
             try { _eventBus.Unsubscribe<TabSwitchedEvent>(this); } catch { /* best-effort */ }
             try { _eventBus.Unsubscribe<TabClosedEvent>(this); } catch { /* best-effort */ }
-            try { _eventBus.Unsubscribe<ConnectionEstablishedEvent>(this); } catch { /* best-effort */ }
             base.OnClosing(e);
             return;
         }
