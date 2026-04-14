@@ -238,12 +238,31 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        // Phase 5 (D-01/D-04): the WR-01 "two WFHs parented" scenario cannot occur here
-        // anymore because the replacement branch in OnConnectionRequested was deleted
-        // (single-host replacement no longer exists). In the multi-host model MainWindow
-        // parents each new WFH under HostContainer on HostMounted and never removes
-        // children from ViewportGrid on a fresh connect. Leave the dict write below as
-        // the sole source of truth for "which hosts does the coordinator know about".
+        // Hotfix (2026-04-14): defensive guard against duplicate host mounts.
+        // OnConnectionRequested dedupes bus-driven connect requests, but pipelines
+        // can also be kicked off directly by RunAutoReconnectAsync and
+        // WireManualHandlers (manual reconnect). If either fires for a connection
+        // whose host is still mounted, we'd get TWO WFHs parented in HostContainer
+        // with the same Tag=ConnectionId — airspace chaos, first-connect black
+        // viewport. Reject the duplicate by disposing the new host and not
+        // raising HostMounted. The pipeline's downstream ConnectStage will call
+        // .ConnectAsync on the disposed host and throw; RunConnectSafely catches
+        // it and logs. The original mounted session continues uninterrupted.
+        if (_coordinatorHosts.ContainsKey(evt.Connection.Id))
+        {
+            _logger.LogWarning(
+                "OnHostCreated: host already mounted for {ConnectionId} ({Hostname}) — disposing duplicate to preserve single-mount invariant",
+                evt.Connection.Id, evt.Connection.Hostname);
+            try { evt.Host.Dispose(); }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    "Duplicate-host dispose threw: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
+            return;
+        }
+
         _coordinatorHosts[evt.Connection.Id] = (evt.Host, evt.Connection);
         _activeId = evt.Connection.Id;
 
