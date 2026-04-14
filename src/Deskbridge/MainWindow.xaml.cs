@@ -59,6 +59,16 @@ public partial class MainWindow : FluentWindow
         // TabHostManager (singleton, eager-resolved in App.OnStartup) publishes this
         // event from HostMounted/OnHostUnmounted/SwitchTo.
         _eventBus.Subscribe<TabSwitchedEvent>(this, OnTabSwitched);
+
+        // Hotfix (2026-04-14): also subscribe to TabClosedEvent for synchronous
+        // WFH removal. OnHostUnmounted is driven by the coordinator's
+        // ConnectionClosedEvent which now fires AFTER the background
+        // (fire-and-forget) disconnect pipeline completes — seconds later for
+        // unresponsive targets. Without a synchronous removal path, the closed
+        // WFH stays parented in HostContainer with its last-rendered frame
+        // showing through the viewport, blocking the "Ctrl+N to create" empty-
+        // state placeholder from being visible.
+        _eventBus.Subscribe<TabClosedEvent>(this, OnTabClosedSync);
     }
 
     /// <summary>
@@ -71,28 +81,48 @@ public partial class MainWindow : FluentWindow
         _airspace.AttachToWindow(this);
     }
 
+    private bool _shutdownInProgress;
+
     /// <summary>
     /// D-08 (Phase 5): sequential app-shutdown disconnect via <see cref="ITabHostManager.CloseAllAsync"/>.
-    /// Replaces the Phase 4 single-host <c>_activeRdpHost.Dispose()</c> pattern. Parallel
-    /// disconnects explicitly rejected — STA re-marshal nullifies the parallelism and
-    /// the per-host disposal sequence in <c>IDisconnectPipeline</c> MUST run on STA.
-    /// Best-effort swallow: if any per-host disconnect throws during shutdown, the
-    /// Serilog sink may already be gone; the window still closes.
+    /// Hotfix (2026-04-14): run async rather than block the UI thread with
+    /// <c>.GetAwaiter().GetResult()</c>. The previous approach deadlocked when
+    /// <c>DisconnectAsync</c> awaited <c>OnDisconnected</c> events that needed the
+    /// dispatcher to pump — but the dispatcher was blocked by <c>GetResult</c>,
+    /// producing a 30-second frozen window per live tab. New flow: cancel the
+    /// close, kick off <c>CloseAllAsync</c>, then invoke <c>Close()</c> from the
+    /// continuation which re-enters <c>OnClosing</c> with <c>_shutdownInProgress</c>
+    /// set so we skip straight to base. Parallel disconnects still explicitly
+    /// rejected — CloseAllAsync preserves its sequential-await shape internally.
     /// </summary>
     protected override void OnClosing(CancelEventArgs e)
     {
-        try
+        if (_shutdownInProgress)
         {
-            _tabHostManager.CloseAllAsync().GetAwaiter().GetResult();
-        }
-        catch
-        {
-            // Non-fatal — Serilog sink may already be gone; best-effort.
+            // Second invocation (after our async continuation calls Close()). Let it close.
+            try { _eventBus.Unsubscribe<TabSwitchedEvent>(this); } catch { /* best-effort */ }
+            try { _eventBus.Unsubscribe<TabClosedEvent>(this); } catch { /* best-effort */ }
+            base.OnClosing(e);
+            return;
         }
 
-        try { _eventBus.Unsubscribe<TabSwitchedEvent>(this); } catch { /* best-effort */ }
+        _shutdownInProgress = true;
+        e.Cancel = true;  // cancel THIS close; we'll re-invoke Close() when disconnects finish
 
-        base.OnClosing(e);
+        // Kick off async shutdown. Dispatcher stays free to pump messages so
+        // OnDisconnected events and other continuations can complete.
+        _ = Dispatcher.InvokeAsync(async () =>
+        {
+            try
+            {
+                await _tabHostManager.CloseAllAsync();
+            }
+            catch
+            {
+                // Non-fatal — Serilog sink may already be gone; best-effort.
+            }
+            Close();  // re-enters OnClosing; _shutdownInProgress routes to base
+        });
     }
 
     private void OnHostMounted(object? sender, IProtocolHost host)
@@ -174,16 +204,53 @@ public partial class MainWindow : FluentWindow
             if (child is WindowsFormsHost wfh)
             {
                 var isActive = wfh.Tag is Guid id && id == activeId;
-                wfh.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+                // Hotfix (2026-04-14): Hidden (not Collapsed) for WFHs. Visibility.Collapsed
+                // can cause WPF to tear down the underlying HwndSource, which orphans the
+                // AxHost's HWND and produces a black viewport when the tab is re-shown
+                // (ActiveX loses its rendering surface and has nothing to repaint into
+                // until the server pushes fresh frame data). Visibility.Hidden keeps the
+                // HwndSource alive and layout slot reserved so the ActiveX keeps its
+                // render target — switching back is instant.
+                wfh.Visibility = isActive ? Visibility.Visible : Visibility.Hidden;
                 wfh.IsEnabled = isActive;
             }
             else if (child is ReconnectOverlay ov)
             {
-                // Per-tab overlay follows its tab's active state (D-14).
+                // Per-tab overlay follows its tab's active state (D-14). Pure WPF element,
+                // Collapsed is safe and preferred (doesn't reserve layout space).
                 var isActive = ov.Tag is Guid id && id == activeId;
                 ov.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
             }
         }
+    }
+
+    /// <summary>
+    /// Hotfix (2026-04-14): synchronous visual removal of a closed tab's WFH. Pairs
+    /// with the fire-and-forget disconnect pipeline in TabHostManager.CloseTabAsync —
+    /// the coordinator's HostUnmounted event fires AFTER the background disconnect
+    /// completes (seconds later), but the WFH needs to leave the visual tree NOW so
+    /// the empty-state placeholder can become visible when the last tab closes.
+    /// OnHostUnmounted still runs its own Remove() later; the second Remove() is a
+    /// no-op because the WFH is already gone from HostContainer.Children.
+    /// </summary>
+    private void OnTabClosedSync(TabClosedEvent evt)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            // Walk backwards so index math survives mid-loop removal. Remove ALL WFHs
+            // with the matching Tag — defense-in-depth against any phantom duplicates.
+            for (var i = HostContainer.Children.Count - 1; i >= 0; i--)
+            {
+                var child = HostContainer.Children[i];
+                if (child is WindowsFormsHost wfh && wfh.Tag is Guid id && id == evt.ConnectionId)
+                {
+                    HostContainer.Children.RemoveAt(i);
+                }
+            }
+            // Also drop any reconnect overlay for this tab (it's a sibling in
+            // HostContainer parented alongside the WFH per D-14).
+            CloseOverlayFor(evt.ConnectionId);
+        });
     }
 
     /// <summary>

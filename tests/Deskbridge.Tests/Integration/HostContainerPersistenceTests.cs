@@ -200,9 +200,12 @@ public sealed class HostContainerPersistenceTests
 
     /// <summary>
     /// Test 5: MainWindow.OnClosing drains tabs via <see cref="ITabHostManager.CloseAllAsync"/>.
-    /// Verified via direct read of MainWindow.xaml.cs source — confirms the exact
-    /// call pattern mandated by D-08 (sequential shutdown, GetAwaiter().GetResult
-    /// on the STA dispatcher).
+    /// Verified via direct read of MainWindow.xaml.cs source — confirms the D-08
+    /// sequential-shutdown pattern survives the 2026-04-14 async hotfix that
+    /// replaced the UI-thread-blocking GetAwaiter().GetResult() with an async
+    /// continuation (to prevent dispatcher deadlock during DisconnectAsync).
+    /// CloseAllAsync must still be called from OnClosing, and e.Cancel must be
+    /// set so the async continuation can drive the real close.
     /// </summary>
     [Fact]
     public void OnClosing_CallsTabHostManager_CloseAllAsync()
@@ -213,17 +216,20 @@ public sealed class HostContainerPersistenceTests
         File.Exists(codePath).Should().BeTrue();
         var src = File.ReadAllText(codePath);
 
-        src.Should().Contain("_tabHostManager.CloseAllAsync().GetAwaiter().GetResult()",
-            "D-08: MainWindow.OnClosing must drain tabs via TabHostManager.CloseAllAsync on the STA dispatcher");
+        src.Should().Contain("_tabHostManager.CloseAllAsync()",
+            "D-08: MainWindow.OnClosing must drain tabs via TabHostManager.CloseAllAsync");
 
-        // The call must be inside OnClosing, BEFORE base.OnClosing(e).
+        // The call must be inside OnClosing.
         var closingIdx = src.IndexOf("protected override void OnClosing(CancelEventArgs e)");
         closingIdx.Should().BePositive();
-        var callIdx = src.IndexOf("_tabHostManager.CloseAllAsync().GetAwaiter().GetResult()", closingIdx);
-        var baseIdx = src.IndexOf("base.OnClosing(e);", closingIdx);
+        var callIdx = src.IndexOf("_tabHostManager.CloseAllAsync()", closingIdx);
         callIdx.Should().BePositive();
-        baseIdx.Should().BePositive();
-        callIdx.Should().BeLessThan(baseIdx);
+
+        // Hotfix (2026-04-14): OnClosing uses async shutdown + e.Cancel = true to
+        // avoid the UI-thread deadlock when DisconnectAsync awaits OnDisconnected
+        // events that need the dispatcher to pump messages.
+        var cancelIdx = src.IndexOf("e.Cancel = true", closingIdx);
+        cancelIdx.Should().BePositive("OnClosing must cancel the close and re-enter via async continuation");
     }
 
     /// <summary>
