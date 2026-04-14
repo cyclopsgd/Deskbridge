@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Windows.Forms.Integration;
+using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Services;
 using Deskbridge.Protocols.Rdp;
@@ -13,10 +15,15 @@ public partial class MainWindow : FluentWindow
 {
     private readonly IConnectionCoordinator _coordinator;
     private readonly AirspaceSwapper _airspace;
-    private IProtocolHost? _activeRdpHost;
-    private ReconnectOverlay? _overlayControl;
-    private ReconnectOverlayViewModel? _overlayVm;
-    private IDisposable? _overlayAirspaceToken;
+    private readonly ITabHostManager _tabHostManager;
+    private readonly IEventBus _eventBus;
+
+    // Phase 5 D-04: per-tab overlay dict keyed by ConnectionId. Replaces the Phase 4
+    // single-slot (_overlayControl, _overlayVm, _overlayAirspaceToken) fields. Each
+    // entry is scoped to ONE tab; rapid-successive drops on the same tab replace the
+    // entry (same pattern as Phase 4 CloseOverlay). Drops on different tabs do NOT
+    // interfere — each gets its own entry inside HostContainer.
+    private readonly Dictionary<Guid, (ReconnectOverlay Control, ReconnectOverlayViewModel Vm, IDisposable? AirspaceToken)> _overlays = new();
 
     public MainWindow(
         ViewModels.MainWindowViewModel viewModel,
@@ -24,7 +31,9 @@ public partial class MainWindow : FluentWindow
         IContentDialogService contentDialogService,
         Views.ConnectionTreeControl connectionTreeControl,
         IConnectionCoordinator coordinator,
-        AirspaceSwapper airspace)
+        AirspaceSwapper airspace,
+        ITabHostManager tabHostManager,
+        IEventBus eventBus)
     {
         DataContext = viewModel;
         InitializeComponent();
@@ -37,9 +46,18 @@ public partial class MainWindow : FluentWindow
 
         _coordinator = coordinator;
         _airspace = airspace;
+        _tabHostManager = tabHostManager;
+        _eventBus = eventBus;
+
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
         _coordinator.ReconnectOverlayRequested += OnReconnectOverlayRequested;
+
+        // Phase 5: subscribe to TabSwitchedEvent so SetActiveHostVisibility can flip
+        // Visibility + IsEnabled across every HostContainer child by Tag correlation.
+        // TabHostManager (singleton, eager-resolved in App.OnStartup) publishes this
+        // event from HostMounted/OnHostUnmounted/SwitchTo.
+        _eventBus.Subscribe<TabSwitchedEvent>(this, OnTabSwitched);
     }
 
     /// <summary>
@@ -53,25 +71,26 @@ public partial class MainWindow : FluentWindow
     }
 
     /// <summary>
-    /// Mitigates dotnet/wpf #10171 (infinite recursion on close with live WFH) by explicitly
-    /// disposing the active RdpHostControl before <c>base.OnClosing</c>. Swallows dispose
-    /// failures so the window still closes if teardown throws.
+    /// D-08 (Phase 5): sequential app-shutdown disconnect via <see cref="ITabHostManager.CloseAllAsync"/>.
+    /// Replaces the Phase 4 single-host <c>_activeRdpHost.Dispose()</c> pattern. Parallel
+    /// disconnects explicitly rejected — STA re-marshal nullifies the parallelism and
+    /// the per-host disposal sequence in <c>IDisconnectPipeline</c> MUST run on STA.
+    /// Best-effort swallow: if any per-host disconnect throws during shutdown, the
+    /// Serilog sink may already be gone; the window still closes.
     /// </summary>
     protected override void OnClosing(CancelEventArgs e)
     {
-        // Plan 04-03: close any live reconnect overlay first so the AirspaceSwapper
-        // restore token runs before the host disappears.
-        try { CloseOverlay(); } catch { /* best-effort */ }
-
         try
         {
-            _activeRdpHost?.Dispose();
+            _tabHostManager.CloseAllAsync().GetAwaiter().GetResult();
         }
         catch
         {
             // Non-fatal — Serilog sink may already be gone; best-effort.
         }
-        _activeRdpHost = null;
+
+        try { _eventBus.Unsubscribe<TabSwitchedEvent>(this); } catch { /* best-effort */ }
+
         base.OnClosing(e);
     }
 
@@ -80,38 +99,32 @@ public partial class MainWindow : FluentWindow
         if (host is not RdpHostControl rdp) return;
         Dispatcher.Invoke(() =>
         {
-            // A fresh host mounting means the reconnect succeeded — close the overlay
-            // so the new session is visible. No-op if no overlay is showing.
-            CloseOverlay();
+            // A fresh host mounting for this connection means either a reconnect
+            // succeeded or a first open — close any OPEN overlay for THIS specific
+            // tab. Other tabs' overlays stay open (D-14 per-tab isolation).
+            CloseOverlayFor(host.ConnectionId);
 
-            // WR-02 defense-in-depth: walk any existing WindowsFormsHost children and
-            // remove them before adding the new host. Guards against the replacement
-            // race in ConnectionCoordinator.OnHostCreated where a stale WFH might still
-            // be parented (the Core-side WR-01 fix handles coordinator state; this
-            // handles the visual tree side in case HostUnmounted ordering ever drifts
-            // or a disposed host's WFH lingers post-OnConnectionFailed).
-            for (int i = ViewportGrid.Children.Count - 1; i >= 0; i--)
-            {
-                if (ViewportGrid.Children[i] is System.Windows.Forms.Integration.WindowsFormsHost)
-                {
-                    ViewportGrid.Children.RemoveAt(i);
-                }
-            }
+            // D-04 persistent container: add WFH to HostContainer ONCE. Tag
+            // correlates back to ConnectionId for tab switching and overlay
+            // routing. The Phase 4 WR-02 defense-in-depth loop that removed all
+            // existing WFH children before mounting a new host is DELETED — it
+            // was valid for single-host but contradicts "never re-parent" and
+            // would force a re-realize of HwndSource on every new tab.
+            rdp.Host.Tag = host.ConnectionId;
+            HostContainer.Children.Add(rdp.Host);
 
-            // D-12 single live host: swap the WFH into the viewport.
-            ViewportGrid.Children.Add(rdp.Host);
-
-            // Fires BEFORE ConnectStage runs (coordinator raises HostMounted on
-            // HostCreatedEvent, Order=200). Force an immediate, synchronous layout pass so
-            // the WindowsFormsHost is parented to a realized HwndSource and AxHost.Handle
-            // becomes non-zero — otherwise the downstream ConnectStage throws
-            // "called before host was added to the visual tree" (RDP-ACTIVEX-PITFALLS §1).
-            // UpdateLayout() is blocking and does NOT pump messages, so it's safe here —
-            // Dispatcher.Yield / PushFrame would re-enter the pump and risk ordering issues.
-            ViewportGrid.UpdateLayout();
+            // Force synchronous layout so AxHost's HWND is realized BEFORE
+            // ConnectStage (coordinator raises HostMounted on HostCreatedEvent
+            // Order=200, ConnectStage is Order=300). UpdateLayout is blocking
+            // and does NOT pump the message queue.
+            HostContainer.UpdateLayout();
 
             _airspace.RegisterHost(rdp.Host, ViewportSnapshot);
-            _activeRdpHost = rdp;
+
+            // TabHostManager's OnHostMounted handler runs via the same coordinator
+            // event and publishes TabSwitchedEvent(previous, thisHost). OnTabSwitched
+            // (below) then flips Visibility across every child of HostContainer so
+            // the just-mounted host becomes Visible and the prior active collapses.
         });
     }
 
@@ -120,76 +133,138 @@ public partial class MainWindow : FluentWindow
         if (host is not RdpHostControl rdp) return;
         Dispatcher.Invoke(() =>
         {
+            CloseOverlayFor(host.ConnectionId);
             _airspace.UnregisterHost(rdp.Host);
-            ViewportGrid.Children.Remove(rdp.Host);
-            if (ReferenceEquals(_activeRdpHost, rdp))
-            {
-                _activeRdpHost = null;
-            }
+
+            // This is the ONLY path where a WFH is removed from HostContainer.
+            // Every other path (tab switch, drag-reorder) uses Visibility toggle.
+            HostContainer.Children.Remove(rdp.Host);
+
+            // TabHostManager fires TabClosedEvent + auto-activates the neighbor
+            // via TabSwitchedEvent — OnTabSwitched flips Visibility for the new
+            // active tab.
         });
     }
 
     /// <summary>
-    /// Plan 04-03 D-07 bridge: wires the Core <see cref="ReconnectOverlayHandle"/> to a
-    /// freshly created <see cref="ReconnectOverlayViewModel"/> + <see cref="ReconnectOverlay"/>,
-    /// mounts the overlay into <c>ViewportGrid</c>, and collapses the current
-    /// WindowsFormsHost via <see cref="AirspaceSwapper.HideWithoutSnapshot"/> so the
-    /// WPF overlay is not obscured by the WinForms airspace.
+    /// Phase 5: subscriber for <see cref="TabSwitchedEvent"/>. Marshals to the
+    /// UI dispatcher and calls <see cref="SetActiveHostVisibility"/> to flip the
+    /// Tag-keyed Visibility/IsEnabled flags across every child of HostContainer.
+    /// </summary>
+    private void OnTabSwitched(TabSwitchedEvent evt)
+    {
+        Dispatcher.Invoke(() => SetActiveHostVisibility(evt.ActiveId));
+    }
+
+    /// <summary>
+    /// D-04: Toggle Visibility + IsEnabled on every HostContainer child based on
+    /// the Tag-keyed correlation to <paramref name="activeId"/>. Exactly one
+    /// WindowsFormsHost ends up Visible + IsEnabled. ReconnectOverlay children
+    /// follow the same rule — their Visibility tracks the tab's active state.
+    ///
+    /// <para>IsEnabled is critical per WINFORMS-HOST-AIRSPACE line 397 — a
+    /// hidden WFH that stays IsEnabled=true can still capture keyboard input,
+    /// which would cause typed keys to leak into the wrong session.</para>
+    /// </summary>
+    private void SetActiveHostVisibility(Guid activeId)
+    {
+        foreach (var child in HostContainer.Children)
+        {
+            if (child is WindowsFormsHost wfh)
+            {
+                var isActive = wfh.Tag is Guid id && id == activeId;
+                wfh.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+                wfh.IsEnabled = isActive;
+            }
+            else if (child is ReconnectOverlay ov)
+            {
+                // Per-tab overlay follows its tab's active state (D-14).
+                var isActive = ov.Tag is Guid id && id == activeId;
+                ov.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Phase 5 D-14: per-tab reconnect overlay. Replaces the Phase 4 single-slot
+    /// fields with an entry in <see cref="_overlays"/> keyed by ConnectionId.
+    /// The overlay is parented into HostContainer alongside the WFH and its
+    /// Visibility follows the tab's active state via the Tag correlation rule
+    /// in <see cref="SetActiveHostVisibility"/>. No auto-switch focus — an
+    /// overlay raised for a background tab stays Collapsed until the user
+    /// switches to that tab.
     /// </summary>
     private void OnReconnectOverlayRequested(object? sender, ReconnectUiRequest req)
     {
         Dispatcher.Invoke(() =>
         {
-            // Replace any existing overlay (edge case: rapid successive drops).
-            CloseOverlay();
+            var id = req.Connection.Id;
 
-            _overlayVm = new ReconnectOverlayViewModel { ConnectionName = req.Connection.Hostname };
-            _overlayControl = new ReconnectOverlay { DataContext = _overlayVm };
+            // Replace any existing overlay for this specific tab (rapid
+            // successive drops). Other tabs' overlays are untouched.
+            CloseOverlayFor(id);
+
+            var vm = new ReconnectOverlayViewModel { ConnectionName = req.Connection.Hostname };
+            var ctrl = new ReconnectOverlay { DataContext = vm };
+            // Correlate the overlay with its tab so SetActiveHostVisibility
+            // can follow the tab's active state on switch.
+            ctrl.Tag = id;
 
             // Core -> UI: coordinator pushes updates through these actions.
             req.Handle.UpdateAttempt = (attempt, delay) =>
-                Dispatcher.Invoke(() => _overlayVm?.Update(attempt, delay));
+                Dispatcher.Invoke(() => vm.Update(attempt, delay));
             req.Handle.SwitchToManual = () =>
-                Dispatcher.Invoke(() => _overlayVm?.SwitchToManual());
+                Dispatcher.Invoke(vm.SwitchToManual);
             req.Handle.Close = () =>
-                Dispatcher.Invoke(CloseOverlay);
+                Dispatcher.Invoke(() => CloseOverlayFor(id));
 
             // UI -> Core: user intents fan out through the handle.
-            _overlayVm.Cancelled += (_, _) => req.Handle.RaiseCancel();
-            _overlayVm.ReconnectRequested += (_, _) => req.Handle.RaiseManualReconnect();
-            _overlayVm.CloseRequested += (_, _) => req.Handle.RaiseManualClose();
+            vm.Cancelled += (_, _) => req.Handle.RaiseCancel();
+            vm.ReconnectRequested += (_, _) => req.Handle.RaiseManualReconnect();
+            vm.CloseRequested += (_, _) => req.Handle.RaiseManualClose();
 
-            // Hide the WFH behind the overlay (D-07) — session is already gone so no
-            // snapshot is meaningful; just collapse Visibility. Airspace helper returns a
-            // token that restores Visible on dispose when the overlay closes.
-            if (_activeRdpHost is RdpHostControl rdp)
+            // Hide the WFH behind the overlay (D-07) — session is already gone
+            // so no snapshot is meaningful; just collapse Visibility. Token
+            // restores the captured previous value on dispose.
+            IDisposable? token = null;
+            var host = _tabHostManager.GetHost(id);
+            if (host is RdpHostControl rdp)
             {
-                try { _overlayAirspaceToken = _airspace.HideWithoutSnapshot(rdp.Host); }
+                try { token = _airspace.HideWithoutSnapshot(rdp.Host); }
                 catch
                 {
-                    // Best-effort: if the host is already disposed the airspace hide fails;
-                    // the overlay still renders on top of the viewport grid regardless.
+                    // Best-effort: if the host is already disposed the airspace
+                    // hide fails; the overlay still renders regardless.
                 }
             }
 
-            ViewportGrid.Children.Add(_overlayControl);
-            System.Windows.Controls.Panel.SetZIndex(_overlayControl, 1000);
+            // D-14: overlay mounts inside HostContainer (not at ViewportGrid level).
+            // Its Visibility follows the tab's active state via Tag + SetActiveHostVisibility.
+            HostContainer.Children.Add(ctrl);
+            System.Windows.Controls.Panel.SetZIndex(ctrl, 1000);
+
+            // Initial visibility — if Reconnecting fires on a background tab, the
+            // overlay starts Collapsed and becomes Visible on tab switch.
+            ctrl.Visibility = (_tabHostManager.ActiveId == id) ? Visibility.Visible : Visibility.Collapsed;
+
+            _overlays[id] = (ctrl, vm, token);
         });
     }
 
-    private void CloseOverlay()
+    /// <summary>
+    /// Remove the overlay for a specific tab. No-op if no overlay is open for
+    /// <paramref name="id"/>. Dispose the airspace token first (restores WFH
+    /// Visibility), then remove the control from HostContainer. Best-effort
+    /// try/catch protects against a race where the token is already disposed.
+    /// </summary>
+    private void CloseOverlayFor(Guid id)
     {
-        if (_overlayControl is null && _overlayVm is null && _overlayAirspaceToken is null) return;
-        Dispatcher.Invoke(() =>
+        if (!_overlays.TryGetValue(id, out var entry)) return;
+        _overlays.Remove(id);
+        try { entry.AirspaceToken?.Dispose(); } catch { /* best-effort */ }
+        if (HostContainer.Children.Contains(entry.Control))
         {
-            try { _overlayAirspaceToken?.Dispose(); } catch { /* best-effort */ }
-            _overlayAirspaceToken = null;
-            if (_overlayControl is not null && ViewportGrid.Children.Contains(_overlayControl))
-            {
-                ViewportGrid.Children.Remove(_overlayControl);
-            }
-            _overlayControl = null;
-            _overlayVm = null;
-        });
+            HostContainer.Children.Remove(entry.Control);
+        }
     }
 }

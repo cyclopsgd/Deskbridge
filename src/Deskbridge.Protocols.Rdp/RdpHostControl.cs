@@ -54,6 +54,25 @@ public sealed class RdpHostControl : IProtocolHost
     /// <summary>The hosted <see cref="WindowsFormsHost"/>. Throws if disposed.</summary>
     public WindowsFormsHost Host => _host ?? throw new ObjectDisposedException(nameof(RdpHostControl));
 
+    /// <summary>
+    /// Reads the current live session resolution from the RDP ActiveX control. Returns
+    /// (0, 0) if the control has not yet sited, is disposed, or <c>OnLoginComplete</c>
+    /// has not yet fired (DesktopWidth/Height are 0 during the initial negotiation).
+    ///
+    /// <para>Phase 5 D-15 status bar fallback: callers should fall back to
+    /// <c>ConnectionModel.DisplaySettings</c> when this returns (0, 0).</para>
+    /// </summary>
+    public (int Width, int Height) GetSessionResolution()
+    {
+        if (_disposed || _rdp is null) return (0, 0);
+        try
+        {
+            return (_rdp.DesktopWidth, _rdp.DesktopHeight);
+        }
+        catch (AxHost.InvalidActiveXStateException) { return (0, 0); }
+        catch (COMException) { return (0, 0); }
+    }
+
     /// <summary>Sanitized error stream — type + HResult only, never credential material.</summary>
     public event EventHandler<string>? ErrorOccurred;
 

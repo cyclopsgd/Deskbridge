@@ -264,7 +264,14 @@
                         <!-- Snapshot Image for drag/resize (RDP-09, D-13). Collapsed by default;
                              AirspaceSwapper toggles on WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE. -->
                         <Image x:Name="ViewportSnapshot" Stretch="Fill" Visibility="Collapsed" />
-                        <!-- RDP host mounts here via code-behind ViewportGrid.Children.Add -->
+                        <!-- Phase 5 D-04: persistent multi-host container. Every WindowsFormsHost
+                             is parented HERE exactly once on HostMounted and removed ONLY on
+                             HostUnmounted (tab close). Tab switch toggles Visibility per child
+                             via MainWindow.xaml.cs SetActiveHostVisibility (Tag-keyed). NEVER
+                             re-parent a WFH after AxHost init — tears down HwndSource, breaks
+                             the RDP session, and can trigger UCEERR_RENDERTHREADFAILURE
+                             (dotnet/wpf #3719). See WINFORMS-HOST-AIRSPACE §Option 3. -->
+                        <Grid x:Name="HostContainer" />
                     </Grid>
                 </Border>
             </Grid>
