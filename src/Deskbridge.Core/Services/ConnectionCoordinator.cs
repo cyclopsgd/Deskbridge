@@ -59,6 +59,37 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     public event EventHandler<IProtocolHost>? HostUnmounted;
     public event EventHandler<ReconnectUiRequest>? ReconnectOverlayRequested;
 
+    /// <summary>
+    /// Q2 resolution (Phase 5): cancel any in-flight auto-reconnect backoff loop for
+    /// <paramref name="connectionId"/>. Invoked by <c>TabHostManager</c>'s close paths
+    /// BEFORE <see cref="IDisconnectPipeline.DisconnectAsync"/> so <c>RdpReconnectCoordinator.RunAsync</c>
+    /// cannot fire <c>ConnectAsync</c> against a host that is about to be disposed.
+    ///
+    /// <para>The current single-CTS design (inherited from Phase 4 single-host) only ever
+    /// tracks ONE active reconnect loop at a time — <see cref="_reconnectCts"/> is assigned
+    /// in <see cref="OnDisconnectedAfterConnect"/> for the dropped connection and nulled in
+    /// <see cref="RunAutoReconnectAsync"/>'s <c>finally</c>. Calling Cancel here is therefore
+    /// safe regardless of whether the currently running backoff loop is for this connection
+    /// id or a different one; if it's for a different one, the cancellation still unblocks
+    /// that loop but that's acceptable because the caller (TabHostManager.CloseAllAsync /
+    /// CloseOthersAsync) is closing that connection too. Per-connection CTS is deferred
+    /// until multiple concurrent backoff loops are actually possible — not in Phase 5 scope.</para>
+    /// </summary>
+    public void CancelReconnect(Guid connectionId)
+    {
+        if (_disposed) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            _dispatcher.Invoke(() => CancelReconnect(connectionId));
+            return;
+        }
+        try { _reconnectCts?.Cancel(); }
+        catch (ObjectDisposedException) { /* already disposed, nothing to cancel */ }
+        _logger.LogInformation(
+            "CancelReconnect invoked for connection id {ConnectionId}",
+            connectionId);
+    }
+
     private void OnConnectionRequested(ConnectionRequestedEvent evt)
     {
         if (_disposed) return;
