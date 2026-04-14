@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows.Forms.Integration;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Services;
@@ -150,6 +151,18 @@ public partial class MainWindow : FluentWindow
             // and does NOT pump the message queue.
             HostContainer.UpdateLayout();
 
+            // Hotfix (2026-04-14): force a render pass before ConnectStage runs
+            // on the FIRST mount. UpdateLayout alone processes Measure/Arrange but
+            // does NOT push through to render priority — the AxHost HWND is
+            // parented and sized, but has no valid render surface yet. If
+            // ConnectStage calls _rdp.Connect() before the render pass completes,
+            // the initial server frames target a zero/invalid surface and the
+            // viewport stays black until something else triggers a repaint
+            // (close+reopen cycle or window resize). Pumping to Render priority
+            // here is a no-op on subsequent mounts (surface already valid) and
+            // fixes the first-connect black-screen.
+            Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
+
             _airspace.RegisterHost(rdp.Host, ViewportSnapshot);
 
             // TabHostManager's OnHostMounted handler runs via the same coordinator
@@ -204,14 +217,12 @@ public partial class MainWindow : FluentWindow
             if (child is WindowsFormsHost wfh)
             {
                 var isActive = wfh.Tag is Guid id && id == activeId;
-                // Hotfix (2026-04-14): Hidden (not Collapsed) for WFHs. Visibility.Collapsed
-                // can cause WPF to tear down the underlying HwndSource, which orphans the
-                // AxHost's HWND and produces a black viewport when the tab is re-shown
-                // (ActiveX loses its rendering surface and has nothing to repaint into
-                // until the server pushes fresh frame data). Visibility.Hidden keeps the
-                // HwndSource alive and layout slot reserved so the ActiveX keeps its
-                // render target — switching back is instant.
-                wfh.Visibility = isActive ? Visibility.Visible : Visibility.Hidden;
+                // Use Collapsed (not Hidden). AirspaceSwapper.WndProc documents that
+                // Hidden tears down the AxHost child HWND on some servers (e.g. xrdp),
+                // raising OnDisconnected with discReason=2 and ending the live RDP
+                // session. Collapsed removes the WFH from the layout pass without
+                // destroying its child HWND, so the RDP session survives tab switches.
+                wfh.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
                 wfh.IsEnabled = isActive;
             }
             else if (child is ReconnectOverlay ov)
