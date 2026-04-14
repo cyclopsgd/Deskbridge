@@ -151,17 +151,13 @@ public partial class MainWindow : FluentWindow
             // and does NOT pump the message queue.
             HostContainer.UpdateLayout();
 
-            // Hotfix (2026-04-14): force a render pass before ConnectStage runs
-            // on the FIRST mount. UpdateLayout alone processes Measure/Arrange but
-            // does NOT push through to render priority — the AxHost HWND is
-            // parented and sized, but has no valid render surface yet. If
-            // ConnectStage calls _rdp.Connect() before the render pass completes,
-            // the initial server frames target a zero/invalid surface and the
-            // viewport stays black until something else triggers a repaint
-            // (close+reopen cycle or window resize). Pumping to Render priority
-            // here is a no-op on subsequent mounts (surface already valid) and
-            // fixes the first-connect black-screen.
-            Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
+            // Hotfix (2026-04-14): drain dispatcher down to ApplicationIdle so
+            // the compositor has carved out the airspace region for the newly-
+            // added WFH before ConnectStage runs _rdp.Connect(). First-mount
+            // black-screen was caused by the Ax control rendering into a region
+            // that WPF hadn't yet composited as "airspace hole" — WPF draws over
+            // the HWND until a full idle-priority render pass runs.
+            Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
 
             _airspace.RegisterHost(rdp.Host, ViewportSnapshot);
 
