@@ -151,14 +151,6 @@ public partial class MainWindow : FluentWindow
             // and does NOT pump the message queue.
             HostContainer.UpdateLayout();
 
-            // Hotfix (2026-04-14): drain dispatcher down to ApplicationIdle so
-            // the compositor has carved out the airspace region for the newly-
-            // added WFH before ConnectStage runs _rdp.Connect(). First-mount
-            // black-screen was caused by the Ax control rendering into a region
-            // that WPF hadn't yet composited as "airspace hole" — WPF draws over
-            // the HWND until a full idle-priority render pass runs.
-            Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
-
             _airspace.RegisterHost(rdp.Host, ViewportSnapshot);
 
             // TabHostManager's OnHostMounted handler runs via the same coordinator
@@ -168,21 +160,21 @@ public partial class MainWindow : FluentWindow
         });
     }
 
+    /// <summary>
+    /// Phase 5 fire-and-forget close refactor (2026-04-14): WFH removal is now
+    /// owned by <see cref="OnTabClosedSync"/> which fires on the synchronous
+    /// <see cref="TabClosedEvent"/>. This handler only handles the
+    /// <see cref="AirspaceSwapper"/> bookkeeping that remains coupled to the
+    /// coordinator's lifecycle. The subscription stays live to prevent
+    /// event-handler leaks if the coordinator's internals change in a future
+    /// phase. No WFH removal here — that would race with OnTabClosedSync.
+    /// </summary>
     private void OnHostUnmounted(object? sender, IProtocolHost host)
     {
         if (host is not RdpHostControl rdp) return;
         Dispatcher.Invoke(() =>
         {
-            CloseOverlayFor(host.ConnectionId);
             _airspace.UnregisterHost(rdp.Host);
-
-            // This is the ONLY path where a WFH is removed from HostContainer.
-            // Every other path (tab switch, drag-reorder) uses Visibility toggle.
-            HostContainer.Children.Remove(rdp.Host);
-
-            // TabHostManager fires TabClosedEvent + auto-activates the neighbor
-            // via TabSwitchedEvent — OnTabSwitched flips Visibility for the new
-            // active tab.
         });
     }
 
@@ -237,8 +229,8 @@ public partial class MainWindow : FluentWindow
     /// the coordinator's HostUnmounted event fires AFTER the background disconnect
     /// completes (seconds later), but the WFH needs to leave the visual tree NOW so
     /// the empty-state placeholder can become visible when the last tab closes.
-    /// OnHostUnmounted still runs its own Remove() later; the second Remove() is a
-    /// no-op because the WFH is already gone from HostContainer.Children.
+    /// This is the SINGLE source of truth for WFH removal — OnHostUnmounted is a
+    /// pure no-op for visual state (it only does AirspaceSwapper bookkeeping).
     /// </summary>
     private void OnTabClosedSync(TabClosedEvent evt)
     {
