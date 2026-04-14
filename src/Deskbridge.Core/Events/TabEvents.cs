@@ -5,9 +5,12 @@ namespace Deskbridge.Core.Events;
 /// <summary>
 /// Published by <c>ITabHostManager</c> (Phase 5) when a tab is opened —
 /// i.e. when the coordinator's <c>HostMounted</c> event fires and the new host is
-/// registered in the tab dictionary. TAB-05.
+/// registered in the tab dictionary. TAB-05. Carries the full <see cref="ConnectionModel"/>
+/// so subscribers render the tab label / tooltip without a separate store lookup
+/// (hotfix 2026-04-14: store lookups were intermittently returning null, producing
+/// "(unknown)" tab titles with spinning ProgressRings).
 /// </summary>
-public record TabOpenedEvent(Guid ConnectionId);
+public record TabOpenedEvent(Guid ConnectionId, ConnectionModel Connection);
 
 /// <summary>
 /// Published by <c>ITabHostManager</c> (Phase 5) when a tab is closed —

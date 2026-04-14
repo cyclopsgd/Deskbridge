@@ -258,7 +258,7 @@ public class MainWindowViewModelTests
         var model = new ConnectionModel { Id = id, Name = "MyServer", Hostname = "srv01" };
         _connectionStore.GetById(id).Returns(model);
 
-        _bus.Publish(new TabOpenedEvent(id));
+        _bus.Publish(new TabOpenedEvent(id, model));
 
         _sut.Tabs.Should().ContainSingle(t => t.ConnectionId == id && t.Title == "MyServer");
     }
@@ -269,7 +269,7 @@ public class MainWindowViewModelTests
         var id = Guid.NewGuid();
         var model = new ConnectionModel { Id = id, Name = "x", Hostname = "h" };
         _connectionStore.GetById(id).Returns(model);
-        _bus.Publish(new TabOpenedEvent(id));
+        _bus.Publish(new TabOpenedEvent(id, model));
 
         _bus.Publish(new TabClosedEvent(id));
 
@@ -290,7 +290,7 @@ public class MainWindowViewModelTests
             DisplaySettings = new DisplaySettings { Width = 1920, Height = 1080 },
         };
         _connectionStore.GetById(id).Returns(model);
-        _bus.Publish(new TabOpenedEvent(id));
+        _bus.Publish(new TabOpenedEvent(id, model));
 
         // Tab is created with State=Connecting; explicitly flip to Connected first.
         _bus.Publish(new TabStateChangedEvent(id, TabState.Connected));
@@ -315,7 +315,7 @@ public class MainWindowViewModelTests
         var id = Guid.NewGuid();
         var model = new ConnectionModel { Id = id, Name = "X", Hostname = "h" };
         _connectionStore.GetById(id).Returns(model);
-        _bus.Publish(new TabOpenedEvent(id));
+        _bus.Publish(new TabOpenedEvent(id, model));
 
         _bus.Publish(new TabSwitchedEvent(null, id));
 

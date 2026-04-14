@@ -353,7 +353,7 @@ public sealed class HostContainerPersistenceTests
 
             vm.HasNoTabs.Should().BeTrue("initial state");
 
-            bus.Publish(new TabOpenedEvent(model.Id));
+            bus.Publish(new TabOpenedEvent(model.Id, model));
             vm.HasNoTabs.Should().BeFalse("after tab opened");
 
             bus.Publish(new TabClosedEvent(model.Id));
