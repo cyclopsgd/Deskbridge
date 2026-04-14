@@ -25,7 +25,14 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     private readonly Dispatcher _dispatcher;
     private readonly ILogger<ConnectionCoordinator> _logger;
     private readonly RdpReconnectCoordinator _reconnectCoordinator;
-    private (IProtocolHost Host, ConnectionModel Model)? _active;
+    // Phase 5 (D-01/D-05): single-slot `_active` tuple replaced by a dict keyed by
+    // ConnectionId so the coordinator's post-connect cleanup paths (OnConnectionFailed,
+    // OnConnectionClosed, OnDisconnectedAfterConnect) can find the right host without
+    // a global "current" field. ITabHostManager remains the source of truth for
+    // "which tabs are open"; this dict is the coordinator's internal bookkeeping for
+    // its own lifecycle cleanup. ActiveHost shim reads the most-recent-mounted entry.
+    private readonly Dictionary<Guid, (IProtocolHost Host, ConnectionModel Model)> _coordinatorHosts = new();
+    private Guid? _activeId;
     private IProtocolHost? _suppressedHost;
     private CancellationTokenSource? _reconnectCts;
     private bool _disposed;
@@ -53,7 +60,12 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _bus.Subscribe<CredentialRequestedEvent>(this, OnCredentialRequested);
     }
 
-    public IProtocolHost? ActiveHost => _active?.Host;
+    // Phase 5 (D-01): shim over the dict-keyed storage. Returns the most-recently-mounted
+    // host (matches Phase 4 single-slot semantics for existing callers). ITabHostManager
+    // is the canonical source of truth for multi-host queries; new code should prefer
+    // that interface.
+    public IProtocolHost? ActiveHost =>
+        _activeId is { } id && _coordinatorHosts.TryGetValue(id, out var entry) ? entry.Host : null;
 
     public event EventHandler<IProtocolHost>? HostMounted;
     public event EventHandler<IProtocolHost>? HostUnmounted;
@@ -101,39 +113,17 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        // Rapid-double-click guard. If the user clicks the SAME connection again while
-        // a host for that model is still active (in-flight Connect or already connected),
-        // drop the duplicate request. Without this, the replace-active-host branch below
-        // would dispose the in-flight RdpHostControl mid-Connect(), causing the
-        // RdpConnectFailedException discReason=1 → COMException 0x83450003 cascade observed
-        // in the field. Auto-reconnect is unaffected: RdpReconnectCoordinator (and the
-        // manual-reconnect handler) call _connect.ConnectAsync directly, never going
-        // through ConnectionRequestedEvent, and OnDisconnectedAfterConnect clears _active
-        // before kicking off the loop anyway.
-        if (_active is { } current && current.Model.Id == evt.Connection.Id)
-        {
-            _logger.LogInformation(
-                "Ignoring duplicate connect request for {Hostname} — host for connection id {ConnectionId} still active",
-                evt.Connection.Hostname, evt.Connection.Id);
-            return;
-        }
-
-        // Single-host replacement policy (Phase 4, Open Question #2). If a host is active
-        // for a DIFFERENT model, dispatch disconnect first. Phase 5 replaces this with
-        // tab-keyed storage.
-        if (_active is { } active)
-        {
-            _logger.LogInformation(
-                "Replacing active host for {OldHost} with new connection to {NewHost}",
-                active.Model.Hostname, evt.Connection.Hostname);
-            _ = RunDisconnectSafely(new DisconnectContext
-            {
-                Connection = active.Model,
-                Host = active.Host,
-                Reason = DisconnectReason.UserInitiated,
-            });
-        }
-
+        // D-02 (Phase 5): the publisher-side TryGetExistingTab check in
+        // ConnectionTreeViewModel.Connect is now the single chokepoint for
+        // switch-to-existing. The rapid-double-click guard that used to live
+        // here (Phase 4 lines 73-88) was deleted because ITabHostManager is
+        // now the authority on "is this connection already open?" — double-clicks
+        // never reach ConnectionRequestedEvent a second time.
+        //
+        // D-01/D-05 (Phase 5): single-host replacement branch (Phase 4 lines 90-104)
+        // was deleted. Multi-host coexistence is owned by TabHostManager + the
+        // persistent HostContainer (Plan 02); the coordinator no longer disconnects
+        // the previous host on a new ConnectionRequestedEvent.
         _logger.LogInformation("Connecting to {Hostname}", evt.Connection.Hostname);
         _ = RunConnectSafely(evt.Connection);
     }
@@ -214,23 +204,14 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        // WR-01 fix: the replace-active-host branch in OnConnectionRequested fires both
-        // RunDisconnectSafely(A) and RunConnectSafely(B) fire-and-forget. CreateHostStage
-        // for B is synchronous while A's disconnect pipeline awaits DisconnectAsync, so
-        // B's HostCreatedEvent typically lands BEFORE A's ConnectionClosedEvent. Without
-        // this handoff, _active overwrites to B while A's WFH is still mounted in
-        // ViewportGrid, and A's later ConnectionClosedEvent no-ops because Model.Id no
-        // longer matches. Result: two WFHs parented, A's covering B's viewport. Unmount
-        // + unsubscribe the previous host explicitly before overwriting.
-        if (_active is { } previous && !ReferenceEquals(previous.Host, evt.Host))
-        {
-            try { previous.Host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
-            catch { /* disposed host may throw */ }
-            HostUnmounted?.Invoke(this, previous.Host);
-            _active = null;
-        }
-
-        _active = (evt.Host, evt.Connection);
+        // Phase 5 (D-01/D-04): the WR-01 "two WFHs parented" scenario cannot occur here
+        // anymore because the replacement branch in OnConnectionRequested was deleted
+        // (single-host replacement no longer exists). In the multi-host model MainWindow
+        // parents each new WFH under HostContainer on HostMounted and never removes
+        // children from ViewportGrid on a fresh connect. Leave the dict write below as
+        // the sole source of truth for "which hosts does the coordinator know about".
+        _coordinatorHosts[evt.Connection.Id] = (evt.Host, evt.Connection);
+        _activeId = evt.Connection.Id;
 
         // Plan 04-03: subscribe to the post-connect disconnect stream so we can drive
         // the reconnect loop. IProtocolHost exposes the event abstractly (D-10);
@@ -283,10 +264,12 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             "Connection to {Hostname} failed: {Reason}",
             evt.Connection.Hostname, evt.Reason);
 
-        if (_active is { } active && active.Model.Id == evt.Connection.Id)
+        if (_coordinatorHosts.TryGetValue(evt.Connection.Id, out var entry))
         {
-            var host = active.Host;
-            _active = null;
+            var host = entry.Host;
+            _coordinatorHosts.Remove(evt.Connection.Id);
+            if (_activeId == evt.Connection.Id) _activeId = null;
+
             // Defense-in-depth: unsubscribe the reconnect handler BEFORE dispose so a
             // late-firing OnDisconnected (mid-teardown COM event) cannot re-enter the
             // reconnect path with a partially-disposed host.
@@ -341,10 +324,11 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        if (_active is { } active && active.Model.Id == evt.Connection.Id)
+        if (_coordinatorHosts.TryGetValue(evt.Connection.Id, out var entry))
         {
-            var host = active.Host;
-            _active = null;
+            var host = entry.Host;
+            _coordinatorHosts.Remove(evt.Connection.Id);
+            if (_activeId == evt.Connection.Id) _activeId = null;
             try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
             catch { /* disposed host may throw */ }
             HostUnmounted?.Invoke(this, host);
@@ -368,9 +352,12 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
 
         if (sender is not IProtocolHost host) return;
-        if (_active is not { } active || !ReferenceEquals(active.Host, host)) return;
+        // Phase 5: look up the connection model via the dict (keyed by ConnectionId)
+        // instead of the old single-slot tuple. Sender-identity check preserved.
+        if (!_coordinatorHosts.TryGetValue(host.ConnectionId, out var entry) ||
+            !ReferenceEquals(entry.Host, host)) return;
 
-        var model = active.Model;
+        var model = entry.Model;
         var category = DisconnectReasonClassifier.Classify(discReason);
         _logger.LogInformation(
             "Post-connect disconnect for {Hostname}: discReason={DiscReason} category={Category}",
@@ -380,7 +367,8 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         // would trigger — we want the overlay to stay visible over the viewport until
         // either a fresh host mounts (success) or the user closes the overlay.
         _suppressedHost = host;
-        _active = null;
+        _coordinatorHosts.Remove(host.ConnectionId);
+        if (_activeId == host.ConnectionId) _activeId = null;
         try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
         catch { /* disposed host may throw */ }
 
@@ -514,16 +502,23 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         _bus.Unsubscribe<ConnectionClosedEvent>(this);
         _bus.Unsubscribe<CredentialRequestedEvent>(this);
 
-        if (_active is { } active)
+        // D-08 (Phase 5): app-shutdown disconnect now runs through
+        // TabHostManager.CloseAllAsync, invoked from MainWindow.OnClosing in Plan 02.
+        // The coordinator still has a best-effort cleanup pass here for any hosts it
+        // knows about that TabHostManager never saw (edge case: failed Connect that
+        // never produced HostCreatedEvent won't register with TabHostManager, but
+        // OnHostCreated fires before ConnectStage so in practice this dict should
+        // already be empty by the time Dispose runs).
+        foreach (var entry in _coordinatorHosts.Values.ToList())
         {
-            try { active.Host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
+            try { entry.Host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
             catch { /* disposed host may throw */ }
             try
             {
                 _disconnect.DisconnectAsync(new DisconnectContext
                 {
-                    Connection = active.Model,
-                    Host = active.Host,
+                    Connection = entry.Model,
+                    Host = entry.Host,
                     Reason = DisconnectReason.AppShutdown,
                 }).GetAwaiter().GetResult();
             }
@@ -533,9 +528,9 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
                     "Disconnect during coordinator dispose threw: {ExceptionType} HResult={HResult:X8}",
                     ex.GetType().Name, ex.HResult);
             }
-            _active = null;
         }
-
+        _coordinatorHosts.Clear();
+        _activeId = null;
         _suppressedHost = null;
     }
 }
