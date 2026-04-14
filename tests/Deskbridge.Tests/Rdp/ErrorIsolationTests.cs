@@ -50,7 +50,7 @@ public sealed class ErrorIsolationTests
         _ = _fixture;
         StaRunner.Run(() =>
         {
-            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance);
+            var host = new RdpHostControl(NullLogger<RdpHostControl>.Instance, Guid.NewGuid());
             host.Dispose();
             // Idempotent dispose — should not throw on second call
             var act = () => host.Dispose();
