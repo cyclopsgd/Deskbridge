@@ -219,14 +219,21 @@ public sealed class ConnectionCoordinatorTests
     }
 
     /// <summary>
-    /// Phase 5 inverts the Phase 4 rapid-double-click guard: the guard was deleted from
-    /// ConnectionCoordinator (D-02 publisher-side check owns switch-to-existing now, see
-    /// SwitchToExistingTabTests). The coordinator-level contract is "no guard" — a second
-    /// ConnectionRequestedEvent for the same id invokes the pipeline a second time, and
-    /// ConnectionTreeViewModel.Connect is expected to have already filtered it.
+    /// Hotfix (2026-04-14): ConnectionCoordinator now dedupes duplicate
+    /// ConnectionRequestedEvents AND defends against double-host mounts in
+    /// OnHostCreated. The publisher-side check in ConnectionTreeViewModel.Connect
+    /// is racy on the initial connect (first click hasn't populated
+    /// TabHostManager._hosts when a second click checks), and background
+    /// reconnect loops can fire ConnectAsync directly without going through the
+    /// bus. Either path produced two WFHs parented with the same Tag=ConnectionId,
+    /// which manifested as a black viewport on first connect (airspace chaos).
+    /// Contract inverted: a second ConnectionRequestedEvent for the same id
+    /// while the first pipeline is in-flight or already mounted is rejected,
+    /// and if a duplicate HostCreatedEvent somehow fires (e.g. from a reconnect
+    /// loop), the new host is disposed without being mounted.
     /// </summary>
     [Fact]
-    public void DoesNotGuard_DuplicateConnectionRequests_PublisherSideOwnsThat()
+    public void Guards_DuplicateConnectionRequests_InFlightAndMounted()
     {
         _ = _fixture;
         StaRunner.Run(() =>
@@ -247,14 +254,29 @@ public sealed class ConnectionCoordinatorTests
                 bus, connect, disconnect, NullLogger<ConnectionCoordinator>.Instance, dispatcher);
 
             var model = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
-            var host = Substitute.For<IProtocolHost>();
+            var host1 = Substitute.For<IProtocolHost>();
+            var host2 = Substitute.For<IProtocolHost>();
 
             reqHandler!(new ConnectionRequestedEvent(model));
-            hostCreatedHandler!(new HostCreatedEvent(model, host));
+            hostCreatedHandler!(new HostCreatedEvent(model, host1));
+
+            // Drain the in-flight set so the second request is at least attempted —
+            // the dedupe should STILL reject because _coordinatorHosts has the id.
+            dispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+
             reqHandler!(new ConnectionRequestedEvent(model));
 
-            // Phase 5: both requests ran the pipeline. The duplicate guard is gone.
-            connect.Received(2).ConnectAsync(Arg.Any<ConnectionModel>());
+            // Only the first ConnectionRequestedEvent made it through to the pipeline.
+            connect.Received(1).ConnectAsync(Arg.Any<ConnectionModel>());
+
+            // Defensive: if a second HostCreatedEvent somehow fires (e.g. from a
+            // reconnect loop bypassing the bus), the duplicate host is disposed
+            // rather than mounted, and HostMounted is NOT raised for host2.
+            var hostMountedCount = 0;
+            coord.HostMounted += (_, _) => hostMountedCount++;
+            hostCreatedHandler!(new HostCreatedEvent(model, host2));
+            host2.Received(1).Dispose();
+            hostMountedCount.Should().Be(0, "duplicate host must not raise HostMounted");
             disconnect.DidNotReceive().DisconnectAsync(Arg.Any<DisconnectContext>());
         });
     }
