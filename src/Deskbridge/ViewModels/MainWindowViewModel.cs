@@ -148,6 +148,9 @@ public partial class MainWindowViewModel : ObservableObject
                     : "(unknown)",
                 ConnectionId = evt.ConnectionId,
                 State = TabState.Connecting,
+                // Plan 05-03 Task 1: populate Hostname so TabItemViewModel.TooltipText
+                // renders the UI-SPEC copy exactly. Never includes credential fields (T-05-01).
+                Hostname = model?.Hostname ?? "(unknown)",
             };
             Tabs.Add(tab);
             OnPropertyChanged(nameof(HasNoTabs));
@@ -174,10 +177,43 @@ public partial class MainWindowViewModel : ObservableObject
             ActiveTab = evt.ActiveId == Guid.Empty
                 ? null
                 : Tabs.FirstOrDefault(t => t.ConnectionId == evt.ActiveId);
-            if (ActiveTab is not null) ActiveTab.IsActive = true;
+            if (ActiveTab is not null)
+            {
+                ActiveTab.IsActive = true;
+                // Plan 05-03 Task 1: refresh Resolution on the now-active tab so
+                // TabItemViewModel.TooltipText renders {Hostname} · {W}×{H} when known.
+                // Live DesktopWidth/Height are 0 before OnLoginComplete; fall back to
+                // DisplaySettings or leave null (em-dash in TooltipText).
+                UpdateActiveTabResolution();
+            }
 
             UpdateStatusBarFromActiveTab();
         });
+    }
+
+    /// <summary>
+    /// Plan 05-03 Task 1: populate <see cref="TabItemViewModel.Resolution"/> for the
+    /// active tab so the tooltip stays in sync with the status bar. Prefers the live
+    /// <c>IMsRdpClient.DesktopWidth</c>/<c>DesktopHeight</c>; falls back to
+    /// <c>ConnectionModel.DisplaySettings</c> during Connecting; null when both missing.
+    /// </summary>
+    private void UpdateActiveTabResolution()
+    {
+        if (ActiveTab is null) return;
+        var host = _tabHostManager.GetHost(ActiveTab.ConnectionId);
+        (int w, int h) = (0, 0);
+        if (host is Deskbridge.Protocols.Rdp.RdpHostControl rdp)
+        {
+            try { (w, h) = rdp.GetSessionResolution(); }
+            catch { (w, h) = (0, 0); }
+        }
+        if (w == 0 || h == 0)
+        {
+            var model = _connectionStore.GetById(ActiveTab.ConnectionId);
+            w = model?.DisplaySettings?.Width ?? 0;
+            h = model?.DisplaySettings?.Height ?? 0;
+        }
+        ActiveTab.Resolution = (w > 0 && h > 0) ? (w, h) : null;
     }
 
     private void OnTabStateChanged(TabStateChangedEvent evt)

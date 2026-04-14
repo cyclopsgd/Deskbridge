@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:models="clr-namespace:Deskbridge.Models"
+    xmlns:behaviors="clr-namespace:Deskbridge.Behaviors"
     Title="{Binding Title}"
     Width="1100" Height="700"
     ExtendsContentIntoTitleBar="True"
@@ -201,7 +202,8 @@
                                 <DataTemplate>
                                     <Border Height="30" Padding="8,0"
                                         Background="Transparent" Cursor="Hand"
-                                        BorderThickness="0,2,0,0">
+                                        BorderThickness="0,2,0,0"
+                                        ToolTip="{Binding TooltipText}">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="BorderBrush" Value="Transparent" />
@@ -209,9 +211,28 @@
                                                     <DataTrigger Binding="{Binding IsActive}" Value="True">
                                                         <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
                                                     </DataTrigger>
+                                                    <!-- Plan 05-03 UI-SPEC line 231: inactive tabs had no hover visual. Add subtle hover. -->
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                                    </Trigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
+
+                                        <!-- D-07 context menu: Close / Close Others / Close All. No icons, no separators, no extra items. -->
+                                        <Border.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Close"
+                                                    Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" />
+                                                <MenuItem Header="Close Others"
+                                                    Command="{Binding DataContext.CloseOtherTabsCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" />
+                                                <MenuItem Header="Close All"
+                                                    Command="{Binding DataContext.CloseAllTabsCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
+
                                         <Border.InputBindings>
                                             <MouseBinding MouseAction="MiddleClick"
                                                 Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -221,13 +242,34 @@
                                                 CommandParameter="{Binding}" />
                                         </Border.InputBindings>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontSize="14">
+                                            <!-- D-12 Connecting indicator (12px ProgressRing). Mutually exclusive with amber/red dots. -->
+                                            <ui:ProgressRing IsIndeterminate="True"
+                                                Width="12" Height="12" Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding IsConnecting, Converter={StaticResource BoolToVisibility}}" />
+                                            <!-- D-12 Reconnecting dot (8px amber Ellipse, DeskbridgeWarningBrush #FFCC02). -->
+                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Fill="{DynamicResource DeskbridgeWarningBrush}"
+                                                Visibility="{Binding IsReconnecting, Converter={StaticResource BoolToVisibility}}" />
+                                            <!-- D-12 Error dot (8px red Ellipse, DeskbridgeErrorBrush #F44747). -->
+                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Fill="{DynamicResource DeskbridgeErrorBrush}"
+                                                Visibility="{Binding IsError, Converter={StaticResource BoolToVisibility}}" />
+                                            <!-- Tab title. UI-SPEC §Tab Bar Internal Layout: MinWidth 96, MaxWidth 240, CharacterEllipsis. -->
+                                            <TextBlock Text="{Binding Title}" FontSize="14"
+                                                MinWidth="96" MaxWidth="240"
+                                                TextTrimming="CharacterEllipsis"
+                                                VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                        <Setter Property="FontWeight" Value="Regular" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsActive}" Value="True">
                                                                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                                <Setter Property="FontWeight" Value="SemiBold" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
