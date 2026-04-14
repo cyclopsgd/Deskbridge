@@ -32,6 +32,17 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     // "which tabs are open"; this dict is the coordinator's internal bookkeeping for
     // its own lifecycle cleanup. ActiveHost shim reads the most-recent-mounted entry.
     private readonly Dictionary<Guid, (IProtocolHost Host, ConnectionModel Model)> _coordinatorHosts = new();
+
+    // Hotfix (2026-04-14): rapid-double-click dedupe set. ConnectionTreeViewModel.Connect's
+    // publisher-side TryGetExistingTab check (D-02) is racy on the INITIAL connect — the
+    // first click hasn't yet populated TabHostManager._hosts when the second click arrives,
+    // so both pass the "not already open" gate and two pipelines run in parallel. Each
+    // creates its own AxHost, each fires HostCreatedEvent, and MainWindow.OnHostMounted
+    // parents BOTH WFHs into HostContainer with the same Tag=ConnectionId, producing
+    // airspace chaos that manifests as a black viewport on first connect. This in-flight
+    // set lives in the coordinator because it owns the pipeline lifecycle and is the
+    // earliest point where duplicate requests can be seen and rejected.
+    private readonly HashSet<Guid> _pendingConnects = new();
     private Guid? _activeId;
     private IProtocolHost? _suppressedHost;
     private CancellationTokenSource? _reconnectCts;
@@ -113,17 +124,25 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        // D-02 (Phase 5): the publisher-side TryGetExistingTab check in
-        // ConnectionTreeViewModel.Connect is now the single chokepoint for
-        // switch-to-existing. The rapid-double-click guard that used to live
-        // here (Phase 4 lines 73-88) was deleted because ITabHostManager is
-        // now the authority on "is this connection already open?" — double-clicks
-        // never reach ConnectionRequestedEvent a second time.
-        //
+        // D-02 (Phase 5): switch-to-existing is handled publisher-side in
+        // ConnectionTreeViewModel.Connect, but that check is RACY on the initial
+        // connect — the first click hasn't populated TabHostManager._hosts when a
+        // rapid second click arrives, so both pass and two pipelines race. Hotfix
+        // (2026-04-14): dedupe here against an in-flight set + the mounted dict.
+        if (_pendingConnects.Contains(evt.Connection.Id) ||
+            _coordinatorHosts.ContainsKey(evt.Connection.Id))
+        {
+            _logger.LogInformation(
+                "Ignoring duplicate connect request for {Hostname} — pipeline already in-flight or mounted",
+                evt.Connection.Hostname);
+            return;
+        }
+
         // D-01/D-05 (Phase 5): single-host replacement branch (Phase 4 lines 90-104)
         // was deleted. Multi-host coexistence is owned by TabHostManager + the
         // persistent HostContainer (Plan 02); the coordinator no longer disconnects
         // the previous host on a new ConnectionRequestedEvent.
+        _pendingConnects.Add(evt.Connection.Id);
         _logger.LogInformation("Connecting to {Hostname}", evt.Connection.Hostname);
         _ = RunConnectSafely(evt.Connection);
     }
@@ -155,6 +174,21 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
                 model,
                 $"{ex.GetType().Name} (HResult 0x{ex.HResult:X8})",
                 ex));
+        }
+        finally
+        {
+            // Hotfix (2026-04-14): drain the in-flight dedupe set so subsequent
+            // open requests for the same connection (e.g. user closes and re-opens)
+            // aren't blocked. Must marshal to STA because the pipeline's awaits
+            // can resume on any dispatcher captured context.
+            if (_dispatcher.CheckAccess())
+            {
+                _pendingConnects.Remove(model.Id);
+            }
+            else
+            {
+                _dispatcher.Invoke(() => _pendingConnects.Remove(model.Id));
+            }
         }
     }
 
