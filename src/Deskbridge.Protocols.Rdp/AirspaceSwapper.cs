@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -37,6 +38,14 @@ public sealed class AirspaceSwapper : IDisposable
     private readonly ILogger<AirspaceSwapper> _logger;
     private bool _inSizeMove;
     private bool _disposed;
+
+    // WR-06 (Phase 5 / Pattern 4): pre-drag visibility snapshot taken on
+    // WM_ENTERSIZEMOVE and restored on WM_EXITSIZEMOVE. Multi-host support
+    // requires per-host restore — in the Phase 5 multi-host model a background
+    // tab's WFH is Collapsed by tab-switch, and forcing every host back to
+    // Visible on every drag-resize would briefly expose the live RDP surfaces
+    // of every background tab. Null when no drag is in progress.
+    private Dictionary<WindowsFormsHost, Visibility>? _preDragVisibility;
 
     public AirspaceSwapper() : this(NullLogger<AirspaceSwapper>.Instance) { }
 
@@ -111,6 +120,7 @@ public sealed class AirspaceSwapper : IDisposable
         }
         _hookedSources.Clear();
         _hosts.Clear();
+        _preDragVisibility = null;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -118,6 +128,11 @@ public sealed class AirspaceSwapper : IDisposable
         if (msg == WM_ENTERSIZEMOVE && !_inSizeMove)
         {
             _inSizeMove = true;
+            // WR-06 (Phase 5 / Pattern 4): capture each host's CURRENT visibility BEFORE
+            // collapsing. The multi-host tab model keeps background tabs Collapsed on
+            // tab switch; restoring unconditionally to Visible on WM_EXITSIZEMOVE would
+            // briefly expose every background host's live RDP surface.
+            _preDragVisibility = _hosts.Keys.ToDictionary(h => h, h => h.Visibility);
             foreach (var (host, overlay) in _hosts)
             {
                 var snapshot = CaptureHwnd(host);
@@ -141,11 +156,17 @@ public sealed class AirspaceSwapper : IDisposable
             _inSizeMove = false;
             foreach (var (host, overlay) in _hosts)
             {
-                host.Visibility = Visibility.Visible;
+                // WR-06 (Phase 5 / Pattern 4): restore per-host captured visibility, NOT
+                // an unconditional Visibility.Visible. Background tabs (Collapsed by the
+                // tab-switch visibility flip) stay Collapsed after a drag-resize.
+                host.Visibility = _preDragVisibility is not null && _preDragVisibility.TryGetValue(host, out var v)
+                    ? v
+                    : Visibility.Visible;
                 overlay.Visibility = Visibility.Collapsed;
                 overlay.Source = null;
             }
-            _logger.LogDebug("[airspace] EXITSIZEMOVE: snapshot hidden, WFH visibility -> Visible (hosts={Count})", _hosts.Count);
+            _preDragVisibility = null;
+            _logger.LogDebug("[airspace] EXITSIZEMOVE: snapshot hidden, WFH visibility restored (hosts={Count})", _hosts.Count);
         }
         return IntPtr.Zero;
     }
