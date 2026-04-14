@@ -4,5 +4,16 @@
     <PackageReference Include="AdysTech.CredentialManager" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <!-- Phase 5: TabHostManager.Show uses Wpf.Ui.ISnackbarService directly per UI-SPEC Snackbar
+         contract (ControlAppearance.Caution + SymbolIcon Warning24). Adding WPF-UI to Core keeps
+         the D-09 warning self-contained and avoids synthesizing a shadow ISnackbarService
+         abstraction. Any non-UI service in Core that consumed this would still compile;
+         nothing in Core instantiates WPF types, it just consumes the interface. -->
+    <PackageReference Include="WPF-UI" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Phase 5: TabHostManager LRU tests use a small internal test seam
+         (PushLastClosedForTesting) to avoid brittle reflection on LinkedList state. -->
+    <InternalsVisibleTo Include="Deskbridge.Tests" />
   </ItemGroup>
 </Project>
