@@ -1,4 +1,7 @@
+using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
+using Deskbridge.Core.Models;
+using Deskbridge.Core.Services;
 using Deskbridge.Models;
 using Deskbridge.ViewModels;
 using NSubstitute;
@@ -9,23 +12,26 @@ namespace Deskbridge.Tests.ViewModels;
 public class MainWindowViewModelTests
 {
     private readonly MainWindowViewModel _sut;
+    private readonly ITabHostManager _tabHostManager;
+    private readonly IEventBus _bus;
+    private readonly IConnectionStore _connectionStore;
 
     public MainWindowViewModelTests()
     {
-        var connectionStore = Substitute.For<IConnectionStore>();
+        _connectionStore = Substitute.For<IConnectionStore>();
         var connectionQuery = Substitute.For<IConnectionQuery>();
         var credentialService = Substitute.For<ICredentialService>();
         var contentDialogService = Substitute.For<IContentDialogService>();
         var snackbarService = Substitute.For<ISnackbarService>();
         var serviceProvider = Substitute.For<IServiceProvider>();
-        var eventBus = Substitute.For<IEventBus>();
-        var tabHostManager = Substitute.For<ITabHostManager>();
+        _bus = new EventBus();   // real bus so Publish/Subscribe deliver end-to-end
+        _tabHostManager = Substitute.For<ITabHostManager>();
 
         var treeVm = new ConnectionTreeViewModel(
-            connectionStore, connectionQuery, credentialService,
-            contentDialogService, snackbarService, serviceProvider, eventBus, tabHostManager);
+            _connectionStore, connectionQuery, credentialService,
+            contentDialogService, snackbarService, serviceProvider, _bus, _tabHostManager);
 
-        _sut = new MainWindowViewModel(treeVm);
+        _sut = new MainWindowViewModel(treeVm, _tabHostManager, _bus, _connectionStore);
     }
 
     // --- Panel toggle state machine (D-04) ---
@@ -45,7 +51,6 @@ public class MainWindowViewModelTests
     [Fact]
     public void TogglePanel_FromNone_OpensPanelWithThatMode()
     {
-        // Start from None by toggling Connections off
         _sut.TogglePanelCommand.Execute(PanelMode.Connections);
         _sut.ActivePanelMode.Should().Be(PanelMode.None);
 
@@ -58,7 +63,6 @@ public class MainWindowViewModelTests
     [Fact]
     public void TogglePanel_SameMode_ClosesPanel()
     {
-        // Connections panel is open by default; toggling it should close.
         _sut.TogglePanelCommand.Execute(PanelMode.Connections);
 
         _sut.ActivePanelMode.Should().Be(PanelMode.None);
@@ -78,7 +82,6 @@ public class MainWindowViewModelTests
     [Fact]
     public void IsConnectionsActive_TrueOnlyWhenModeIsConnections()
     {
-        // Default is Connections, so it's true out of the gate.
         _sut.IsConnectionsActive.Should().BeTrue();
 
         _sut.TogglePanelCommand.Execute(PanelMode.Search);
@@ -131,7 +134,7 @@ public class MainWindowViewModelTests
         changedProperties.Should().Contain(nameof(MainWindowViewModel.IsSettingsActive));
     }
 
-    // --- Tab management ---
+    // --- Tab management (Phase 5 delegations) ---
 
     [Fact]
     public void Tabs_DefaultsToEmptyCollection()
@@ -152,86 +155,175 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void CloseTab_RemovesTabFromCollection()
+    public void CloseTab_DelegatesToTabHostManager_CloseTabAsync()
     {
-        var tab = new TabItemViewModel { Title = "Test" };
-        _sut.Tabs.Add(tab);
+        _tabHostManager.CloseTabAsync(Arg.Any<Guid>()).Returns(Task.CompletedTask);
+        var tab = new TabItemViewModel { Title = "Test", ConnectionId = Guid.NewGuid() };
 
         _sut.CloseTabCommand.Execute(tab);
+
+        _tabHostManager.Received(1).CloseTabAsync(tab.ConnectionId);
+    }
+
+    [Fact]
+    public void CloseTab_NullTab_DoesNotCallService()
+    {
+        _sut.CloseTabCommand.Execute(null);
+
+        _tabHostManager.DidNotReceive().CloseTabAsync(Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public void SwitchTab_DelegatesToTabHostManager_SwitchTo()
+    {
+        var tab = new TabItemViewModel { Title = "Test", ConnectionId = Guid.NewGuid() };
+
+        _sut.SwitchTabCommand.Execute(tab);
+
+        _tabHostManager.Received(1).SwitchTo(tab.ConnectionId);
+    }
+
+    [Fact]
+    public void CloseOtherTabs_DelegatesToTabHostManager_CloseOthersAsync()
+    {
+        _tabHostManager.CloseOthersAsync(Arg.Any<Guid>()).Returns(Task.CompletedTask);
+        var tab = new TabItemViewModel { Title = "Keep", ConnectionId = Guid.NewGuid() };
+
+        _sut.CloseOtherTabsCommand.Execute(tab);
+
+        _tabHostManager.Received(1).CloseOthersAsync(tab.ConnectionId);
+    }
+
+    [Fact]
+    public void CloseAllTabs_DelegatesToTabHostManager_CloseAllAsync()
+    {
+        _tabHostManager.CloseAllAsync().Returns(Task.CompletedTask);
+
+        _sut.CloseAllTabsCommand.Execute(null);
+
+        _tabHostManager.Received(1).CloseAllAsync();
+    }
+
+    [Fact]
+    public void ReopenLastClosed_EmptyLru_IsSilentNoOp()
+    {
+        _tabHostManager.PopLastClosed().Returns((Guid?)null);
+
+        // Use an NSubstitute-mocked bus here — the real bus won't help us prove a negative.
+        var bus = Substitute.For<IEventBus>();
+        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore);
+
+        vm.ReopenLastClosedCommand.Execute(null);
+
+        bus.DidNotReceive().Publish(Arg.Any<ConnectionRequestedEvent>());
+    }
+
+    [Fact]
+    public void ReopenLastClosed_ConnectionDeleted_IsSilentNoOp()
+    {
+        var id = Guid.NewGuid();
+        _tabHostManager.PopLastClosed().Returns((Guid?)id);
+        _connectionStore.GetById(id).Returns((ConnectionModel?)null);
+
+        var bus = Substitute.For<IEventBus>();
+        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore);
+
+        vm.ReopenLastClosedCommand.Execute(null);
+
+        bus.DidNotReceive().Publish(Arg.Any<ConnectionRequestedEvent>());
+    }
+
+    [Fact]
+    public void ReopenLastClosed_ValidConnection_PublishesConnectionRequestedEvent()
+    {
+        var id = Guid.NewGuid();
+        var model = new ConnectionModel { Id = id, Name = "x", Hostname = "h" };
+        _tabHostManager.PopLastClosed().Returns((Guid?)id);
+        _connectionStore.GetById(id).Returns(model);
+
+        var bus = Substitute.For<IEventBus>();
+        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore);
+
+        vm.ReopenLastClosedCommand.Execute(null);
+
+        bus.Received(1).Publish(Arg.Is<ConnectionRequestedEvent>(e => e.Connection.Id == id));
+    }
+
+    // --- TabOpenedEvent / TabClosedEvent subscribers ---
+
+    [Fact]
+    public void OnTabOpened_AddsTabToCollection_WithConnectionName()
+    {
+        var id = Guid.NewGuid();
+        var model = new ConnectionModel { Id = id, Name = "MyServer", Hostname = "srv01" };
+        _connectionStore.GetById(id).Returns(model);
+
+        _bus.Publish(new TabOpenedEvent(id));
+
+        _sut.Tabs.Should().ContainSingle(t => t.ConnectionId == id && t.Title == "MyServer");
+    }
+
+    [Fact]
+    public void OnTabClosed_RemovesTabFromCollection()
+    {
+        var id = Guid.NewGuid();
+        var model = new ConnectionModel { Id = id, Name = "x", Hostname = "h" };
+        _connectionStore.GetById(id).Returns(model);
+        _bus.Publish(new TabOpenedEvent(id));
+
+        _bus.Publish(new TabClosedEvent(id));
 
         _sut.Tabs.Should().BeEmpty();
     }
 
+    // --- TabSwitchedEvent / status bar ---
+
     [Fact]
-    public void CloseTab_SetsActiveTabToNull_WhenClosedTabWasActiveAndNoOtherTabs()
+    public void OnTabSwitched_UpdatesStatusText_WithHostnameAndConnectedState()
     {
-        var tab = new TabItemViewModel { Title = "Test" };
-        _sut.Tabs.Add(tab);
-        _sut.ActiveTab = tab;
+        var id = Guid.NewGuid();
+        var model = new ConnectionModel
+        {
+            Id = id,
+            Name = "S",
+            Hostname = "myserver",
+            DisplaySettings = new DisplaySettings { Width = 1920, Height = 1080 },
+        };
+        _connectionStore.GetById(id).Returns(model);
+        _bus.Publish(new TabOpenedEvent(id));
 
-        _sut.CloseTabCommand.Execute(tab);
+        // Tab is created with State=Connecting; explicitly flip to Connected first.
+        _bus.Publish(new TabStateChangedEvent(id, TabState.Connected));
+        _bus.Publish(new TabSwitchedEvent(null, id));
 
-        _sut.ActiveTab.Should().BeNull();
+        _sut.StatusText.Should().Be("myserver \u00B7 Connected");
+        _sut.StatusSecondary.Should().Be("1920 \u00D7 1080");
     }
 
     [Fact]
-    public void CloseTab_SetsActiveTabToLastRemaining_WhenClosedTabWasActive()
+    public void OnTabSwitched_ActiveIdEmpty_ResetsStatusToReady()
     {
-        var tab1 = new TabItemViewModel { Title = "Tab 1" };
-        var tab2 = new TabItemViewModel { Title = "Tab 2" };
-        _sut.Tabs.Add(tab1);
-        _sut.Tabs.Add(tab2);
-        _sut.ActiveTab = tab2;
+        _bus.Publish(new TabSwitchedEvent(null, Guid.Empty));
 
-        _sut.CloseTabCommand.Execute(tab2);
-
-        _sut.ActiveTab.Should().Be(tab1);
-        tab1.IsActive.Should().BeTrue();
+        _sut.StatusText.Should().Be("Ready");
+        _sut.StatusSecondary.Should().Be(string.Empty);
     }
 
     [Fact]
-    public void CloseTab_UpdatesHasNoTabs()
+    public void OnTabSwitched_Connecting_RendersEllipsisAndEmDash()
     {
-        var tab = new TabItemViewModel { Title = "Test" };
-        _sut.Tabs.Add(tab);
-        _sut.HasNoTabs.Should().BeFalse();
+        var id = Guid.NewGuid();
+        var model = new ConnectionModel { Id = id, Name = "X", Hostname = "h" };
+        _connectionStore.GetById(id).Returns(model);
+        _bus.Publish(new TabOpenedEvent(id));
 
-        _sut.CloseTabCommand.Execute(tab);
+        _bus.Publish(new TabSwitchedEvent(null, id));
 
-        _sut.HasNoTabs.Should().BeTrue();
+        _sut.StatusText.Should().Be("h \u00B7 Connecting\u2026");    // U+2026 ellipsis
+        _sut.StatusSecondary.Should().Be("\u2014");                    // U+2014 em-dash
     }
 
-    [Fact]
-    public void SwitchTab_SetsActiveTabAndMarksIsActive()
-    {
-        var tab1 = new TabItemViewModel { Title = "Tab 1" };
-        var tab2 = new TabItemViewModel { Title = "Tab 2" };
-        _sut.Tabs.Add(tab1);
-        _sut.Tabs.Add(tab2);
-
-        _sut.SwitchTabCommand.Execute(tab1);
-
-        _sut.ActiveTab.Should().Be(tab1);
-        tab1.IsActive.Should().BeTrue();
-    }
-
-    [Fact]
-    public void SwitchTab_ClearsIsActiveOnPreviousTab()
-    {
-        var tab1 = new TabItemViewModel { Title = "Tab 1", IsActive = true };
-        var tab2 = new TabItemViewModel { Title = "Tab 2" };
-        _sut.Tabs.Add(tab1);
-        _sut.Tabs.Add(tab2);
-        _sut.ActiveTab = tab1;
-
-        _sut.SwitchTabCommand.Execute(tab2);
-
-        tab1.IsActive.Should().BeFalse();
-        tab2.IsActive.Should().BeTrue();
-        _sut.ActiveTab.Should().Be(tab2);
-    }
-
-    // --- Status bar ---
+    // --- Status bar defaults ---
 
     [Fact]
     public void StatusText_DefaultsToReady()
@@ -240,8 +332,8 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void StatusSecondary_DefaultsToNoActiveConnection()
+    public void StatusSecondary_DefaultsToEmpty()
     {
-        _sut.StatusSecondary.Should().Be("No active connection");
+        _sut.StatusSecondary.Should().BeEmpty();
     }
 }
