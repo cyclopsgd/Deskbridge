@@ -71,6 +71,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _coordinator.HostUnmounted += OnHostUnmounted;
         _coordinator.ReconnectOverlayRequested += OnReconnectOverlayRequested;
         _bus.Subscribe<HostCreatedEvent>(this, OnHostCreated);
+        _bus.Subscribe<ConnectionEstablishedEvent>(this, OnConnectionEstablished);
     }
 
     public int ActiveCount => _hosts.Count;
@@ -110,30 +111,132 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _bus.Publish(new TabSwitchedEvent(previous, connectionId));
     }
 
-    public async Task CloseTabAsync(Guid connectionId)
+    public Task CloseTabAsync(Guid connectionId)
+    {
+        if (_disposed) return Task.CompletedTask;
+        if (!_dispatcher.CheckAccess())
+        {
+            return _dispatcher.InvokeAsync(() => CloseTabAsync(connectionId)).Task.Unwrap();
+        }
+
+        // Q2 (Phase 5): cancel the reconnect backoff loop BEFORE everything else so
+        // RdpReconnectCoordinator.RunAsync cannot fire ConnectAsync against a host that
+        // is about to be disposed. See IConnectionCoordinator.CancelReconnect XML doc.
+        _coordinator.CancelReconnect(connectionId);
+
+        // Hotfix (2026-04-14): user-initiated tab close must be instant from the UI
+        // perspective. Phase 4's IDisconnectPipeline waits up to 30s for OnDisconnected
+        // before disposing, which made mis-clicks while Connecting look like the close
+        // button didn't work. Split into immediate visual removal + fire-and-forget
+        // disconnect so the tab disappears before the pipeline completes. D-08 app-
+        // shutdown teardown (CloseAllAsync) still awaits sequentially to preserve the
+        // 20-cycle GDI baseline.
+        var removed = DoVisualClose(connectionId);
+        if (removed is null) return Task.CompletedTask;
+
+        // Fire-and-forget: the async method runs synchronously up to its first await,
+        // so DisconnectAsync IS called before this returns (tests rely on this). The
+        // rest of the pipeline runs without blocking the caller.
+        _ = RunDisconnectAsync(removed.Value.Model, removed.Value.Host);
+        return Task.CompletedTask;
+    }
+
+    public async Task CloseOthersAsync(Guid keepConnectionId)
     {
         if (_disposed) return;
         if (!_dispatcher.CheckAccess())
         {
-            await _dispatcher.InvokeAsync(() => CloseTabAsync(connectionId));
+            await _dispatcher.InvokeAsync(() => CloseOthersAsync(keepConnectionId));
             return;
         }
 
-        if (!_hosts.TryGetValue(connectionId, out var host)) return;
-
-        // Q2 (Phase 5): cancel the reconnect backoff loop BEFORE the disconnect pipeline
-        // so RdpReconnectCoordinator.RunAsync cannot fire ConnectAsync against a host that
-        // is about to be disposed. See IConnectionCoordinator.CancelReconnect XML doc.
-        _coordinator.CancelReconnect(connectionId);
-
-        if (!_connections.TryGetValue(connectionId, out var model))
+        // Pitfall 4: snapshot the keys before iterating — user-initiated close path so
+        // each tab uses the fire-and-forget disconnect (same UX as CloseTabAsync).
+        var targets = _hosts.Keys.Where(k => k != keepConnectionId).ToList();
+        foreach (var id in targets)
         {
-            // HostCreatedEvent should have populated _connections before HostMounted fires;
-            // if it didn't (e.g. a race with disposal), we still dispose the host below but
-            // skip the pipeline because DisconnectContext requires a ConnectionModel.
+            _coordinator.CancelReconnect(id);
+            var removed = DoVisualClose(id);
+            if (removed is null) continue;
+            _ = RunDisconnectAsync(removed.Value.Model, removed.Value.Host);
+        }
+    }
+
+    public async Task CloseAllAsync()
+    {
+        if (_disposed) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            await _dispatcher.InvokeAsync(() => CloseAllAsync());
+            return;
+        }
+
+        // D-08 app-shutdown teardown: sequential AWAIT per host so strict disposal
+        // ordering from RDP-ACTIVEX-PITFALLS §3 is preserved and the 20-cycle GDI
+        // baseline survives app close. This is different from user-initiated close
+        // (CloseTabAsync / CloseOthersAsync), which fire-and-forget for UI snappiness.
+        var targets = _hosts.Keys.ToList();
+        foreach (var id in targets)
+        {
+            _coordinator.CancelReconnect(id);
+            var removed = DoVisualClose(id);
+            if (removed is null) continue;
+            await RunDisconnectAsync(removed.Value.Model, removed.Value.Host);
+        }
+    }
+
+    /// <summary>
+    /// Hotfix helper: performs the synchronous, instant-visual side of a tab close —
+    /// removes from <c>_hosts</c> / <c>_connections</c>, pushes LRU, publishes
+    /// <see cref="TabClosedEvent"/>, and activates a neighbor if needed. Returns the
+    /// captured (Model, Host) so the caller can drive disposal either awaited
+    /// (<see cref="CloseAllAsync"/>) or fire-and-forget (user close paths). Returns
+    /// <c>null</c> if the host was not in the dict (stale / double-fire guard).
+    /// </summary>
+    private (ConnectionModel? Model, IProtocolHost Host)? DoVisualClose(Guid connectionId)
+    {
+        if (!_hosts.TryGetValue(connectionId, out var host)) return null;
+        _connections.TryGetValue(connectionId, out var model);
+
+        _hosts.Remove(connectionId);
+        _connections.Remove(connectionId);
+
+        // D-09 re-arm: allow a future 14→15 crossing to warn again.
+        if (_hosts.Count < GdiWarningThreshold) _warned15 = false;
+
+        // D-16: push to LRU with dedupe.
+        PushLru(connectionId);
+
+        _bus.Publish(new TabClosedEvent(connectionId));
+
+        // Auto-activate a neighbor if the closed tab was active (mRemoteNG UX).
+        if (_activeId == connectionId)
+        {
+            var next = _hosts.Keys.LastOrDefault();  // Last-added = right-most tab
+            var previous = _activeId;
+            _activeId = next == Guid.Empty ? null : next;
+            _bus.Publish(new TabSwitchedEvent(previous, _activeId ?? Guid.Empty));
+        }
+
+        return (model, host);
+    }
+
+    /// <summary>
+    /// Drives <see cref="IDisconnectPipeline"/> with proper error isolation. When invoked
+    /// fire-and-forget from <see cref="CloseTabAsync"/>, the synchronous portion (up to
+    /// the first <c>await</c>) calls <c>DisconnectAsync</c> before returning, so tests
+    /// that assert <c>Received(1).DisconnectAsync(...)</c> after <c>await sut.CloseTabAsync</c>
+    /// still pass without needing explicit yields.
+    /// </summary>
+    private async Task RunDisconnectAsync(ConnectionModel? model, IProtocolHost host)
+    {
+        if (model is null)
+        {
+            // HostCreatedEvent should have populated _connections before HostMounted;
+            // if it didn't (race with disposal), we still dispose the host directly.
             _logger.LogWarning(
-                "CloseTabAsync: no ConnectionModel recorded for {ConnectionId}; skipping disconnect pipeline",
-                connectionId);
+                "RunDisconnectAsync: no ConnectionModel recorded for {ConnectionId}; skipping disconnect pipeline",
+                host.ConnectionId);
             try { host.Dispose(); }
             catch (Exception ex)
             {
@@ -159,53 +262,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
             // T-05-02 + T-04-EXC: log type + HResult only. Never interpolate ex.Message.
             _logger.LogError(
                 "Disconnect pipeline for {ConnectionId} threw: {ExceptionType} HResult={HResult:X8}",
-                connectionId, ex.GetType().Name, ex.HResult);
-        }
-        // OnHostUnmounted (from coordinator) performs the _hosts.Remove + LRU push +
-        // TabClosedEvent publish + neighbor activation.
-    }
-
-    public async Task CloseOthersAsync(Guid keepConnectionId)
-    {
-        if (_disposed) return;
-        if (!_dispatcher.CheckAccess())
-        {
-            await _dispatcher.InvokeAsync(() => CloseOthersAsync(keepConnectionId));
-            return;
-        }
-
-        // Pitfall 4: snapshot the keys before iterating. Each CloseTabAsync awaits the
-        // disconnect pipeline and can re-enter OnHostUnmounted mid-loop, which mutates
-        // _hosts. Without the snapshot the foreach throws InvalidOperationException.
-        var targets = _hosts.Keys.Where(k => k != keepConnectionId).ToList();
-        foreach (var id in targets)
-        {
-            // Q2 (Phase 5): cancel reconnect loop BEFORE the disconnect pipeline so
-            // RdpReconnectCoordinator cannot race ConnectAsync against a disposing host.
-            // CloseTabAsync also calls CancelReconnect — the repeated call is a no-op
-            // because the single-CTS design ignores cancels after the loop has exited.
-            _coordinator.CancelReconnect(id);
-            await CloseTabAsync(id);
-        }
-    }
-
-    public async Task CloseAllAsync()
-    {
-        if (_disposed) return;
-        if (!_dispatcher.CheckAccess())
-        {
-            await _dispatcher.InvokeAsync(() => CloseAllAsync());
-            return;
-        }
-
-        // Pitfall 4: snapshot before iterating (see CloseOthersAsync rationale).
-        var targets = _hosts.Keys.ToList();
-        foreach (var id in targets)
-        {
-            // Q2 (Phase 5): explicit CancelReconnect per host before its disconnect
-            // pipeline runs (CloseTabAsync also cancels; the repeat is defensive).
-            _coordinator.CancelReconnect(id);
-            await CloseTabAsync(id);
+                model.Id, ex.GetType().Name, ex.HResult);
         }
     }
 
@@ -328,6 +385,30 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _bus.Publish(new TabStateChangedEvent(req.Connection.Id, TabState.Reconnecting));
     }
 
+    /// <summary>
+    /// Hotfix (2026-04-14): publish <see cref="TabStateChangedEvent"/> with
+    /// <see cref="TabState.Connected"/> when the connect pipeline's
+    /// <see cref="ConnectionEstablishedEvent"/> fires. Without this, tabs were stuck in
+    /// <see cref="TabState.Connecting"/> forever — the state property was initialised on
+    /// tab creation but no handler transitioned it to Connected on login completion.
+    /// The ProgressRing spinner kept running, tooltip kept showing "Connecting…", and
+    /// the status bar never cleared the ellipsis suffix.
+    /// </summary>
+    private void OnConnectionEstablished(ConnectionEstablishedEvent evt)
+    {
+        if (_disposed) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            _dispatcher.Invoke(() => OnConnectionEstablished(evt));
+            return;
+        }
+
+        // Silent no-op if the tab is no longer tracked (user closed mid-connect).
+        if (!_hosts.ContainsKey(evt.Connection.Id)) return;
+
+        _bus.Publish(new TabStateChangedEvent(evt.Connection.Id, TabState.Connected));
+    }
+
     // ---------------------------------------------------------------------- LRU internals
 
     private void PushLru(Guid id)
@@ -358,6 +439,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         try { _coordinator.HostUnmounted -= OnHostUnmounted; } catch { /* best-effort */ }
         try { _coordinator.ReconnectOverlayRequested -= OnReconnectOverlayRequested; } catch { /* best-effort */ }
         try { _bus.Unsubscribe<HostCreatedEvent>(this); } catch { /* best-effort */ }
+        try { _bus.Unsubscribe<ConnectionEstablishedEvent>(this); } catch { /* best-effort */ }
 
         _hosts.Clear();
         _connections.Clear();
