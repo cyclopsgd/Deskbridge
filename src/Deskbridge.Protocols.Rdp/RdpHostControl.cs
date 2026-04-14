@@ -338,8 +338,44 @@ public sealed class RdpHostControl : IProtocolHost
             try { _rdp.OnDisconnected -= OnDisconnectedDuringConnect; } catch { }
             try { _rdp.OnDisconnected += OnDisconnectedAfterConnectHandler; } catch { }
         }
+
+        // Hotfix (2026-04-14): first-connect black-screen fix. Force a Win32
+        // WM_PAINT on the AxHost's HWND so the just-arrived post-login frames
+        // actually reach the screen. Without this, the Ax control has a valid
+        // session and is pushing bitmap data, but the HWND's client area hasn't
+        // received a WM_PAINT since before the session came up — so the compositor
+        // shows the pre-login (black) state until something else (resize, tab
+        // switch, etc.) triggers a repaint. RDW_INVALIDATE | RDW_ALLCHILDREN |
+        // RDW_UPDATENOW queues an immediate paint for the Ax control + any
+        // children it has.
+        if (_rdp is not null)
+        {
+            try
+            {
+                var hwnd = _rdp.Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    const uint RDW_INVALIDATE = 0x0001;
+                    const uint RDW_UPDATENOW = 0x0100;
+                    const uint RDW_ALLCHILDREN = 0x0080;
+                    NativeRedrawWindow(hwnd, IntPtr.Zero, IntPtr.Zero,
+                        RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    "Post-login RedrawWindow threw (non-fatal): {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
+        }
+
         _loginTcs?.TrySetResult(true);
     }
+
+    [DllImport("user32.dll", EntryPoint = "RedrawWindow", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool NativeRedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
 
     private void OnDisconnectedDuringConnect(object? sender, IMsTscAxEvents_OnDisconnectedEvent e)
     {
