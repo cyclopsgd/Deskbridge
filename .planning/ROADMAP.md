@@ -105,7 +105,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md -- Core multi-host plumbing: TabHostManager + Tab events + TabState + ConnectionCoordinator cleanup + publisher-side switch-to-existing + AirspaceSwapper per-host visibility fix + unit tests
-- [ ] 05-02-PLAN.md -- Persistent HostContainer in MainWindow + per-tab reconnect overlays + DI wiring + MainWindowViewModel commands + TabSwitchedEvent status bar + STA integration tests
+- [x] 05-02-PLAN.md -- Persistent HostContainer in MainWindow + per-tab reconnect overlays + DI wiring + MainWindowViewModel commands + TabSwitchedEvent status bar + STA integration tests
 - [ ] 05-03-PLAN.md -- Tab DataTemplate state indicators + ContextMenu + TabReorderBehavior + PreviewKeyDown shortcuts (Ctrl+Tab/1-9/F4/Shift+T) + UAT checkpoint (A1 gate + GDI + drag + state matrix)
 
 ### Phase 6: Cross-Cutting Features
@@ -157,6 +157,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. Application Shell | 0/2 | Planning complete | - |
 | 3. Connection Management | 0/4 | Planning complete | - |
 | 4. RDP Integration | 0/3 | Planning complete | - |
-| 5. Tab Management | 1/3 | In Progress|  |
+| 5. Tab Management | 2/3 | In Progress|  |
 | 6. Cross-Cutting Features | 0/4 | Not started | - |
 | 7. Update & Migration | 0/3 | Not started | - |

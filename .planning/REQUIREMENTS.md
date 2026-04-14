@@ -62,7 +62,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Tab Management
 
 - [x] **TAB-01**: One connection per tab, active tab only renders live ActiveX control
-- [ ] **TAB-02**: Inactive tabs set BitmapPersistence = 0 to reduce GDI handle usage
+- [x] **TAB-02**: Inactive tabs set BitmapPersistence = 0 to reduce GDI handle usage
 - [ ] **TAB-03**: Ctrl+Tab / Ctrl+Shift+Tab to cycle tabs, Ctrl+W to close, middle-click tab to close
 - [x] **TAB-04**: Warning shown at 15+ simultaneous connections (GDI handle limit)
 - [x] **TAB-05**: Tab opened on ConnectionEstablishedEvent, closed on ConnectionClosedEvent via event bus
@@ -205,7 +205,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RDP-08 | Phase 4 | Pending |
 | RDP-09 | Phase 4 | Pending |
 | TAB-01 | Phase 5 | Complete |
-| TAB-02 | Phase 5 | Pending |
+| TAB-02 | Phase 5 | Complete |
 | TAB-03 | Phase 5 | Pending |
 | TAB-04 | Phase 5 | Complete |
 | TAB-05 | Phase 5 | Complete |
