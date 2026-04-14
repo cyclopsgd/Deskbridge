@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-04-13T22:08:29.163Z"
-last_activity: 2026-04-13 -- Phase 5 planning complete
+stopped_at: Completed 05-01-PLAN.md (multi-host coordination core)
+last_updated: "2026-04-14T05:51:46.964Z"
+last_activity: 2026-04-14
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 15
-  completed_plans: 12
-  percent: 80
+  completed_plans: 13
+  percent: 87
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 04 — rdp-integration
+**Current focus:** Phase 5 — Tab Management
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 5 (Tab Management) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-04-13 -- Phase 5 planning complete
+Last activity: 2026-04-14
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P02 | 5min | 2 tasks | 11 files |
 | Phase 03 P03 | 5min | 2 tasks | 7 files |
 | Phase 03 P04 | 14min | 2 tasks | 9 files |
+| Phase 05 P01 | 18min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ Recent decisions affecting current work:
 - [Phase 03]: ConnectionTreeViewModel registered as singleton (was transient) for shared instance between MainWindowViewModel and ConnectionTreeControl
 - [Phase 03]: Context menus assigned dynamically in code-behind via PreviewMouseRightButtonDown rather than XAML DataTriggers
 - [Phase 03]: GetDialogHostEx() used instead of deprecated GetDialogHost() per WPF-UI 4.2.0
+- [Phase 05]: [Phase 05-01]: WPF-UI added to Deskbridge.Core for ISnackbarService + ControlAppearance; TabState enum placed in Core.Models to keep TabStateChangedEvent free of reverse WPF dep; Tab*Event records consolidated into TabEvents.cs
+- [Phase 05]: [Phase 05-01]: ActiveHost shim on IConnectionCoordinator retained (backed by _coordinatorHosts dict + _activeId); Phase 4 tests unchanged; new code should prefer ITabHostManager.GetHost / ActiveId
+- [Phase 05]: [Phase 05-01]: Q2 CancelReconnect invoked at each close path (CloseTabAsync + CloseOthersAsync + CloseAllAsync) BEFORE IDisconnectPipeline.DisconnectAsync; single-CTS design preserved (per-connection CTS deferred until multiple concurrent backoff loops are actually possible)
 
 ### Pending Todos
 
@@ -111,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T21:12:26.447Z
-Stopped at: Phase 5 UI-SPEC approved
-Resume file: .planning/phases/05-tab-management/05-UI-SPEC.md
+Last session: 2026-04-14T05:51:46.960Z
+Stopped at: Completed 05-01-PLAN.md (multi-host coordination core)
+Resume file: None
