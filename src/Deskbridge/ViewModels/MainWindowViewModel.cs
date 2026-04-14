@@ -140,17 +140,21 @@ public partial class MainWindowViewModel : ObservableObject
     {
         Dispatch(() =>
         {
-            var model = _connectionStore.GetById(evt.ConnectionId);
+            // Hotfix (2026-04-14): read the ConnectionModel off the event payload
+            // directly (carried from TabHostManager._connections, guaranteed non-null
+            // at publish time). The prior store-lookup path produced "(unknown)"
+            // titles when the JsonConnectionStore race/load state returned null.
+            var model = evt.Connection;
             var tab = new TabItemViewModel
             {
-                Title = model?.Name is { Length: > 0 } name ? name
-                    : model?.Hostname is { Length: > 0 } host ? host
+                Title = model.Name is { Length: > 0 } name ? name
+                    : model.Hostname is { Length: > 0 } host ? host
                     : "(unknown)",
                 ConnectionId = evt.ConnectionId,
                 State = TabState.Connecting,
                 // Plan 05-03 Task 1: populate Hostname so TabItemViewModel.TooltipText
                 // renders the UI-SPEC copy exactly. Never includes credential fields (T-05-01).
-                Hostname = model?.Hostname ?? "(unknown)",
+                Hostname = model.Hostname,
             };
             Tabs.Add(tab);
             OnPropertyChanged(nameof(HasNoTabs));

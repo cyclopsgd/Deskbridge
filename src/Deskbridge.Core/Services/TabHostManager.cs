@@ -309,7 +309,20 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         var previous = _activeId;
         _activeId = host.ConnectionId;
 
-        _bus.Publish(new TabOpenedEvent(host.ConnectionId));
+        // Hotfix (2026-04-14): include the full ConnectionModel so subscribers don't
+        // need a separate store lookup (which was intermittently returning null and
+        // producing "(unknown)" tab labels with never-clearing ProgressRings). The
+        // model is guaranteed to be in _connections because OnHostCreated fires
+        // synchronously before HostMounted.
+        if (!_connections.TryGetValue(host.ConnectionId, out var model))
+        {
+            _logger.LogError(
+                "OnHostMounted: no ConnectionModel recorded for {ConnectionId}; TabOpenedEvent suppressed",
+                host.ConnectionId);
+            return;
+        }
+
+        _bus.Publish(new TabOpenedEvent(host.ConnectionId, model));
         _bus.Publish(new TabSwitchedEvent(previous, host.ConnectionId));
 
         // D-09 + D-10: fire-once-per-crossing warning. Fires on the 14 → 15 crossing,
