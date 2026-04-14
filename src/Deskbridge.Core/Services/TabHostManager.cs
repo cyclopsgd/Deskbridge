@@ -282,48 +282,56 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
 
     // ---------------------------------------------------------------------- events
 
+    /// <summary>
+    /// Hotfix (2026-04-14): tab registration was previously split between OnHostCreated
+    /// (bus) for model recording and OnHostMounted (coordinator delegate) for the
+    /// TabOpenedEvent publish. But the bus delivers to subscribers in registration
+    /// order — ConnectionCoordinator subscribes to HostCreatedEvent FIRST (created
+    /// earlier in DI), and its handler synchronously raises the HostMounted delegate
+    /// before TabHostManager's OnHostCreated bus handler runs. Result: OnHostMounted
+    /// fired with an empty _connections dict, logged "no ConnectionModel recorded",
+    /// and suppressed the TabOpenedEvent — no tab ever appeared.
+    ///
+    /// <para>Fix: do ALL tab-registration work in OnHostCreated. HostCreatedEvent
+    /// carries both Connection and Host, so we don't need to wait for HostMounted.
+    /// OnHostMounted stays subscribed as a defensive no-op for back-compat.</para>
+    /// </summary>
     private void OnHostCreated(HostCreatedEvent evt)
     {
         if (_disposed) return;
         if (!_dispatcher.CheckAccess())
         {
-            // Synchronous Invoke so the connection model is recorded before HostMounted
-            // (which fires later in ConnectionCoordinator.OnHostCreated) asks for it.
             _dispatcher.Invoke(() => OnHostCreated(evt));
             return;
         }
 
         _connections[evt.Connection.Id] = evt.Connection;
+        _hosts[evt.Connection.Id] = evt.Host;
+        var previous = _activeId;
+        _activeId = evt.Connection.Id;
+
+        _bus.Publish(new TabOpenedEvent(evt.Connection.Id, evt.Connection));
+        _bus.Publish(new TabSwitchedEvent(previous, evt.Connection.Id));
+
+        // D-09 + D-10: fire-once-per-crossing warning. Moved here from OnHostMounted
+        // because _hosts is now populated synchronously in this handler.
+        FireGdiWarningIfCrossingThreshold();
     }
 
+    /// <summary>
+    /// Defensive no-op retained to keep <see cref="IConnectionCoordinator.HostMounted"/>
+    /// subscribed — prevents event-handler leaks if coordinator internal behavior
+    /// changes in a future phase. Tab registration (formerly here) moved to
+    /// <see cref="OnHostCreated"/> to fix the bus-subscription-order bug.
+    /// </summary>
     private void OnHostMounted(object? sender, IProtocolHost host)
     {
         if (_disposed) return;
-        if (!_dispatcher.CheckAccess())
-        {
-            _dispatcher.Invoke(() => OnHostMounted(sender, host));
-            return;
-        }
+        // Intentionally empty — see OnHostCreated for tab registration work.
+    }
 
-        _hosts[host.ConnectionId] = host;
-        var previous = _activeId;
-        _activeId = host.ConnectionId;
-
-        // Hotfix (2026-04-14): include the full ConnectionModel so subscribers don't
-        // need a separate store lookup (which was intermittently returning null and
-        // producing "(unknown)" tab labels with never-clearing ProgressRings). The
-        // model is guaranteed to be in _connections because OnHostCreated fires
-        // synchronously before HostMounted.
-        if (!_connections.TryGetValue(host.ConnectionId, out var model))
-        {
-            _logger.LogError(
-                "OnHostMounted: no ConnectionModel recorded for {ConnectionId}; TabOpenedEvent suppressed",
-                host.ConnectionId);
-            return;
-        }
-
-        _bus.Publish(new TabOpenedEvent(host.ConnectionId, model));
-        _bus.Publish(new TabSwitchedEvent(previous, host.ConnectionId));
+    private void FireGdiWarningIfCrossingThreshold()
+    {
 
         // D-09 + D-10: fire-once-per-crossing warning. Fires on the 14 → 15 crossing,
         // does NOT re-fire at 16/17/..., re-arms only when the count drops below 15.
