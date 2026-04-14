@@ -305,8 +305,30 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
             return;
         }
 
+        // Hotfix (2026-04-14): idempotency guard. HostCreatedEvent fires on the INITIAL
+        // connect AND on every reconnect attempt (D-04 "dispose + recreate host per
+        // attempt"). Without this guard, each reconnect cycle re-publishes TabOpenedEvent,
+        // which MainWindowViewModel.OnTabOpened handles by calling Tabs.Add(new
+        // TabItemViewModel) — producing phantom duplicate tabs in the UI that cannot be
+        // closed because the close path only removes one match at a time. Evidence was
+        // repeated "Connection established" + "Connecting to X" pairs in the log with no
+        // TabClosedEvent between them.
+        var isReconnectCycle = _hosts.ContainsKey(evt.Connection.Id);
+
         _connections[evt.Connection.Id] = evt.Connection;
         _hosts[evt.Connection.Id] = evt.Host;
+
+        if (isReconnectCycle)
+        {
+            // Same tab, new underlying host — swap the dict entry silently and let the
+            // UI keep its existing TabItemViewModel. No TabOpenedEvent, no 15+ warning
+            // (count didn't change), no TabSwitchedEvent (active didn't change).
+            _logger.LogDebug(
+                "OnHostCreated: reconnect cycle detected for {ConnectionId}; suppressing duplicate TabOpenedEvent",
+                evt.Connection.Id);
+            return;
+        }
+
         var previous = _activeId;
         _activeId = evt.Connection.Id;
 

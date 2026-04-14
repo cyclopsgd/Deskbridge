@@ -165,11 +165,20 @@ public partial class MainWindowViewModel : ObservableObject
     {
         Dispatch(() =>
         {
-            var tab = Tabs.FirstOrDefault(t => t.ConnectionId == evt.ConnectionId);
-            if (tab is null) return;
-            Tabs.Remove(tab);
-            if (ActiveTab == tab) ActiveTab = null;
-            OnPropertyChanged(nameof(HasNoTabs));
+            // Hotfix (2026-04-14): remove ALL tabs with matching ConnectionId, not just
+            // the first one. Defense-in-depth against phantom duplicates that can
+            // accumulate if reconnect-cycle TabOpenedEvent suppression ever slips
+            // through. Iterate backwards so index math survives mid-loop removal.
+            var removed = 0;
+            for (var i = Tabs.Count - 1; i >= 0; i--)
+            {
+                if (Tabs[i].ConnectionId != evt.ConnectionId) continue;
+                var tab = Tabs[i];
+                Tabs.RemoveAt(i);
+                if (ActiveTab == tab) ActiveTab = null;
+                removed++;
+            }
+            if (removed > 0) OnPropertyChanged(nameof(HasNoTabs));
         });
     }
 
