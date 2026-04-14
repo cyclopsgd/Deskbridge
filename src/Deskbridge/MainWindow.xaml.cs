@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows.Forms.Integration;
+using System.Windows.Input;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Services;
@@ -266,5 +267,51 @@ public partial class MainWindow : FluentWindow
         {
             HostContainer.Children.Remove(entry.Control);
         }
+    }
+
+    /// <summary>
+    /// Typed accessor for the VM so <see cref="OnPreviewKeyDown"/> can invoke the
+    /// Phase 5 tab commands without casting every time. DataContext is set in the
+    /// ctor and never replaced.
+    /// </summary>
+    private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext;
+
+    /// <summary>
+    /// D-16: Phase 5 keyboard shortcut routing. Ctrl+Tab and Ctrl+Shift+Tab cannot
+    /// be XAML <c>KeyBinding</c>s (WPF intercepts them for focus navigation — see
+    /// MainWindow.xaml line 17-19 comment). Ctrl+W is already bound in XAML at
+    /// window level; we do NOT re-handle it here.
+    ///
+    /// <para>Shortcuts handled here:</para>
+    /// <list type="bullet">
+    /// <item><c>Ctrl+Tab</c> / <c>Ctrl+Shift+Tab</c> — cycle forward/backward (TAB-03).</item>
+    /// <item><c>Ctrl+F4</c> — close active tab (D-16 alias for Ctrl+W).</item>
+    /// <item><c>Ctrl+Shift+T</c> — reopen last closed tab from LRU.</item>
+    /// <item><c>Ctrl+1..Ctrl+8</c> — jump to the N-th tab.</item>
+    /// <item><c>Ctrl+9</c> — jump to the LAST tab (Chrome / VS Code convention).</item>
+    /// </list>
+    ///
+    /// <para>All recognized shortcuts set <c>e.Handled = true</c> so the key event
+    /// does not bubble into the focused AxHost and get sent to the remote session.
+    /// Assumption A1 (RESEARCH §Pitfall 2): <c>KeyboardHookMode=0</c> on the RDP
+    /// ActiveX control causes the AxHost to forgo the low-level keyboard hook,
+    /// so <c>PreviewKeyDown</c> fires on the WPF window BEFORE the AxHost sees the
+    /// keystroke. UAT Task 3 validates this against a live session.</para>
+    /// </summary>
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        // Delegate to the pure-data router so the routing logic is unit-testable
+        // without a real Window + Dispatcher + routed-event plumbing.
+        if (KeyboardShortcutRouter.TryRoute(ViewModel, e.Key, Keyboard.Modifiers))
+        {
+            // Handled = true prevents the keystroke from bubbling into the focused
+            // AxHost and being sent to the remote session. Assumption A1 (RESEARCH
+            // §Pitfall 2): KeyboardHookMode=0 lets PreviewKeyDown fire BEFORE the
+            // AxHost receives input. UAT Task 3 validates this against a live session.
+            e.Handled = true;
+            return;
+        }
+
+        base.OnPreviewKeyDown(e);
     }
 }

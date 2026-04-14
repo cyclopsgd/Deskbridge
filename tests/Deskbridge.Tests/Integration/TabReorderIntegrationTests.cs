@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Forms.Integration;
+using System.Windows.Media;
+using Deskbridge.Behaviors;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Tests.Fixtures;
 using Deskbridge.ViewModels;
@@ -127,6 +130,100 @@ public sealed class TabReorderIntegrationTests
             wfhs[3].Visibility.Should().Be(Visibility.Collapsed);
 
             foreach (var w in wfhs) w.Dispose();
+        });
+    }
+
+    // ---------------------------------------------------------------- Plan 05-03 Task 2
+
+    /// <summary>
+    /// Test 3 (Plan 03 Task 2): the TabReorderBehavior EnableReorder attached
+    /// property wires AllowDrop and the drag-arming handlers without throwing.
+    /// Attach + detach round-trip — smoke-level coverage of the metadata-changed
+    /// callback path that registers / unregisters DragOver / Drop / etc.
+    /// </summary>
+    [Fact]
+    public void TabReorderBehavior_EnableReorder_TogglesAllowDrop()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            var ic = new ItemsControl();
+            ic.AllowDrop.Should().BeFalse();
+
+            TabReorderBehavior.SetEnableReorder(ic, true);
+            ic.AllowDrop.Should().BeTrue("attached property True must enable drop on the ItemsControl");
+
+            TabReorderBehavior.SetEnableReorder(ic, false);
+            ic.AllowDrop.Should().BeFalse("attached property False must disable drop");
+        });
+    }
+
+    /// <summary>
+    /// Test 4 (Plan 03 Task 2): Tabs.Move correctness. If the behavior's Drop
+    /// handler calls Tabs.Move(oldIdx, newIdx), the result matches the expected
+    /// drag-right reorder (0 → 2). Proxies for the behavior's drop logic because
+    /// DragDrop.DoDragDrop is modal and cannot be simulated from a unit test.
+    /// Combined with the TabReorderBehavior_EnableReorder smoke above + the
+    /// pre-existing ObservableCollection_Move_DoesNotReParent invariant test,
+    /// this locks the contract the behavior must honor.
+    /// </summary>
+    [Fact]
+    public void Move_ShiftsSingleTab_PreservesReferenceIdentity()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            var tabs = new ObservableCollection<TabItemViewModel>();
+            for (int i = 0; i < 5; i++)
+                tabs.Add(new TabItemViewModel { Title = $"Tab {i}", ConnectionId = Guid.NewGuid() });
+
+            var moved = tabs[0];
+            tabs.Move(0, 2);
+
+            ReferenceEquals(tabs[2], moved).Should().BeTrue(
+                "Move must preserve instance identity — drag-reorder must never Remove+Insert");
+            tabs.Count.Should().Be(5);
+        });
+    }
+
+    /// <summary>
+    /// Test 5 (Plan 03 Task 2): TabInsertionAdorner constructs with before/after
+    /// semantics. Renders with a 2px accent-coloured pen against a
+    /// <see cref="DrawingVisual"/> — exercises the <see cref="TabInsertionAdorner.OnRender"/>
+    /// path without requiring a live AdornerLayer. Full visual verification of
+    /// colour + thickness is deferred to UAT (tests/uat/phase-05-drag.md).
+    /// </summary>
+    [Fact]
+    public void TabInsertionAdorner_Constructs_BeforeAndAfter_WithCorrectFlag()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            var target = new Border { Width = 100, Height = 30 };
+            target.Measure(new System.Windows.Size(100, 30));
+            target.Arrange(new Rect(0, 0, 100, 30));
+
+            var before = new TabInsertionAdorner(target, before: true);
+            before.IsBefore.Should().BeTrue();
+            before.IsHitTestVisible.Should().BeFalse(
+                "UI-SPEC: drag adorner must not steal drop events");
+
+            var after = new TabInsertionAdorner(target, before: false);
+            after.IsBefore.Should().BeFalse();
+            after.IsHitTestVisible.Should().BeFalse();
+
+            // Exercise OnRender by rendering into a DrawingVisual. If the pen
+            // setup or accent brush lookup throws, this test catches it.
+            var dv = new DrawingVisual();
+            using (var ctx = dv.RenderOpen())
+            {
+                var method = typeof(TabInsertionAdorner).GetMethod(
+                    "OnRender",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                method.Should().NotBeNull("OnRender must exist on TabInsertionAdorner");
+                method!.Invoke(before, new object[] { ctx });
+                method.Invoke(after, new object[] { ctx });
+            }
         });
     }
 }

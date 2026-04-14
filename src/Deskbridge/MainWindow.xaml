@@ -192,7 +192,8 @@
                     BorderThickness="0,0,0,1">
                     <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding Tabs}">
+                        <ItemsControl ItemsSource="{Binding Tabs}"
+                            behaviors:TabReorderBehavior.EnableReorder="True">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" />
