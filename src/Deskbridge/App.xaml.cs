@@ -62,6 +62,10 @@ public partial class App : Application
         // Resolve ConnectionCoordinator eagerly so it subscribes to the event bus
         _ = _serviceProvider.GetRequiredService<IConnectionCoordinator>();
 
+        // Phase 5 (D-01): resolve TabHostManager eagerly so its HostMounted/HostUnmounted
+        // subscriptions exist BEFORE the first ConnectionRequestedEvent fires.
+        _ = _serviceProvider.GetRequiredService<ITabHostManager>();
+
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
@@ -92,8 +96,13 @@ public partial class App : Application
         // Protocol host factory + RDP impl
         services.AddSingleton<IProtocolHostFactory, RdpProtocolHostFactory>();
 
-        // Connection coordinator (event-bus bridge — D-11 STA marshal + D-12 single-host policy)
+        // Connection coordinator (event-bus bridge — D-11 STA marshal + multi-host in Phase 5)
         services.AddSingleton<IConnectionCoordinator, ConnectionCoordinator>();
+
+        // Phase 5 (D-01): multi-host tab manager. Singleton. Subscribes to the coordinator's
+        // Host events in its ctor; resolve eagerly after build-service-provider so the
+        // subscriptions land before the first ConnectionRequestedEvent.
+        services.AddSingleton<ITabHostManager, TabHostManager>();
 
         // Reconnect coordinator (Plan 04-03 — D-03 backoff + D-05 cap). Injected into
         // ConnectionCoordinator via optional ctor parameter (DI resolves the concrete class).

@@ -26,6 +26,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private readonly ISnackbarService _snackbarService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IEventBus _eventBus;
+    private readonly ITabHostManager _tabHostManager;
 
     // Cached full tree for restoring after search filter clears
     private ObservableCollection<TreeItemViewModel> _fullTree = [];
@@ -40,7 +41,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
         IContentDialogService contentDialogService,
         ISnackbarService snackbarService,
         IServiceProvider serviceProvider,
-        IEventBus eventBus)
+        IEventBus eventBus,
+        ITabHostManager tabHostManager)
     {
         _connectionStore = connectionStore;
         _connectionQuery = connectionQuery;
@@ -49,6 +51,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _snackbarService = snackbarService;
         _serviceProvider = serviceProvider;
         _eventBus = eventBus;
+        _tabHostManager = tabHostManager;
     }
 
     // Data
@@ -674,6 +677,19 @@ public partial class ConnectionTreeViewModel : ObservableObject
         if (target is null) return;
         var model = _connectionStore.GetById(target.Id);
         if (model is null) return;
+
+        // D-02 (Phase 5): switch to existing tab if one is already open. Publisher-side
+        // check breaks the would-be circular DI between ConnectionCoordinator and
+        // ITabHostManager (Pitfall 5 — both are singletons, ctor-injecting each other
+        // throws CircularDependency). The duplicate-click guard previously at
+        // ConnectionCoordinator.OnConnectionRequested was deleted in the same Phase 5
+        // refactor; this is the single chokepoint that owns switch-to-existing.
+        if (_tabHostManager.TryGetExistingTab(model.Id, out _))
+        {
+            _tabHostManager.SwitchTo(model.Id);
+            return;
+        }
+
         _eventBus.Publish(new ConnectionRequestedEvent(model));
     }
 
