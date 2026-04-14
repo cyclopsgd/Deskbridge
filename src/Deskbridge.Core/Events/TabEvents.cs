@@ -13,9 +13,17 @@ namespace Deskbridge.Core.Events;
 public record TabOpenedEvent(Guid ConnectionId, ConnectionModel Connection);
 
 /// <summary>
-/// Published by <c>ITabHostManager</c> (Phase 5) when a tab is closed —
-/// i.e. after the disconnect pipeline completes and the host is removed from the tab
-/// dictionary. TAB-05.
+/// Published SYNCHRONOUSLY by <c>TabHostManager.DoVisualClose</c> when the user
+/// closes a tab. Signals "tab is gone from the UI — remove visuals NOW". Does
+/// NOT mean the underlying COM resources have been released; the fire-and-
+/// forget disconnect pipeline may still be running in the background.
+/// <see cref="ConnectionClosedEvent"/> fires seconds later when that completes.
+///
+/// <para>Consumers wanting "the tab should disappear from the UI" (MainWindow
+/// WFH removal, MainWindowViewModel Tabs collection) subscribe here. Consumers
+/// wanting "the session is fully torn down" (audit log sinks, future security
+/// Phase 6 work) should subscribe to <see cref="ConnectionClosedEvent"/>
+/// instead.</para>
 /// </summary>
 public record TabClosedEvent(Guid ConnectionId);
 
