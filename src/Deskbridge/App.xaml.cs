@@ -6,6 +6,8 @@ using Deskbridge.Core.Pipeline;
 using Deskbridge.Core.Pipeline.Stages;
 using Deskbridge.Core.Services;
 using Deskbridge.Protocols.Rdp;
+using Deskbridge.Services;
+using Deskbridge.ViewModels;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Wpf.Ui;
@@ -69,6 +71,11 @@ public partial class App : Application
         // Phase 5 (D-01): resolve TabHostManager eagerly so its HostMounted/HostUnmounted
         // subscriptions exist BEFORE the first ConnectionRequestedEvent fires.
         _ = _serviceProvider.GetRequiredService<ITabHostManager>();
+
+        // Phase 6 Plan 06-02 (NOTF-01 / NOTF-03): eager-resolve ToastSubscriptionService
+        // so its 6 bus subscriptions land BEFORE the first ConnectionRequestedEvent can
+        // fire. Mirrors the ITabHostManager pattern above.
+        _ = _serviceProvider.GetRequiredService<ToastSubscriptionService>();
 
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
@@ -138,6 +145,17 @@ public partial class App : Application
         // WPF-UI services (for Phases 3+ and 6)
         services.AddSingleton<ISnackbarService, SnackbarService>();
         services.AddSingleton<IContentDialogService, ContentDialogService>();
+
+        // Phase 6 Plan 06-02 (NOTF-04): window + security settings persistence.
+        services.AddSingleton<IWindowStateService, WindowStateService>();
+
+        // Phase 6 Plan 06-02 (NOTF-01 / NOTF-03): custom toast stack (Q1 Option B).
+        // ToastStackViewModel and ToastSubscriptionService MUST be singletons so the
+        // MainWindow.DataContext binding and ToastSubscriptionService push into the
+        // SAME ObservableCollection — transient scope would silently swallow every
+        // subscription-side push.
+        services.AddSingleton<ToastStackViewModel>();
+        services.AddSingleton<ToastSubscriptionService>();
 
         // ViewModels
         services.AddSingleton<ViewModels.MainWindowViewModel>();

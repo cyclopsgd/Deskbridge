@@ -31,7 +31,7 @@ public class MainWindowViewModelTests
             _connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider, _bus, _tabHostManager);
 
-        _sut = new MainWindowViewModel(treeVm, _tabHostManager, _bus, _connectionStore);
+        _sut = new MainWindowViewModel(treeVm, _tabHostManager, _bus, _connectionStore, new ToastStackViewModel());
     }
 
     // --- Panel toggle state machine (D-04) ---
@@ -211,7 +211,7 @@ public class MainWindowViewModelTests
 
         // Use an NSubstitute-mocked bus here — the real bus won't help us prove a negative.
         var bus = Substitute.For<IEventBus>();
-        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore);
+        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore, new ToastStackViewModel());
 
         vm.ReopenLastClosedCommand.Execute(null);
 
@@ -226,7 +226,7 @@ public class MainWindowViewModelTests
         _connectionStore.GetById(id).Returns((ConnectionModel?)null);
 
         var bus = Substitute.For<IEventBus>();
-        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore);
+        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore, new ToastStackViewModel());
 
         vm.ReopenLastClosedCommand.Execute(null);
 
@@ -242,7 +242,7 @@ public class MainWindowViewModelTests
         _connectionStore.GetById(id).Returns(model);
 
         var bus = Substitute.For<IEventBus>();
-        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore);
+        var vm = new MainWindowViewModel(_sut.ConnectionTree, _tabHostManager, bus, _connectionStore, new ToastStackViewModel());
 
         vm.ReopenLastClosedCommand.Execute(null);
 

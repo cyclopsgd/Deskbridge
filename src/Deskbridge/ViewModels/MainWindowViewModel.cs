@@ -17,12 +17,14 @@ public partial class MainWindowViewModel : ObservableObject
         ConnectionTreeViewModel connectionTree,
         ITabHostManager tabHostManager,
         IEventBus eventBus,
-        IConnectionStore connectionStore)
+        IConnectionStore connectionStore,
+        ToastStackViewModel toastStack)
     {
         ConnectionTree = connectionTree;
         _tabHostManager = tabHostManager;
         _eventBus = eventBus;
         _connectionStore = connectionStore;
+        ToastStack = toastStack;
 
         // Phase 5: subscribe to TabHostManager lifecycle events so the ObservableCollection
         // and status bar stay in sync. All handlers marshal to the UI dispatcher because
@@ -37,6 +39,13 @@ public partial class MainWindowViewModel : ObservableObject
     // Expose ConnectionTreeViewModel for Ctrl+N binding in MainWindow
     [ObservableProperty]
     public partial ConnectionTreeViewModel ConnectionTree { get; set; }
+
+    /// <summary>
+    /// Phase 6 Plan 06-02 (NOTF-01): toast stack VM bound by <c>MainWindow.xaml</c>
+    /// to the new <c>ToastStackControl</c>. Shared singleton — same instance
+    /// populated by <see cref="Services.ToastSubscriptionService"/>.
+    /// </summary>
+    public ToastStackViewModel ToastStack { get; }
 
     [ObservableProperty]
     public partial string Title { get; set; } = "Deskbridge";

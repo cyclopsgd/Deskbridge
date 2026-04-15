@@ -1,9 +1,12 @@
+using System.IO;
 using System.Windows.Threading;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Pipeline;
 using Deskbridge.Core.Services;
+using Deskbridge.Services;
 using Deskbridge.Tests.Fixtures;
+using Deskbridge.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -55,6 +58,117 @@ public sealed class DiCompositionTests
         first.Should().BeOfType<AuditLogger>();
         ReferenceEquals(first, second).Should().BeTrue(
             "AuditLogger must be a singleton — only one writer per process holds the SemaphoreSlim");
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-02 (NOTF-04 / NOTF-01 / NOTF-03): settings persistence +
+    /// toast stack resolve as singletons. Singleton matters for all three:
+    /// <see cref="IWindowStateService"/> (single serialiser for atomic writes),
+    /// <see cref="ToastStackViewModel"/> (shared Items collection bound to XAML
+    /// AND written by the subscription service), <see cref="ToastSubscriptionService"/>
+    /// (bus subscriptions must be process-lifetime).
+    /// </summary>
+    [Fact]
+    public void NOTF_Services_ResolveAsSingletons()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IEventBus, EventBus>();
+        services.AddSingleton<IWindowStateService, WindowStateService>();
+        services.AddSingleton<ToastStackViewModel>();
+        services.AddSingleton<ToastSubscriptionService>();
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IWindowStateService>().Should().BeOfType<WindowStateService>();
+        ReferenceEquals(
+            provider.GetRequiredService<IWindowStateService>(),
+            provider.GetRequiredService<IWindowStateService>())
+            .Should().BeTrue("IWindowStateService must be a singleton");
+        ReferenceEquals(
+            provider.GetRequiredService<ToastStackViewModel>(),
+            provider.GetRequiredService<ToastStackViewModel>())
+            .Should().BeTrue("ToastStackViewModel must be a singleton — the XAML binding and the subscription service must share the Items collection");
+        ReferenceEquals(
+            provider.GetRequiredService<ToastSubscriptionService>(),
+            provider.GetRequiredService<ToastSubscriptionService>())
+            .Should().BeTrue("ToastSubscriptionService must be a singleton — subscriptions are process-lifetime");
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-02: source-order regression — App.xaml.cs OnStartup must
+    /// eager-resolve ToastSubscriptionService AFTER ITabHostManager and BEFORE
+    /// mainWindow.Show(). Protects against refactors that accidentally reorder the
+    /// eager-resolve block and let an early event fire without a subscriber.
+    /// </summary>
+    [Fact]
+    public void App_EagerResolvesToastSubscriptionService_AfterTabHostManager_BeforeShow()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var appCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge", "App.xaml.cs"));
+
+        var tabHostIdx = appCs.IndexOf("GetRequiredService<ITabHostManager>()", StringComparison.Ordinal);
+        var toastIdx = appCs.IndexOf("GetRequiredService<ToastSubscriptionService>()", StringComparison.Ordinal);
+        var showIdx = appCs.IndexOf("mainWindow.Show()", StringComparison.Ordinal);
+
+        tabHostIdx.Should().BeGreaterThan(-1);
+        toastIdx.Should().BeGreaterThan(tabHostIdx, "ToastSubscriptionService must resolve AFTER ITabHostManager");
+        showIdx.Should().BeGreaterThan(toastIdx, "ToastSubscriptionService must resolve BEFORE mainWindow.Show()");
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-02 (NOTF-04): MainWindow.OnSourceInitialized must hydrate
+    /// window state BEFORE _airspace.AttachToWindow so the window has correct bounds
+    /// when the HwndSource is realised (attaching airspace before resizing would
+    /// cause the snapshot bitmap to be captured at the wrong size).
+    /// </summary>
+    [Fact]
+    public void MainWindow_OnSourceInitialized_LoadsWindowState_BeforeAirspaceAttach()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var mwCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge", "MainWindow.xaml.cs"));
+
+        var loadIdx = mwCs.IndexOf("_windowState.LoadAsync", StringComparison.Ordinal);
+        var airspaceIdx = mwCs.IndexOf("_airspace.AttachToWindow(this)", StringComparison.Ordinal);
+
+        loadIdx.Should().BeGreaterThan(-1, "MainWindow.OnSourceInitialized must call _windowState.LoadAsync");
+        airspaceIdx.Should().BeGreaterThan(loadIdx, "LoadAsync must run BEFORE AttachToWindow");
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-02 (NOTF-04): MainWindow.OnClosing must save window state on
+    /// both the first invocation (before the async shutdown begins) and the second
+    /// invocation (after CloseAllAsync completes). TrySaveWindowState must appear
+    /// twice in the OnClosing method body.
+    /// </summary>
+    [Fact]
+    public void MainWindow_OnClosing_SavesWindowState_InBothInvocationPaths()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var mwCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge", "MainWindow.xaml.cs"));
+
+        // Count occurrences — the first appears inside the _shutdownInProgress branch,
+        // the second BEFORE the async kickoff on first invocation.
+        var count = 0;
+        var idx = 0;
+        while ((idx = mwCs.IndexOf("TrySaveWindowState()", idx, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            idx += "TrySaveWindowState()".Length;
+        }
+
+        // Expect 3: two invocation sites in OnClosing + 1 method definition marker (private void TrySaveWindowState()).
+        count.Should().BeGreaterThanOrEqualTo(3,
+            "TrySaveWindowState must be invoked on the _shutdownInProgress path AND on the first-invocation path");
+    }
+
+    private static string FindSolutionRoot(string startPath)
+    {
+        var dir = new DirectoryInfo(startPath);
+        while (dir is not null)
+        {
+            if (dir.GetFiles("Deskbridge.sln").Length > 0) return dir.FullName;
+            dir = dir.Parent;
+        }
+        throw new InvalidOperationException($"Could not locate Deskbridge.sln from {startPath}");
     }
 
     /// <summary>

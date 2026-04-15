@@ -72,7 +72,7 @@ public sealed class KeyboardShortcutTests
             // NSubstitute's Returns handlers return the last-registered value.
         }
 
-        var vm = new MainWindowViewModel(tree, tabHostManager, bus, connectionStore);
+        var vm = new MainWindowViewModel(tree, tabHostManager, bus, connectionStore, new ToastStackViewModel());
 
         for (int i = 0; i < initialTabs; i++)
         {
