@@ -6,6 +6,7 @@ using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Services;
 using Deskbridge.Core.Settings;
+using Deskbridge.Dialogs;
 using Deskbridge.Protocols.Rdp;
 using Deskbridge.ViewModels;
 using Deskbridge.Views;
@@ -21,6 +22,19 @@ public partial class MainWindow : FluentWindow
     private readonly ITabHostManager _tabHostManager;
     private readonly IEventBus _eventBus;
     private readonly IWindowStateService _windowState;
+
+    /// <summary>Plan 06-03 Q6 gate: Ctrl+Shift+P is a no-op while the app is locked.</summary>
+    private readonly IAppLockState _lockState;
+
+    /// <summary>Plan 06-03 CMD-01: factory for a fresh palette dialog instance per open.</summary>
+    private readonly Func<CommandPaletteDialog> _paletteFactory;
+
+    /// <summary>Plan 06-03 CMD-01: idempotence guard so a held-down Ctrl+Shift+P doesn't stack dialogs.</summary>
+    private bool _paletteOpen;
+
+    /// <summary>Plan 06-03 D-05: saved WindowStyle/WindowState for fullscreen restore.</summary>
+    private System.Windows.WindowStyle _savedWindowStyle;
+    private System.Windows.WindowState _savedWindowState;
 
     /// <summary>
     /// Phase 6 Plan 06-02 (NOTF-04): cached settings snapshot from OnSourceInitialized.
@@ -45,7 +59,9 @@ public partial class MainWindow : FluentWindow
         AirspaceSwapper airspace,
         ITabHostManager tabHostManager,
         IEventBus eventBus,
-        IWindowStateService windowState)
+        IWindowStateService windowState,
+        IAppLockState lockState,
+        Func<CommandPaletteDialog> paletteFactory)
     {
         DataContext = viewModel;
         InitializeComponent();
@@ -61,10 +77,17 @@ public partial class MainWindow : FluentWindow
         _tabHostManager = tabHostManager;
         _eventBus = eventBus;
         _windowState = windowState;
+        _lockState = lockState;
+        _paletteFactory = paletteFactory;
 
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
         _coordinator.ReconnectOverlayRequested += OnReconnectOverlayRequested;
+
+        // Phase 6 Plan 06-03 (D-05): observe IsFullscreen changes so we can apply
+        // WindowStyle.None + WindowState.Maximized (and restore) without moving the
+        // actual window control into the VM.
+        viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
         // Phase 5: subscribe to TabSwitchedEvent so SetActiveHostVisibility can flip
         // Visibility + IsEnabled across every HostContainer child by Tag correlation.
@@ -452,6 +475,22 @@ public partial class MainWindow : FluentWindow
     /// </summary>
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
+        // Plan 06-03 CMD-01: Ctrl+Shift+P opens the command palette. Handled HERE
+        // (not in KeyboardShortcutRouter) because the router has no
+        // IContentDialogService / IAppLockState dependency. Q6 gate: Ctrl+Shift+P
+        // is a no-op while the app is locked so the palette cannot render above
+        // the lock overlay. The key event is still consumed (e.Handled=true) so
+        // it doesn't bubble to the focused AxHost.
+        if (e.Key == Key.P && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+        {
+            if (!_lockState.IsLocked)
+            {
+                _ = OpenCommandPaletteAsync();
+            }
+            e.Handled = true;
+            return;
+        }
+
         // Delegate to the pure-data router so the routing logic is unit-testable
         // without a real Window + Dispatcher + routed-event plumbing.
         if (KeyboardShortcutRouter.TryRoute(ViewModel, e.Key, Keyboard.Modifiers))
@@ -465,5 +504,54 @@ public partial class MainWindow : FluentWindow
         }
 
         base.OnPreviewKeyDown(e);
+    }
+
+    /// <summary>
+    /// Plan 06-03 CMD-01: open the command palette via <see cref="IContentDialogService"/>
+    /// using the transient <see cref="CommandPaletteDialog"/> factory. Idempotent —
+    /// a held-down Ctrl+Shift+P does NOT stack dialogs. Exceptions are swallowed
+    /// with a Serilog warning so a dialog-host misconfiguration can't crash the app.
+    /// </summary>
+    private async Task OpenCommandPaletteAsync()
+    {
+        if (_paletteOpen) return;
+        _paletteOpen = true;
+        try
+        {
+            var dialog = _paletteFactory();
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to open command palette");
+        }
+        finally
+        {
+            _paletteOpen = false;
+        }
+    }
+
+    /// <summary>
+    /// Plan 06-03 D-05 / CMD-04: observe <see cref="MainWindowViewModel.IsFullscreen"/>
+    /// and apply WindowStyle+WindowState. Entering fullscreen saves the current
+    /// style/state so the restore is exact (including Maximized-before-F11).
+    /// </summary>
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ViewModels.MainWindowViewModel.IsFullscreen)) return;
+        var vm = (ViewModels.MainWindowViewModel)sender!;
+
+        if (vm.IsFullscreen)
+        {
+            _savedWindowStyle = WindowStyle;
+            _savedWindowState = WindowState;
+            WindowStyle = System.Windows.WindowStyle.None;
+            WindowState = System.Windows.WindowState.Maximized;
+        }
+        else
+        {
+            WindowStyle = _savedWindowStyle;
+            WindowState = _savedWindowState;
+        }
     }
 }

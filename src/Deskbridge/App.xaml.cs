@@ -5,6 +5,8 @@ using Deskbridge.Core.Logging;
 using Deskbridge.Core.Pipeline;
 using Deskbridge.Core.Pipeline.Stages;
 using Deskbridge.Core.Services;
+using Deskbridge.Dialogs;
+using Deskbridge.Models;
 using Deskbridge.Protocols.Rdp;
 using Deskbridge.Services;
 using Deskbridge.ViewModels;
@@ -156,6 +158,39 @@ public partial class App : Application
         // subscription-side push.
         services.AddSingleton<ToastStackViewModel>();
         services.AddSingleton<ToastSubscriptionService>();
+
+        // Phase 6 Plan 06-03 (CMD-01 / CMD-02 / Q6): palette scaffolding.
+        // IAppLockState singleton (Plan 06-04 flips IsLocked on startup).
+        services.AddSingleton<IAppLockState, AppLockState>();
+
+        // ICommandPaletteService singleton — command closures delegate to the
+        // MainWindowViewModel / ConnectionTreeViewModel singletons so the palette
+        // entries invoke the SAME commands as the global keyboard shortcuts.
+        services.AddSingleton<ICommandPaletteService>(sp =>
+        {
+            var main = sp.GetRequiredService<MainWindowViewModel>();
+            var tree = sp.GetRequiredService<ConnectionTreeViewModel>();
+            return new CommandPaletteService(
+                newConnection: () => tree.NewConnectionCommand.ExecuteAsync(null),
+                openSettings: () =>
+                {
+                    main.ActivePanelMode = PanelMode.Settings;
+                    return Task.CompletedTask;
+                },
+                disconnectAll: () => main.DisconnectAllCommand.ExecuteAsync(null),
+                quickConnect: () => main.QuickConnectCommand.ExecuteAsync(null));
+        });
+
+        // CommandPaletteViewModel + CommandPaletteDialog are transient — one
+        // instance per palette session (Ctrl+Shift+P creates a fresh VM each time
+        // so SearchText starts blank and Items re-populates from current state).
+        services.AddTransient<CommandPaletteViewModel>();
+        services.AddTransient<CommandPaletteDialog>();
+
+        // Factory so MainWindow can request a fresh dialog each open without
+        // holding a reference to IServiceProvider directly.
+        services.AddTransient<Func<CommandPaletteDialog>>(sp =>
+            () => sp.GetRequiredService<CommandPaletteDialog>());
 
         // ViewModels
         services.AddSingleton<ViewModels.MainWindowViewModel>();
