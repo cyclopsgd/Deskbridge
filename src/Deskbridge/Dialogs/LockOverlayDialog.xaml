@@ -1,0 +1,99 @@
+<ui:ContentDialog x:Class="Deskbridge.Dialogs.LockOverlayDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:local="clr-namespace:Deskbridge.Dialogs"
+    xmlns:vm="clr-namespace:Deskbridge.ViewModels"
+    d:DataContext="{d:DesignInstance vm:LockOverlayViewModel}"
+    mc:Ignorable="d"
+    IsFooterVisible="False"
+    Background="{DynamicResource ApplicationBackgroundBrush}">
+
+    <ui:ContentDialog.Resources>
+        <!--
+            WPF-UI Pitfall 1: ContentDialog subclasses need a BasedOn style pointing
+            at the base ContentDialog type or they render with broken chrome.
+        -->
+        <Style BasedOn="{StaticResource {x:Type ui:ContentDialog}}"
+               TargetType="{x:Type local:LockOverlayDialog}" />
+
+        <!--
+            SEC-02 / D-15 opaque-backdrop override (user checkpoint feedback):
+            WPF-UI's ContentDialog ships with a semi-transparent SmokeGrid Rectangle
+            in its ControlTemplate whose Fill is bound to the DynamicResource
+            ContentDialogSmokeFill. The default brush lets the shell (connections
+            panel, properties panel, RDP tabs) bleed through the lock overlay — a
+            security defect (T-06-04 air-space bypass) and a UI-SPEC violation.
+
+            Overriding the brush resource with an OPAQUE SolidColorBrush at the
+            dialog's own Resources scope propagates via DynamicResource into the
+            SmokeGrid Fill and forces the full-window opaque backdrop required by
+            UI-SPEC §Lock Overlay Internal Layout line 147.
+
+            Hex #202020 matches ApplicationBackgroundBrush from the Fluent dark
+            theme so the card sits on the same surface colour as the rest of the
+            app. No DynamicResource here — we want an explicit opaque brush that
+            cannot be overridden by a parent dictionary.
+        -->
+        <SolidColorBrush x:Key="ContentDialogSmokeFill" Color="#FF202020" />
+    </ui:ContentDialog.Resources>
+
+    <!-- UI-SPEC §Lock Overlay Internal Layout lines 123-143 -->
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border Width="360" Padding="32" CornerRadius="8"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <StackPanel>
+                <!-- Title: "Deskbridge" — 20px SemiBold centered muted -->
+                <TextBlock Text="Deskbridge"
+                           FontSize="20" FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+                <!-- 8px gap → body copy (14px muted) — text varies by IsFirstRun -->
+                <TextBlock Text="{Binding BodyCopy}"
+                           FontSize="14"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Margin="0,8,0,24" />
+
+                <!-- Password field (40px tall). PasswordBox.Password is NOT a DP (by
+                     design — avoids plaintext in the WPF binding pipeline) so we push
+                     into the VM via PasswordField_PasswordChanged in code-behind. Using
+                     ui:PasswordBox for the PlaceholderText DP (stock PasswordBox has none). -->
+                <ui:PasswordBox x:Name="PasswordField"
+                                Height="40"
+                                PlaceholderText="{Binding PasswordPlaceholder}"
+                                PasswordChanged="PasswordField_PasswordChanged" />
+
+                <!-- Confirm field — only visible in first-run setup mode. 8px gap above. -->
+                <ui:PasswordBox x:Name="ConfirmField"
+                                Height="40"
+                                Margin="0,8,0,0"
+                                PlaceholderText="Confirm password"
+                                Visibility="{Binding IsFirstRun, Converter={StaticResource BoolToVisibility}}"
+                                PasswordChanged="ConfirmField_PasswordChanged" />
+
+                <!-- 12px gap → error slot (reserves space via NullToCollapsed) -->
+                <TextBlock Text="{Binding ErrorMessage}"
+                           FontSize="12"
+                           Foreground="{DynamicResource DeskbridgeErrorBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,12,0,16"
+                           Visibility="{Binding ErrorMessage, Converter={StaticResource NullToCollapsed}}" />
+
+                <!-- 16px gap → primary Unlock / Set Password button -->
+                <ui:Button Content="{Binding ButtonCopy}"
+                           Appearance="Primary"
+                           Height="40"
+                           HorizontalAlignment="Stretch"
+                           HorizontalContentAlignment="Center"
+                           Command="{Binding UnlockCommand}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:ContentDialog>
