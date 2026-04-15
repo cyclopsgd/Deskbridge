@@ -69,10 +69,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Command Palette & Shortcuts
 
-- [ ] **CMD-01**: Ctrl+Shift+P opens floating search box with fuzzy match across connections and commands
-- [ ] **CMD-02**: Commands available: New Connection, Settings, Disconnect All, Quick Connect
-- [ ] **CMD-03**: Connection results consume IConnectionQuery.Search() for consistent matching
-- [ ] **CMD-04**: Ctrl+N new connection, Ctrl+T quick connect, Ctrl+W close tab, F11 fullscreen, Escape exit fullscreen
+- [x] **CMD-01**: Ctrl+Shift+P opens floating search box with fuzzy match across connections and commands
+- [x] **CMD-02**: Commands available: New Connection, Settings, Disconnect All, Quick Connect
+- [x] **CMD-03**: Connection results consume IConnectionQuery.Search() for consistent matching
+- [x] **CMD-04**: Ctrl+N new connection, Ctrl+T quick connect, Ctrl+W close tab, F11 fullscreen, Escape exit fullscreen
 
 ### Notifications & Status
 
@@ -209,10 +209,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TAB-03 | Phase 5 | Pending |
 | TAB-04 | Phase 5 | Complete |
 | TAB-05 | Phase 5 | Complete |
-| CMD-01 | Phase 6 | Pending |
-| CMD-02 | Phase 6 | Pending |
-| CMD-03 | Phase 6 | Pending |
-| CMD-04 | Phase 6 | Pending |
+| CMD-01 | Phase 6 | Complete |
+| CMD-02 | Phase 6 | Complete |
+| CMD-03 | Phase 6 | Complete |
+| CMD-04 | Phase 6 | Complete |
 | NOTF-01 | Phase 6 | Complete |
 | NOTF-02 | Phase 6 | Complete |
 | NOTF-03 | Phase 6 | Complete |
