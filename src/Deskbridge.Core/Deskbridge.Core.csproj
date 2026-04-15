@@ -3,6 +3,9 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="AdysTech.CredentialManager" />
     <PackageReference Include="Serilog" />
+    <!-- Phase 6 (Plan 06-01): SerilogSetup.Configure references RollingInterval +
+         WriteTo.File so Deskbridge.Core needs Serilog.Sinks.File too. -->
+    <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <!-- Phase 5: TabHostManager.Show uses Wpf.Ui.ISnackbarService directly per UI-SPEC Snackbar
          contract (ControlAppearance.Caution + SymbolIcon Warning24). Adding WPF-UI to Core keeps

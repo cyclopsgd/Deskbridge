@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows.Media;
 using Deskbridge.Core.Interfaces;
+using Deskbridge.Core.Logging;
 using Deskbridge.Core.Pipeline;
 using Deskbridge.Core.Pipeline.Stages;
 using Deskbridge.Core.Services;
@@ -21,14 +22,17 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // --- Serilog baseline (Phase 4 — Phase 6 LOG-01 refines) ---
-        var logPath = Path.Combine(
+        // LOG-04 / Pattern 4: attach Dispatcher hook now that Application.Current is valid.
+        // AppDomain + UnobservedTask hooks were installed in Program.Main before App ctor.
+        CrashHandler.InstallDispatcherHook(this);
+
+        // --- LOG-01 + LOG-05 Serilog config (replaces Phase 4 baseline) ---
+        // Dispose any previous logger (Velopack / earlier startup may have created one).
+        (Log.Logger as IDisposable)?.Dispose();
+        var logRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Deskbridge", "logs", "deskbridge-.log");
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .WriteTo.File(logPath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 5)
-            .CreateLogger();
+            "Deskbridge", "logs");
+        Log.Logger = SerilogSetup.Configure(logRoot).CreateLogger();
 
         ApplicationThemeManager.Apply(
             ApplicationTheme.Dark,
@@ -75,6 +79,9 @@ public partial class App : Application
         // Core services
         services.AddSingleton<IEventBus, EventBus>();
         services.AddSingleton<INotificationService, NotificationService>();
+        // LOG-02 / LOG-03 audit logger — singleton (one writer per process so the
+        // SemaphoreSlim guards monthly rotation across all bus consumers).
+        services.AddSingleton<IAuditLogger, AuditLogger>();
         services.AddSingleton<IConnectionPipeline, ConnectionPipeline>();
         services.AddSingleton<IDisconnectPipeline, DisconnectPipeline>();
 

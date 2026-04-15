@@ -21,6 +21,7 @@ public sealed class DiCompositionTests
         // Mirror the exact registrations from App.xaml.cs ConfigureServices
         services.AddSingleton<IEventBus, EventBus>();
         services.AddSingleton<INotificationService, NotificationService>();
+        services.AddSingleton<IAuditLogger, AuditLogger>();
         services.AddSingleton<IConnectionPipeline, ConnectionPipeline>();
         services.AddSingleton<IDisconnectPipeline, DisconnectPipeline>();
         services.AddSingleton<IConnectionQuery, ConnectionQueryService>();
@@ -29,9 +30,31 @@ public sealed class DiCompositionTests
 
         provider.GetRequiredService<IEventBus>().Should().NotBeNull();
         provider.GetRequiredService<INotificationService>().Should().NotBeNull();
+        provider.GetRequiredService<IAuditLogger>().Should().NotBeNull();
         provider.GetRequiredService<IConnectionPipeline>().Should().NotBeNull();
         provider.GetRequiredService<IDisconnectPipeline>().Should().NotBeNull();
         provider.GetRequiredService<IConnectionQuery>().Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Phase 6 (Plan 06-01) LOG-02: <see cref="IAuditLogger"/> is registered as a
+    /// singleton. The single-instance guarantee matters because the SemaphoreSlim
+    /// inside <see cref="AuditLogger"/> only serialises writes against ITS OWN
+    /// instance — multiple instances would re-introduce Pitfall 2 (interleaved lines).
+    /// </summary>
+    [Fact]
+    public void IAuditLogger_RegistersAsSingleton()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAuditLogger, AuditLogger>();
+        using var provider = services.BuildServiceProvider();
+
+        var first = provider.GetRequiredService<IAuditLogger>();
+        var second = provider.GetRequiredService<IAuditLogger>();
+
+        first.Should().BeOfType<AuditLogger>();
+        ReferenceEquals(first, second).Should().BeTrue(
+            "AuditLogger must be a singleton — only one writer per process holds the SemaphoreSlim");
     }
 
     /// <summary>
