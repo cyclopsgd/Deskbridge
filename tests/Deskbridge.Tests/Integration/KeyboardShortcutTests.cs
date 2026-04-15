@@ -460,4 +460,39 @@ public sealed class KeyboardShortcutTests
 
         handled.Should().BeFalse();
     }
+
+    // ----------------------------------------------------------- Phase 6 Plan 06-04
+
+    [Fact]
+    public void CtrlL_IsHandled_PublishesAppLockedEventWithManualReason()
+    {
+        // SEC-04 / D-18: Ctrl+L invokes LockAppCommand which publishes AppLockedEvent
+        // on the bus. AppLockController subscribes and orchestrates the lock flow.
+        // Bus-indirect (not a direct controller reference) avoids a DI cycle.
+        var vm = BuildVm(out _, out var bus, out _, initialTabs: 0);
+
+        AppLockedEvent? published = null;
+        bus.Subscribe<AppLockedEvent>(this, evt => published = evt);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.L, ModifierKeys.Control);
+
+        handled.Should().BeTrue();
+        published.Should().NotBeNull();
+        published!.Reason.Should().Be(LockReason.Manual);
+    }
+
+    [Fact]
+    public void CtrlL_WithShift_IsNotHandled()
+    {
+        // Ctrl+Shift+L is not a Phase 6 shortcut. The Ctrl+L branch requires !Shift.
+        var vm = BuildVm(out _, out var bus, out _, initialTabs: 0);
+
+        AppLockedEvent? published = null;
+        bus.Subscribe<AppLockedEvent>(this, evt => published = evt);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.L, ModifierKeys.Control | ModifierKeys.Shift);
+
+        handled.Should().BeFalse();
+        published.Should().BeNull();
+    }
 }

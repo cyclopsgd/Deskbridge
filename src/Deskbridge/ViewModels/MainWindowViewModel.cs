@@ -3,7 +3,9 @@ using System.Windows;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
+using Deskbridge.Core.Settings;
 using Deskbridge.Models;
+using Serilog;
 
 namespace Deskbridge.ViewModels;
 
@@ -13,18 +15,27 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IEventBus _eventBus;
     private readonly IConnectionStore _connectionStore;
 
+    /// <summary>
+    /// Plan 06-04 (SEC-03 / SEC-05): optional — settings-panel bindings persist
+    /// changes here. Nullable so existing VM test call-sites don't need to
+    /// construct a full settings subsystem; persistence is a no-op when null.
+    /// </summary>
+    private readonly IWindowStateService? _windowState;
+
     public MainWindowViewModel(
         ConnectionTreeViewModel connectionTree,
         ITabHostManager tabHostManager,
         IEventBus eventBus,
         IConnectionStore connectionStore,
-        ToastStackViewModel toastStack)
+        ToastStackViewModel toastStack,
+        IWindowStateService? windowState = null)
     {
         ConnectionTree = connectionTree;
         _tabHostManager = tabHostManager;
         _eventBus = eventBus;
         _connectionStore = connectionStore;
         ToastStack = toastStack;
+        _windowState = windowState;
 
         // Phase 5: subscribe to TabHostManager lifecycle events so the ObservableCollection
         // and status bar stay in sync. All handlers marshal to the UI dispatcher because
@@ -206,6 +217,89 @@ public partial class MainWindowViewModel : ObservableObject
     private void ExitFullscreen()
     {
         if (IsFullscreen) IsFullscreen = false;
+    }
+
+    // ----------------------------------------------------------- Phase 6 Plan 06-04
+
+    /// <summary>
+    /// Plan 06-04 SEC-03: auto-lock idle timeout in minutes. Two-way bound to
+    /// the Settings panel's ui:NumberBox (UI-SPEC §Settings Panel Additions).
+    /// Changes persist via <see cref="PersistSecuritySettings"/>.
+    /// </summary>
+    [ObservableProperty]
+    public partial int AutoLockTimeoutMinutes { get; set; } = 15;
+
+    /// <summary>
+    /// Plan 06-04 SEC-05: when true, <c>WindowState == Minimized</c> triggers
+    /// an immediate lock (MainWindow OnStateChanged observes this flag).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool LockOnMinimise { get; set; }
+
+    /// <summary>
+    /// Plan 06-04 SEC-04 / D-18 Ctrl+L. Publishes <see cref="AppLockedEvent"/>
+    /// on the bus — <see cref="AppLockController"/> subscribes and fans in all
+    /// lock triggers (timer + session-switch + Ctrl+L) here. Bus-indirect is
+    /// used instead of a direct controller reference to avoid a
+    /// MainWindowViewModel → AppLockController → MainWindow (IHostContainerProvider)
+    /// → MainWindowViewModel DI cycle.
+    /// </summary>
+    [RelayCommand]
+    private void LockApp()
+    {
+        _eventBus.Publish(new AppLockedEvent(LockReason.Manual));
+    }
+
+    /// <summary>
+    /// Called from <c>MainWindow.OnSourceInitialized</c> after <see cref="IWindowStateService.LoadAsync"/>
+    /// so the Settings-panel bindings start populated with the persisted values.
+    /// Does NOT trigger a save (we're applying disk state, not user input).
+    /// </summary>
+    public void ApplySecuritySettings(SecuritySettingsRecord security)
+    {
+        ArgumentNullException.ThrowIfNull(security);
+        _suppressPersist = true;
+        try
+        {
+            AutoLockTimeoutMinutes = security.AutoLockTimeoutMinutes;
+            LockOnMinimise = security.LockOnMinimise;
+        }
+        finally
+        {
+            _suppressPersist = false;
+        }
+    }
+
+    /// <summary>Snapshot of the current security preferences for MainWindow.OnClosing persistence.</summary>
+    public SecuritySettingsRecord CurrentSecuritySettings =>
+        new(AutoLockTimeoutMinutes: AutoLockTimeoutMinutes, LockOnMinimise: LockOnMinimise);
+
+    // --- settings persistence ---
+
+    /// <summary>
+    /// Guards against a round-trip persist when <see cref="ApplySecuritySettings"/>
+    /// initialises the bindings from disk. Settings panel user edits still flow
+    /// through <see cref="PersistSecuritySettings"/>.
+    /// </summary>
+    private bool _suppressPersist;
+
+    partial void OnAutoLockTimeoutMinutesChanged(int value) => PersistSecuritySettings();
+    partial void OnLockOnMinimiseChanged(bool value) => PersistSecuritySettings();
+
+    private async void PersistSecuritySettings()
+    {
+        if (_suppressPersist) return;
+        if (_windowState is null) return;
+        try
+        {
+            var current = await _windowState.LoadAsync().ConfigureAwait(false);
+            var updated = current with { Security = CurrentSecuritySettings };
+            await _windowState.SaveAsync(updated).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to persist security settings");
+        }
     }
 
     // ---------------------------------------------------------------- event handlers

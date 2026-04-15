@@ -88,8 +88,30 @@ public partial class App : Application
         // fire. Mirrors the ITabHostManager pattern above.
         _ = _serviceProvider.GetRequiredService<ToastSubscriptionService>();
 
+        // Phase 6 Plan 06-04 (SEC-03 / SEC-04): eager-resolve the lock-trigger
+        // services so their subscriptions (InputManager.PreProcessInput,
+        // SystemEvents.SessionSwitch) land BEFORE the user can interact with the
+        // window. Without eager resolution these singletons only construct on
+        // first lazy request — AppLockController's bus subscription would work,
+        // but the trigger services would miss every pre-first-request event.
+        _ = _serviceProvider.GetRequiredService<IdleLockService>();
+        _ = _serviceProvider.GetRequiredService<SessionLockService>();
+
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
+
+        // Phase 6 Plan 06-04 (SEC-02): resolve AppLockController AFTER Show() because
+        // the controller takes IHostContainerProvider (the MainWindow), and because
+        // it needs the visual tree realized before capturing children on the first
+        // EnsureLockedOnStartupAsync call. Controller subscribes to AppLockedEvent
+        // on the bus in its ctor, so resolving here also activates the fan-in.
+        var lockController = _serviceProvider.GetRequiredService<AppLockController>();
+
+        // Startup lock — fire-and-forget so OnStartup returns and the dispatcher
+        // can render the overlay. EnsureLockedOnStartupAsync handles both the
+        // returning-user (unlock mode) and first-run (setup mode) flows by
+        // reading IMasterPasswordService.IsMasterPasswordSet inside the VM.
+        _ = lockController.EnsureLockedOnStartupAsync();
     }
 
     private static void ConfigureServices(IServiceCollection services)
@@ -201,8 +223,74 @@ public partial class App : Application
         services.AddTransient<Func<CommandPaletteDialog>>(sp =>
             () => sp.GetRequiredService<CommandPaletteDialog>());
 
+        // ---- Phase 6 Plan 06-04: app security (SEC-01..SEC-05) ----
+        //
+        // IMasterPasswordService singleton: single writer to auth.json. The service
+        // takes a directory path — we resolve the %AppData%/Deskbridge root once.
+        services.AddSingleton<IMasterPasswordService>(_ =>
+            new MasterPasswordService(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Deskbridge")));
+
+        // LockOverlayViewModel + LockOverlayDialog are transient — a fresh VM +
+        // dialog per lock event so the password field starts blank and IsFirstRun
+        // is recomputed from IMasterPasswordService.IsMasterPasswordSet() each time.
+        services.AddTransient<LockOverlayViewModel>();
+        services.AddTransient<LockOverlayDialog>();
+        services.AddTransient<Func<LockOverlayDialog>>(sp =>
+            () => sp.GetRequiredService<LockOverlayDialog>());
+
+        // Idle-timer + session-switch services are singletons — they own a
+        // DispatcherTimer + InputManager subscription + SystemEvents subscription
+        // that must live for the process lifetime. App.OnStartup eager-resolves both
+        // so the subscriptions land before the user can interact with the window.
+        //
+        // NOTE: SecuritySettingsRecord is passed by VALUE — changes made through the
+        // settings panel at runtime do NOT automatically update the IdleLockService
+        // interval. A restart picks up the new interval. A future plan could add a
+        // "settings changed" bus event to hot-reload without restart.
+        services.AddSingleton<IdleLockService>(sp =>
+        {
+            var bus = sp.GetRequiredService<IEventBus>();
+            var windowState = sp.GetRequiredService<IWindowStateService>();
+            // Load synchronously at ctor time — this service is eager-resolved from
+            // OnStartup on the UI thread so the sync-over-async is acceptable (< 1 KB
+            // read from %AppData%).
+            var settings = windowState.LoadAsync().GetAwaiter().GetResult();
+            return new IdleLockService(bus, settings.Security);
+        });
+        services.AddSingleton<SessionLockService>(sp =>
+            new SessionLockService(sp.GetRequiredService<IEventBus>()));
+
+        // AppLockController: singleton factory that takes the MainWindow (as
+        // IHostContainerProvider) — resolved at service-build time, so the
+        // controller sees the already-constructed window. The controller
+        // subscribes to AppLockedEvent in its ctor; ALL lock triggers (bus
+        // events + Ctrl+L direct call + startup) fan in here.
+        services.AddSingleton<AppLockController>(sp => new AppLockController(
+            sp.GetRequiredService<IAppLockState>(),
+            sp.GetRequiredService<IEventBus>(),
+            sp.GetRequiredService<IContentDialogService>(),
+            sp.GetRequiredService<IAuditLogger>(),
+            sp.GetRequiredService<Func<LockOverlayDialog>>(),
+            sp.GetRequiredService<MainWindow>(),
+            sp.GetRequiredService<IMasterPasswordService>()));
+
         // ViewModels
-        services.AddSingleton<ViewModels.MainWindowViewModel>();
+        //
+        // MainWindowViewModel: factory registration so Plan 06-04's optional
+        // IWindowStateService ctor param is resolved (DI's default binder ignores
+        // optional ref-type params with a null default). AppLockController is NOT
+        // passed to the VM to avoid a DI cycle (controller takes MainWindow as
+        // IHostContainerProvider which takes this VM as DataContext). The LockApp
+        // command publishes on the bus — AppLockController subscribes.
+        services.AddSingleton<ViewModels.MainWindowViewModel>(sp => new ViewModels.MainWindowViewModel(
+            sp.GetRequiredService<ViewModels.ConnectionTreeViewModel>(),
+            sp.GetRequiredService<ITabHostManager>(),
+            sp.GetRequiredService<IEventBus>(),
+            sp.GetRequiredService<IConnectionStore>(),
+            sp.GetRequiredService<ViewModels.ToastStackViewModel>(),
+            windowState: sp.GetRequiredService<IWindowStateService>()));
         services.AddSingleton<ViewModels.ConnectionTreeViewModel>();
         services.AddTransient<ViewModels.ConnectionEditorViewModel>();
         services.AddTransient<ViewModels.GroupEditorViewModel>();
