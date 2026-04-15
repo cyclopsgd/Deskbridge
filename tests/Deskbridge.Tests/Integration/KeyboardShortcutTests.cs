@@ -311,4 +311,153 @@ public sealed class KeyboardShortcutTests
 
         handled.Should().BeFalse("Ctrl+W stays with MainWindow.xaml line 15 KeyBinding");
     }
+
+    // ----------------------------------------------------------- Phase 6 Plan 06-03
+
+    [Fact]
+    public void CtrlShiftP_IsHandled_RoutesToOpenCommandPalette()
+    {
+        // CMD-01: Ctrl+Shift+P is routed. The actual dialog open lives in
+        // MainWindow.OnPreviewKeyDown (IContentDialogService dependency); the VM
+        // command is a no-op placeholder. Test only asserts the router recognizes
+        // the shortcut and returns true so the key doesn't bubble to AxHost.
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.P, ModifierKeys.Control | ModifierKeys.Shift);
+
+        handled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CtrlN_IsHandled_InvokesNewConnectionCommand_OnConnectionTree()
+    {
+        // CMD-04: Ctrl+N delegates to ConnectionTreeViewModel.NewConnectionCommand
+        // (same command the palette's New Connection entry calls).
+        // NewConnectionCommand is a [RelayCommand]-generated AsyncRelayCommand; we
+        // can't spy directly without reflection, so we assert the router returns true
+        // and the underlying ConnectionTree property is untouched / not null (the
+        // command is resolvable for execution).
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.N, ModifierKeys.Control);
+
+        handled.Should().BeTrue();
+        vm.ConnectionTree.Should().NotBeNull();
+        vm.ConnectionTree.NewConnectionCommand.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CtrlT_NoShift_IsHandled_InvokesQuickConnect()
+    {
+        // CMD-04: plain Ctrl+T (no Shift) is Quick Connect. Ctrl+Shift+T remains
+        // Phase 5's ReopenLastClosed — verified by the existing test above.
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.T, ModifierKeys.Control);
+
+        handled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void F11_NoModifier_IsHandled_FlipsIsFullscreen()
+    {
+        // D-05 / CMD-04: F11 toggles APP fullscreen (not RDP session fullscreen).
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+        vm.IsFullscreen.Should().BeFalse("initial state — not fullscreen");
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.F11, ModifierKeys.None);
+
+        handled.Should().BeTrue();
+        vm.IsFullscreen.Should().BeTrue();
+
+        // Toggle again — should go back to false.
+        KeyboardShortcutRouter.TryRoute(vm, Key.F11, ModifierKeys.None);
+        vm.IsFullscreen.Should().BeFalse();
+    }
+
+    [Fact]
+    public void F11_WithCtrl_IsNotRouted_LetsAxHostSeeIt()
+    {
+        // Alt+F11 or Ctrl+F11 might belong to the remote session macro suite.
+        // We only intercept plain F11.
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.F11, ModifierKeys.Alt);
+
+        handled.Should().BeFalse();
+        vm.IsFullscreen.Should().BeFalse("Alt+F11 must not hijack app fullscreen");
+    }
+
+    [Fact]
+    public void Esc_WhenFullscreen_IsHandled_ExitsFullscreen()
+    {
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+        vm.IsFullscreen = true;
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.Escape, ModifierKeys.None);
+
+        handled.Should().BeTrue();
+        vm.IsFullscreen.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Esc_WhenNotFullscreen_IsNotHandled_PassesThroughToContentDialog()
+    {
+        // Critical: Esc must bubble to ContentDialog when the app is NOT fullscreen,
+        // so the palette (and other dialogs) can receive their native backdrop-close.
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+        vm.IsFullscreen.Should().BeFalse();
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.Escape, ModifierKeys.None);
+
+        handled.Should().BeFalse("Esc passes through when not fullscreen");
+    }
+
+    [Fact]
+    public void Esc_WithCtrl_IsNotRouted()
+    {
+        // Only plain Esc is routed. Ctrl+Esc / Shift+Esc belong to the focused control.
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+        vm.IsFullscreen = true;
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.Escape, ModifierKeys.Control);
+
+        handled.Should().BeFalse();
+        vm.IsFullscreen.Should().BeTrue("Ctrl+Esc must not exit fullscreen");
+    }
+
+    [Fact]
+    public void CtrlShiftT_StillRoutesToReopen_AfterPlan0603CtrlTAddition()
+    {
+        // Regression: Plan 06-03 added Ctrl+T → QuickConnect. Ensure Ctrl+Shift+T
+        // (Phase 5 ReopenLastClosed) still wins because the Shift branch is checked
+        // FIRST in the router.
+        var vm = BuildVm(out var thm, out var bus, out var store);
+        var id = Guid.NewGuid();
+        var model = new ConnectionModel { Id = id, Name = "Reopened", Hostname = "r" };
+        store.GetById(id).Returns(model);
+        thm.PopLastClosed().Returns(id);
+
+        ConnectionRequestedEvent? published = null;
+        bus.Subscribe<ConnectionRequestedEvent>(this, evt => published = evt);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.T, ModifierKeys.Control | ModifierKeys.Shift);
+
+        handled.Should().BeTrue();
+        thm.Received(1).PopLastClosed();
+        published.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CtrlN_WithShift_IsNotHandledByCtrlN_Branch()
+    {
+        // Ctrl+Shift+N is not a Phase 6 shortcut. The router's Ctrl+N branch requires
+        // !Shift, so Ctrl+Shift+N falls through to Ctrl+1..9 check (not matched) and
+        // returns false. Documents the guard.
+        var vm = BuildVm(out _, out _, out _, initialTabs: 0);
+
+        var handled = KeyboardShortcutRouter.TryRoute(vm, Key.N, ModifierKeys.Control | ModifierKeys.Shift);
+
+        handled.Should().BeFalse();
+    }
 }

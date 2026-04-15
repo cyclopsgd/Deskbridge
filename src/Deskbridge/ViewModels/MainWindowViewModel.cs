@@ -80,6 +80,16 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial string StatusSecondary { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Phase 6 Plan 06-03 D-05 (CMD-04): APP-level fullscreen flag. The
+    /// MainWindow code-behind subscribes to <see cref="PropertyChanged"/> and
+    /// applies <c>WindowStyle.None</c> + <c>WindowState.Maximized</c> when true;
+    /// restores the saved style/state on false. Distinct from RDP session
+    /// fullscreen which is owned by <c>AxHost</c> in Phase 4.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsFullscreen { get; set; }
+
     // Commands
     [RelayCommand]
     private void TogglePanel(PanelMode mode)
@@ -141,6 +151,61 @@ public partial class MainWindowViewModel : ObservableObject
         var model = _connectionStore.GetById(connId);
         if (model is null) return;  // Silent per UI-SPEC — no toast, no beep
         _eventBus.Publish(new ConnectionRequestedEvent(model));
+    }
+
+    // ----------------------------------------------------------- Phase 6 Plan 06-03
+
+    /// <summary>
+    /// Plan 06-03 CMD-01: no-op placeholder so <see cref="KeyboardShortcutRouter"/>
+    /// has a consistent <c>ICommand</c> surface for Ctrl+Shift+P. The real dialog
+    /// open lives in <see cref="MainWindow.OnPreviewKeyDown"/> because it needs
+    /// <c>IContentDialogService</c> + <c>IAppLockState</c> — dependencies the VM
+    /// shouldn't carry. Kept here so VM-only tests can verify the command exists
+    /// and routes are consistent.
+    /// </summary>
+    [RelayCommand]
+    private Task OpenCommandPalette() => Task.CompletedTask;
+
+    /// <summary>
+    /// Plan 06-03 CMD-04 Ctrl+T: quick connect.
+    /// v1 reuses <c>ConnectionTreeViewModel.NewConnectionCommand</c> — a dedicated
+    /// quick-connect dialog is deferred (not in Phase 6 scope).
+    /// </summary>
+    [RelayCommand]
+    private async Task QuickConnect()
+    {
+        if (ConnectionTree.NewConnectionCommand.CanExecute(null))
+        {
+            await ConnectionTree.NewConnectionCommand.ExecuteAsync(null);
+        }
+    }
+
+    /// <summary>
+    /// Plan 06-03 palette "Disconnect All" command: delegates to
+    /// <see cref="ITabHostManager.CloseAllAsync"/> (same sequential path as
+    /// Phase 5 D-08 app shutdown).
+    /// </summary>
+    [RelayCommand]
+    private async Task DisconnectAll()
+    {
+        await _tabHostManager.CloseAllAsync();
+    }
+
+    /// <summary>
+    /// Plan 06-03 D-05 / CMD-04 F11: flip <see cref="IsFullscreen"/>. MainWindow
+    /// code-behind observes the change and applies WindowStyle+WindowState.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleFullscreen() => IsFullscreen = !IsFullscreen;
+
+    /// <summary>
+    /// Plan 06-03 D-05 / CMD-04 Esc-in-fullscreen: exit fullscreen. Idempotent
+    /// when already non-fullscreen so a spurious Esc doesn't toggle.
+    /// </summary>
+    [RelayCommand]
+    private void ExitFullscreen()
+    {
+        if (IsFullscreen) IsFullscreen = false;
     }
 
     // ---------------------------------------------------------------- event handlers
