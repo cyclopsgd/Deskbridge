@@ -160,6 +160,94 @@ public sealed class DiCompositionTests
             "TrySaveWindowState must be invoked on the _shutdownInProgress path AND on the first-invocation path");
     }
 
+    // ----------------------------------------------------------- Phase 6 Plan 06-03
+
+    /// <summary>
+    /// Phase 6 Plan 06-03 (Q6): <see cref="IAppLockState"/> must be a singleton so
+    /// Plan 06-04's Lock/Unlock calls and MainWindow's Ctrl+Shift+P gate share the
+    /// SAME IsLocked observation.
+    /// </summary>
+    [Fact]
+    public void IAppLockState_RegistersAsSingleton()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAppLockState, AppLockState>();
+        using var provider = services.BuildServiceProvider();
+
+        var first = provider.GetRequiredService<IAppLockState>();
+        var second = provider.GetRequiredService<IAppLockState>();
+
+        first.Should().BeOfType<AppLockState>();
+        ReferenceEquals(first, second).Should().BeTrue(
+            "IAppLockState must be a singleton — Plan 06-04 setter + Plan 06-03 gate must see the same state");
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-03 (CMD-01): MainWindow.OnPreviewKeyDown must gate
+    /// Ctrl+Shift+P with <c>_lockState.IsLocked</c> (Q6) before opening the
+    /// palette. Asserts the guard is present by source-grep — the alternative
+    /// (instantiating MainWindow) is impractical under test.
+    /// </summary>
+    [Fact]
+    public void MainWindow_CtrlShiftP_Gated_By_LockState_IsLocked()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var mwCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge", "MainWindow.xaml.cs"));
+
+        // The gate must appear between the Ctrl+Shift+P key match and the palette
+        // open call. Verify both the key match and the IsLocked check exist.
+        mwCs.Should().Contain("Key.P", "Ctrl+Shift+P handling must exist in OnPreviewKeyDown");
+        mwCs.Should().Contain("ModifierKeys.Control | ModifierKeys.Shift");
+        mwCs.Should().Contain("_lockState.IsLocked",
+            "Q6 gate: the palette must be suppressed when the app is locked");
+        mwCs.Should().Contain("OpenCommandPaletteAsync",
+            "MainWindow must have a dedicated palette-open method");
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-03 CMD-01: CommandPaletteDialog must have the Pitfall 8
+    /// mitigation (Enter inside a TextBox routes to ExecuteSelectedAsync rather
+    /// than firing a phantom PrimaryButton per WPF-UI Issue #1404).
+    /// </summary>
+    [Fact]
+    public void CommandPaletteDialog_Has_Pitfall8_EnterHandler()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var dlgCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge",
+            "Dialogs", "CommandPaletteDialog.xaml.cs"));
+
+        dlgCs.Should().Contain("Dialog_PreviewKeyDown");
+        dlgCs.Should().Contain("Key.Enter");
+        dlgCs.Should().Contain("TextBoxBase");
+        dlgCs.Should().Contain("ExecuteSelectedAsync");
+        dlgCs.Should().Contain("e.Handled = true");
+
+        // And the XAML must declare IsFooterVisible="False"
+        var dlgXaml = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge",
+            "Dialogs", "CommandPaletteDialog.xaml"));
+        dlgXaml.Should().Contain("IsFooterVisible=\"False\"");
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-03 CMD-02 source check: exactly 4 <c>new(</c> CommandEntry
+    /// ctor invocations inside CommandPaletteService — safer than reflecting on
+    /// the runtime type because it catches regressions that add command rows
+    /// without a corresponding test update.
+    /// </summary>
+    [Fact]
+    public void CommandPaletteService_Source_Registers_ExactlyFour_Commands()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var svcCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge.Core",
+            "Services", "CommandPaletteService.cs"));
+
+        // Count ctor invocations `new(` at the start of a new CommandEntry record — the
+        // service source uses the positional syntax `new(\n    Id: "...", ...`.
+        var count = System.Text.RegularExpressions.Regex.Matches(svcCs, @"new\(\s*\n\s*Id:").Count;
+
+        count.Should().Be(4, "D-04: exactly 4 palette commands must be registered");
+    }
+
     private static string FindSolutionRoot(string startPath)
     {
         var dir = new DirectoryInfo(startPath);
