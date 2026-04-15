@@ -20,6 +20,8 @@ namespace Deskbridge;
 /// delegates to <see cref="MainWindowViewModel.ConnectionTree"/>), Ctrl+T (quick
 /// connect), F11 (toggle fullscreen, D-05), Esc (exit fullscreen when active;
 /// pass through otherwise so ContentDialog gets its native backdrop-close).</item>
+/// <item>Phase 6 Plan 06-04: Ctrl+L (manual app lock — SEC-04 / D-18).
+/// LockAppCommand delegates to AppLockController.LockAsync which is idempotent.</item>
 /// </list>
 ///
 /// <para>Ctrl+W stays in XAML <c>KeyBinding</c> — we do not re-handle it here.</para>
@@ -84,6 +86,18 @@ public static class KeyboardShortcutRouter
             if (vm.ConnectionTree.NewConnectionCommand.CanExecute(null))
             {
                 vm.ConnectionTree.NewConnectionCommand.Execute(null);
+            }
+            return true;
+        }
+
+        // Plan 06-04 Ctrl+L — manual app lock (SEC-04, D-18). LockAppCommand itself is
+        // idempotent; the controller's LockAsync checks IAppLockState.IsLocked before
+        // mutating state. Return true so the key doesn't bubble to the focused AxHost.
+        if (!shift && key == Key.L)
+        {
+            if (vm.LockAppCommand.CanExecute(null))
+            {
+                vm.LockAppCommand.Execute(null);
             }
             return true;
         }

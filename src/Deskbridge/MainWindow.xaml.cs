@@ -1,13 +1,16 @@
 using System.ComponentModel;
+using System.Windows.Controls;
 using System.Windows.Forms.Integration;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
+using Deskbridge.Core.Models;
 using Deskbridge.Core.Services;
 using Deskbridge.Core.Settings;
 using Deskbridge.Dialogs;
 using Deskbridge.Protocols.Rdp;
+using Deskbridge.Services;
 using Deskbridge.ViewModels;
 using Deskbridge.Views;
 using Wpf.Ui;
@@ -15,7 +18,12 @@ using Wpf.Ui.Controls;
 
 namespace Deskbridge;
 
-public partial class MainWindow : FluentWindow
+/// <summary>
+/// Phase 6 Plan 06-04: implements <see cref="IHostContainerProvider"/> so
+/// <see cref="AppLockController"/> can snapshot+collapse every WFH child
+/// without a direct MainWindow reference (Pitfall 5 Option A).
+/// </summary>
+public partial class MainWindow : FluentWindow, IHostContainerProvider
 {
     private readonly IConnectionCoordinator _coordinator;
     private readonly AirspaceSwapper _airspace;
@@ -42,6 +50,7 @@ public partial class MainWindow : FluentWindow
     /// so Security preferences from Plan 06-04 pass through untouched.
     /// </summary>
     private AppSettings _loadedSettings = new();
+
 
     // Phase 5 D-04: per-tab overlay dict keyed by ConnectionId. Replaces the Phase 4
     // single-slot (_overlayControl, _overlayVm, _overlayAirspaceToken) fields. Each
@@ -134,6 +143,15 @@ public partial class MainWindow : FluentWindow
             {
                 WindowState = System.Windows.WindowState.Maximized;
             }
+
+            // Plan 06-04 (SEC-03 / SEC-05): push the loaded Security section into
+            // the MainWindowViewModel so the settings-panel bindings render the
+            // persisted values on first open. Suppressed-persist flag in the VM
+            // ensures this initial apply doesn't round-trip a save.
+            if (DataContext is ViewModels.MainWindowViewModel vm)
+            {
+                vm.ApplySecuritySettings(_loadedSettings.Security);
+            }
         }
         catch (Exception ex)
         {
@@ -141,6 +159,33 @@ public partial class MainWindow : FluentWindow
         }
 
         _airspace.AttachToWindow(this);
+    }
+
+    /// <summary>
+    /// Plan 06-04 (IHostContainerProvider): exposes the persistent HostContainer
+    /// Grid (MainWindow.xaml line 318) as the <see cref="IHostContainerProvider"/>
+    /// surface so <see cref="AppLockController"/> can snapshot + collapse every
+    /// WFH child on lock (Pitfall 5 Option A). Explicit interface implementation
+    /// avoids colliding with the XAML-generated <c>HostContainer</c> field.
+    /// </summary>
+    Panel IHostContainerProvider.HostContainer => HostContainer;
+
+    /// <summary>
+    /// Plan 06-04 (SEC-05 / D-19): minimise-to-lock. Fires when <see cref="Window.WindowState"/>
+    /// changes. When LockOnMinimise is enabled and the window is minimised, publishes
+    /// <see cref="AppLockedEvent"/>(<see cref="LockReason.Minimise"/>) on the bus —
+    /// <see cref="AppLockController"/> subscribes and drives the lock flow. Bus-indirect
+    /// is used instead of a direct controller reference because the VM-hosted LockApp
+    /// command uses the same pattern (DI cycle avoidance).
+    /// </summary>
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState != System.Windows.WindowState.Minimized) return;
+        if (DataContext is not ViewModels.MainWindowViewModel vm) return;
+        if (!vm.LockOnMinimise) return;
+
+        _eventBus.Publish(new AppLockedEvent(LockReason.Minimise));
     }
 
     private bool _shutdownInProgress;
@@ -222,9 +267,15 @@ public partial class MainWindow : FluentWindow
             var w = isMaximized ? RestoreBounds.Width : Width;
             var h = isMaximized ? RestoreBounds.Height : Height;
 
+            // Plan 06-04 (SEC-03 / SEC-05): pick up the VM's current Security values
+            // (bindings may have mutated them since OnSourceInitialized). Fall back to
+            // the loaded record when the VM is missing or mid-teardown.
+            var security = vm?.CurrentSecuritySettings ?? _loadedSettings.Security;
+
             var updated = _loadedSettings with
             {
-                Window = new WindowStateRecord(x, y, w, h, isMaximized, sidebarOpen, sidebarWidth)
+                Window = new WindowStateRecord(x, y, w, h, isMaximized, sidebarOpen, sidebarWidth),
+                Security = security,
             };
 
             _windowState.SaveAsync(updated).GetAwaiter().GetResult();
