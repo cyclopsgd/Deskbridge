@@ -1,0 +1,60 @@
+<UserControl x:Class="Deskbridge.Controls.ToastStackControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:Deskbridge.ViewModels"
+             HorizontalAlignment="Right"
+             VerticalAlignment="Bottom"
+             Margin="0,0,24,24"
+             IsHitTestVisible="True">
+    <ItemsControl x:Name="ItemsHost"
+                  ItemsSource="{Binding Items}">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Vertical" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type vm:ToastItemViewModel}">
+                <Border Width="360" Margin="0,0,0,8"
+                        CornerRadius="8"
+                        Padding="16"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0"
+                                       Symbol="{Binding Icon}"
+                                       FontSize="24"
+                                       VerticalAlignment="Top"
+                                       Margin="0,0,12,0" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding Title}"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="{Binding Message}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="2"
+                                   Appearance="Transparent"
+                                   Width="24"
+                                   Height="24"
+                                   Padding="0"
+                                   Command="{Binding DismissCommand}">
+                            <ui:SymbolIcon Symbol="Dismiss16" FontSize="16" />
+                        </ui:Button>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>
