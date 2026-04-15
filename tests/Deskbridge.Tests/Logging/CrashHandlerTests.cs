@@ -169,29 +169,35 @@ public sealed class CrashHandlerTests
     }
 
     // ------------------------------------------------------------------
-    // Test 7 — OnDispatcherUnhandled logs Fatal AND sets Handled=true
+    // Test 7 — OnDispatcherUnhandled contract + Plan 06-04 real dialog path
     // ------------------------------------------------------------------
-    // Note: Constructing DispatcherUnhandledExceptionEventArgs requires an internal
-    // ctor, so direct invocation isn't feasible without reflection. We assert the
-    // observable contract via Test 8's source-order check + the production stub
-    // returning true so e.Handled = true holds.
+    // Constructing DispatcherUnhandledExceptionEventArgs requires an internal
+    // ctor, so direct invocation isn't feasible without reflection. We assert
+    // the observable contract via source-grep:
+    //   - OnDispatcherUnhandled sets e.Handled = true when TryShowCrashDialog
+    //     returns true (the app survives the dispatcher exception).
+    //   - Plan 06-04 replaced the log-only stub with a real CrashDialog marshal:
+    //     TryShowCrashDialog now invokes Application.Current.Dispatcher.Invoke +
+    //     new CrashDialog + ShowAsync, and returns true only when the dialog
+    //     actually opened (shown bool).
     [Fact]
-    public void OnDispatcherUnhandled_StubReturnsTrue_SoDispatcherSetsHandled()
+    public void OnDispatcherUnhandled_SetsHandled_AndTryShowCrashDialog_ShowsRealDialog()
     {
-        // The dispatcher handler's contract: TryShowCrashDialog returns true, the
-        // dispatcher handler then sets e.Handled = true. We can verify the stub
-        // returns true by reflection (the stub is private) — easier: verify the
-        // INVARIANT holds in the source by string-grep below.
         var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
         var crashHandlerCs = File.ReadAllText(
             Path.Combine(solutionRoot, "src", "Deskbridge", "CrashHandler.cs"));
 
-        // The dispatcher handler MUST set e.Handled = true when TryShowCrashDialog returned true.
+        // Dispatcher handler invariant (Plan 06-01, preserved by Plan 06-04).
         crashHandlerCs.Should().Contain("e.Handled = true",
             "OnDispatcherUnhandled must mark the exception as handled so the app survives");
-        // The stub MUST return true.
-        crashHandlerCs.Should().Contain("return true;",
-            "TryShowCrashDialog stub must return true so e.Handled is set");
+
+        // Plan 06-04: real dialog path replaces the log-only stub.
+        crashHandlerCs.Should().Contain("Application.Current?.Dispatcher",
+            "TryShowCrashDialog must marshal to the UI dispatcher (Plan 06-04 LOG-04)");
+        crashHandlerCs.Should().Contain("new CrashDialog",
+            "TryShowCrashDialog must construct the real CrashDialog (Plan 06-04 LOG-04)");
+        crashHandlerCs.Should().NotContain("TryShowCrashDialog stub",
+            "Plan 06-04 replaced the log-only stub — the marker string must be gone");
     }
 
     // ------------------------------------------------------------------
