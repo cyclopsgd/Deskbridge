@@ -118,14 +118,14 @@ Plans:
   3. Application logs are written to %AppData%/Deskbridge/logs/ with rolling file rotation, and credentials never appear in logs
   4. An audit trail at %AppData%/Deskbridge/audit.jsonl records all connection events, credential changes, and app lock/unlock events
   5. On first run the user sets a master password; on every subsequent launch a lock overlay blocks access until the password is entered; the app auto-locks after 15 minutes of inactivity
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
-- [ ] 06-03: TBD
-- [ ] 06-04: TBD
+- [ ] 06-01-PLAN.md -- Logging & Audit (Wave 1): IAuditLogger + monthly jsonl writer (SemaphoreSlim + FileShare.ReadWrite), RedactSensitivePolicy, CrashHandler 3-hook install, SerilogSetup with 10MB/5-retained config
+- [ ] 06-02-PLAN.md -- Notifications + Window State (Wave 2): custom ItemsControl ToastStackControl (Q1 Option B — max 3, newest-on-top, hover pause), ToastSubscriptionService (6 event bindings + UI-SPEC copy), AppSettings schema + atomic WindowStateService
+- [ ] 06-03-PLAN.md -- Command Palette + Shortcuts (Wave 3): IAppLockState scaffolding, ICommandPaletteService (4 D-04 commands + ScoreCommand parity), CommandPaletteDialog/ViewModel, KeyboardShortcutRouter extensions (Ctrl+Shift+P/Ctrl+N/Ctrl+T/F11/Esc)
+- [ ] 06-04-PLAN.md -- App Security (Wave 4, non-autonomous): Wave 0 LockOverlayDialog chrome spike, PBKDF2 MasterPasswordService, LockOverlayDialog + ViewModel, IdleLockService (Pitfall 6 filter), SessionLockService (Pattern 9), AppLockController (Pitfall 5 airspace), CrashDialog UI, Ctrl+L, settings panel, 3 UAT files
 
 ### Phase 7: Update & Migration
 **Goal**: The application silently checks for updates and offers one-click upgrade, and users can import their existing mRemoteNG connections and export connection data
@@ -158,5 +158,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Connection Management | 0/4 | Planning complete | - |
 | 4. RDP Integration | 0/3 | Planning complete | - |
 | 5. Tab Management | 2/3 | In Progress|  |
-| 6. Cross-Cutting Features | 0/4 | Not started | - |
+| 6. Cross-Cutting Features | 0/4 | Planning complete | - |
 | 7. Update & Migration | 0/3 | Not started | - |
