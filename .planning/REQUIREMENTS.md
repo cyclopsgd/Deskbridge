@@ -76,10 +76,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Notifications & Status
 
-- [ ] **NOTF-01**: Toast notification stack (bottom-right) for connection events: connected, disconnected, reconnecting, errors
-- [ ] **NOTF-02**: No modal dialogs for non-critical events
-- [ ] **NOTF-03**: Notifications auto-generated from event bus subscriptions (connection failures, updates available)
-- [ ] **NOTF-04**: Window state persistence: position, size, maximised, sidebar state saved to %AppData%/Deskbridge/settings.json
+- [x] **NOTF-01**: Toast notification stack (bottom-right) for connection events: connected, disconnected, reconnecting, errors
+- [x] **NOTF-02**: No modal dialogs for non-critical events
+- [x] **NOTF-03**: Notifications auto-generated from event bus subscriptions (connection failures, updates available)
+- [x] **NOTF-04**: Window state persistence: position, size, maximised, sidebar state saved to %AppData%/Deskbridge/settings.json
 
 ### Logging & Audit
 
@@ -213,10 +213,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMD-02 | Phase 6 | Pending |
 | CMD-03 | Phase 6 | Pending |
 | CMD-04 | Phase 6 | Pending |
-| NOTF-01 | Phase 6 | Pending |
-| NOTF-02 | Phase 6 | Pending |
-| NOTF-03 | Phase 6 | Pending |
-| NOTF-04 | Phase 6 | Pending |
+| NOTF-01 | Phase 6 | Complete |
+| NOTF-02 | Phase 6 | Complete |
+| NOTF-03 | Phase 6 | Complete |
+| NOTF-04 | Phase 6 | Complete |
 | LOG-01 | Phase 6 | Complete |
 | LOG-02 | Phase 6 | Complete |
 | LOG-03 | Phase 6 | Complete |
