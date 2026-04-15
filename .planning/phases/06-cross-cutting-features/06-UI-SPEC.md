@@ -1,10 +1,16 @@
 ---
 phase: 6
 slug: cross-cutting-features
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-04-14
+reviewed_at: 2026-04-15
+checker_verdict: APPROVED
+checker_flags:
+  - Dimension 1 Copywriting — "Unlock" / "Restart" single-word CTAs (non-blocking, idiomatic)
+  - Dimension 2 Visuals — no explicit focal-point declaration per surface (non-blocking, hierarchy implied)
+  - Dimension 4 Typography — 11px section-header label not listed in the 4-size type ramp (non-blocking, inherited pattern)
 ---
 
 # Phase 6 — UI Design Contract: Cross-Cutting Features
