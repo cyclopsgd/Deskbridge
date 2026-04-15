@@ -16,12 +16,12 @@ Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle managem
 - ✓ Core services: DI container, event bus, notification service, connection pipeline interfaces — Phase 1
 - ✓ WPF shell: FluentWindow, dark theme, icon rail, slide-out panel, tab bar, status bar, viewport layout — Phase 2
 - ✓ Connection management: JSON persistence, TreeView, connection editor, credential storage with inheritance — Phase 3
+- ✓ RDP integration: ActiveX wrapper, siting, disposal, connect/disconnect lifecycle via pipeline — Phase 4
+- ✓ Tab management: open/close/switch, active-only rendering, disposal on close — Phase 5
+- ✓ Command palette and keyboard shortcuts — Phase 6
+- ✓ Notifications, window state persistence, Serilog logging, audit log, app-level security (master password, lock overlay, idle/session auto-lock, crash dialog) — Phase 6
 
 ### Active
-- [ ] RDP integration: ActiveX wrapper, siting, disposal, connect/disconnect lifecycle via pipeline
-- [ ] Tab management: open/close/switch, active-only rendering, disposal on close
-- [ ] Command palette and keyboard shortcuts
-- [ ] Notifications, window state persistence, Serilog logging, audit log
 - [ ] Auto-update via Velopack + GitHub Actions release pipeline
 - [ ] mRemoteNG import and JSON/CSV export
 
@@ -94,4 +94,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after Phase 3 completion*
+*Last updated: 2026-04-15 after Phase 6 completion*
