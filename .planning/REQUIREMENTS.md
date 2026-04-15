@@ -83,11 +83,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Logging & Audit
 
-- [ ] **LOG-01**: Serilog rolling file logging at %AppData%/Deskbridge/logs/ with 10MB cap and 5 file rotation
-- [ ] **LOG-02**: Audit log at %AppData%/Deskbridge/audit.jsonl as append-only JSON lines with monthly rotation
-- [ ] **LOG-03**: Audit log records all connection events, credential changes, imports/exports, app lock/unlock
-- [ ] **LOG-04**: Global exception handler with per-connection error isolation
-- [ ] **LOG-05**: Credentials never appear in log files
+- [x] **LOG-01**: Serilog rolling file logging at %AppData%/Deskbridge/logs/ with 10MB cap and 5 file rotation
+- [x] **LOG-02**: Audit log at %AppData%/Deskbridge/audit.jsonl as append-only JSON lines with monthly rotation
+- [x] **LOG-03**: Audit log records all connection events, credential changes, imports/exports, app lock/unlock
+- [x] **LOG-04**: Global exception handler with per-connection error isolation
+- [x] **LOG-05**: Credentials never appear in log files
 
 ### App Security
 
@@ -217,11 +217,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTF-02 | Phase 6 | Pending |
 | NOTF-03 | Phase 6 | Pending |
 | NOTF-04 | Phase 6 | Pending |
-| LOG-01 | Phase 6 | Pending |
-| LOG-02 | Phase 6 | Pending |
-| LOG-03 | Phase 6 | Pending |
-| LOG-04 | Phase 6 | Pending |
-| LOG-05 | Phase 6 | Pending |
+| LOG-01 | Phase 6 | Complete |
+| LOG-02 | Phase 6 | Complete |
+| LOG-03 | Phase 6 | Complete |
+| LOG-04 | Phase 6 | Complete |
+| LOG-05 | Phase 6 | Complete |
 | SEC-01 | Phase 6 | Pending |
 | SEC-02 | Phase 6 | Pending |
 | SEC-03 | Phase 6 | Pending |

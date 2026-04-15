@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-02-PLAN.md (multi-host HostContainer refactor)
-last_updated: "2026-04-14T19:57:32.809Z"
-last_activity: 2026-04-14 -- Phase 05 execution started
+stopped_at: Completed 06-01-PLAN.md (logging + audit + crash handler foundation)
+last_updated: "2026-04-15T11:33:53.055Z"
+last_activity: 2026-04-15
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 14
-  percent: 93
+  completed_phases: 5
+  total_plans: 19
+  completed_plans: 16
+  percent: 84
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 05 — tab-management
+**Current focus:** Phase 06 — cross-cutting-features
 
 ## Current Position
 
-Phase: 05 (tab-management) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 05
-Last activity: 2026-04-14 -- Phase 05 execution started
+Phase: 06 (cross-cutting-features) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-15
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P04 | 14min | 2 tasks | 9 files |
 | Phase 05 P01 | 18min | 3 tasks | 18 files |
 | Phase 05-tab-management P02 | 35min | 3 tasks | 7 files |
+| Phase 06 P01 | 11min | 4 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,13 @@ Recent decisions affecting current work:
 - [Phase 05]: [Phase 05-01]: Q2 CancelReconnect invoked at each close path (CloseTabAsync + CloseOthersAsync + CloseAllAsync) BEFORE IDisconnectPipeline.DisconnectAsync; single-CTS design preserved (per-connection CTS deferred until multiple concurrent backoff loops are actually possible)
 - [Phase 05-tab-management]: Plan 02: Integration tests use Grid-harness + XAML-text-parse rather than full MainWindow XAML instantiation — cross-thread Freezable exceptions with shared Application resources made per-STA-thread MainWindow construction unviable. Production logic exercised via standalone Grid mirror.
 - [Phase 05-tab-management]: Plan 02: MainWindowViewModel.Dispatch uses synchronous Dispatcher.FromThread check rather than Application.Current.Dispatcher.Invoke — Tab*Events are always published from the UI dispatcher in production, and cross-thread Invoke caused TaskCanceledException in tests.
+- [Phase 06]: [Phase 06-01]: AuditLogger uses internal Func<DateTime> UtcNowProvider seam over IClock injection — avoids polluting Core with a one-off interface
+- [Phase 06]: [Phase 06-01]: RedactSensitivePolicy lives in Deskbridge.Core (not exe) so future plans 06-02..06-04 instantiating it from Core consumers (notification + palette) work without exe reference
+- [Phase 06]: [Phase 06-01]: Serilog.Sinks.File added to Deskbridge.Core (Rule 3 blocking issue — SerilogSetup needs RollingInterval + WriteTo.File extension method)
+- [Phase 06]: [Phase 06-01]: TryShowCrashDialog left as logging-only stub returning true; Plan 06-04 wires the ContentDialog UI per UI-SPEC §Crash Dialog. Stub returns true so dispatcher hook still sets e.Handled and app survives.
+- [Phase 06]: [Phase 06-01]: Hook-state booleans (HookState static class) over reflection on AppDomain/TaskScheduler internal event invocation lists — simpler, portable, exposes exactly the contract tests need
+- [Phase 06]: [Phase 06-01]: Pattern 4 hook split — AppDomain + UnobservedTask in Program.Main (before App ctor); Dispatcher in App.OnStartup (Application.Current null at Main time)
+- [Phase 06]: [Phase 06-01]: IDestructuringPolicy (denylist) over Destructure.ByTransforming<T> — auto-protects every type Serilog destructures including future types added in plans 06-02..06-04 + Phase 7 (no per-type opt-in required)
 
 ### Pending Todos
 
@@ -118,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T06:12:15.260Z
-Stopped at: Completed 05-02-PLAN.md (multi-host HostContainer refactor)
+Last session: 2026-04-15T11:33:32.743Z
+Stopped at: Completed 06-01-PLAN.md (logging + audit + crash handler foundation)
 Resume file: None
