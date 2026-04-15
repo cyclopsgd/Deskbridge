@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md (logging + audit + crash handler foundation)
-last_updated: "2026-04-15T11:33:53.055Z"
+stopped_at: Completed 06-02-PLAN.md (toast stack + window state persistence)
+last_updated: "2026-04-15T11:52:13.902Z"
 last_activity: 2026-04-15
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 19
-  completed_plans: 16
-  percent: 84
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 06 (cross-cutting-features) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-15
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05 P01 | 18min | 3 tasks | 18 files |
 | Phase 05-tab-management P02 | 35min | 3 tasks | 7 files |
 | Phase 06 P01 | 11min | 4 tasks | 16 files |
+| Phase 06-cross-cutting-features P02 | 12min | 4 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,11 @@ Recent decisions affecting current work:
 - [Phase 06]: [Phase 06-01]: Hook-state booleans (HookState static class) over reflection on AppDomain/TaskScheduler internal event invocation lists — simpler, portable, exposes exactly the contract tests need
 - [Phase 06]: [Phase 06-01]: Pattern 4 hook split — AppDomain + UnobservedTask in Program.Main (before App ctor); Dispatcher in App.OnStartup (Application.Current null at Main time)
 - [Phase 06]: [Phase 06-01]: IDestructuringPolicy (denylist) over Destructure.ByTransforming<T> — auto-protects every type Serilog destructures including future types added in plans 06-02..06-04 + Phase 7 (no per-type opt-in required)
+- [Phase 06-cross-cutting-features]: [Phase 06-02]: Q1 Option B custom ItemsControl ToastStackControl replaces WPF-UI SnackbarPresenter (Pitfall 3 FIFO queue incompatible with D-07 max-3/hover-pause). SnackbarPresenter RETAINED for Phase 5 15-session warning.
+- [Phase 06-cross-cutting-features]: [Phase 06-02]: ToastStackViewModel + ToastSubscriptionService MUST be singletons — XAML DataContext reads Items while subscription service writes Items; transient scope would silently drop pushes.
+- [Phase 06-cross-cutting-features]: [Phase 06-02]: AppSettings dual-schema (Window + Security) landed NOW in 06-02 — Plan 06-04 consumes SecuritySettingsRecord unchanged (no migration / no new file).
+- [Phase 06-cross-cutting-features]: [Phase 06-02]: MainWindow.OnClosing TrySaveWindowState called on BOTH first-invocation (before async CloseAllAsync) + second-invocation (after async rejoins) — survives drag/resize during disconnect window; atomic tmp-rename makes redundant write cheap.
+- [Phase 06-cross-cutting-features]: [Phase 06-02]: Reconnect→Reconnected disambiguation via _reconnectingIds HashSet in ToastSubscriptionService — ReconnectingEvent adds id; subsequent ConnectionEstablishedEvent with id-in-set produces 'Reconnected' 3s copy (UI-SPEC line 392). Failed clears id so later retry reads as fresh Connected.
 
 ### Pending Todos
 
@@ -126,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T11:33:32.743Z
-Stopped at: Completed 06-01-PLAN.md (logging + audit + crash handler foundation)
+Last session: 2026-04-15T11:52:13.898Z
+Stopped at: Completed 06-02-PLAN.md (toast stack + window state persistence)
 Resume file: None
