@@ -125,7 +125,7 @@ Plans:
 - [x] 06-01-PLAN.md -- Logging & Audit (Wave 1): IAuditLogger + monthly jsonl writer (SemaphoreSlim + FileShare.ReadWrite), RedactSensitivePolicy, CrashHandler 3-hook install, SerilogSetup with 10MB/5-retained config
 - [x] 06-02-PLAN.md -- Notifications + Window State (Wave 2): custom ItemsControl ToastStackControl (Q1 Option B — max 3, newest-on-top, hover pause), ToastSubscriptionService (6 event bindings + UI-SPEC copy), AppSettings schema + atomic WindowStateService
 - [x] 06-03-PLAN.md -- Command Palette + Shortcuts (Wave 3): IAppLockState scaffolding, ICommandPaletteService (4 D-04 commands + ScoreCommand parity), CommandPaletteDialog/ViewModel, KeyboardShortcutRouter extensions (Ctrl+Shift+P/Ctrl+N/Ctrl+T/F11/Esc)
-- [ ] 06-04-PLAN.md -- App Security (Wave 4, non-autonomous): Wave 0 LockOverlayDialog chrome spike, PBKDF2 MasterPasswordService, LockOverlayDialog + ViewModel, IdleLockService (Pitfall 6 filter), SessionLockService (Pattern 9), AppLockController (Pitfall 5 airspace), CrashDialog UI, Ctrl+L, settings panel, 3 UAT files
+- [x] 06-04-PLAN.md -- App Security (Wave 4, non-autonomous): Wave 0 LockOverlayDialog chrome spike, PBKDF2 MasterPasswordService, LockOverlayDialog + ViewModel, IdleLockService (Pitfall 6 filter), SessionLockService (Pattern 9), AppLockController (Pitfall 5 airspace), CrashDialog UI, Ctrl+L, settings panel, 3 UAT files
 
 ### Phase 7: Update & Migration
 **Goal**: The application silently checks for updates and offers one-click upgrade, and users can import their existing mRemoteNG connections and export connection data
