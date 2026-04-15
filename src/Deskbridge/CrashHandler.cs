@@ -1,5 +1,8 @@
 using System.Windows.Threading;
+using Deskbridge.Dialogs;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using Wpf.Ui;
 
 namespace Deskbridge;
 
@@ -120,23 +123,68 @@ public static class CrashHandler
     }
 
     /// <summary>
-    /// STUB — Plan 06-04 replaces this with the actual <c>ui:ContentDialog</c> per
-    /// UI-SPEC §Crash Dialog (Copy Details / Restart buttons, no stack trace visible).
-    /// For now we log-only and return <c>true</c> so the dispatcher hook still sets
-    /// <c>e.Handled = true</c> and the app survives.
+    /// Plan 06-04 (LOG-04, D-11) real CrashDialog UI. Marshals to the WPF UI
+    /// dispatcher (the dispatcher hook fires on the UI thread, but AppDomain /
+    /// TaskScheduler hooks can fire from anywhere), resolves
+    /// <see cref="IContentDialogService"/> from the app's DI container, and
+    /// shows a <see cref="CrashDialog"/>. Returns <c>true</c> when the dialog
+    /// opened so the dispatcher hook can set <c>e.Handled = true</c> and the
+    /// app survives; <c>false</c> on any failure in the marshal / dialog path
+    /// so the caller can fall back to logging + exit.
     /// </summary>
     /// <remarks>
-    /// A11: Velopack restart is NOT used — Plan 06-04 will use a plain
-    /// <c>Process.Start(MainModule.FileName)</c>, which is sufficient for the v1 flow.
+    /// A11: Velopack restart is NOT used — <see cref="CrashDialog"/> uses a plain
+    /// <c>Process.Start(MainModule.FileName)</c>, sufficient for the v1 flow.
     /// </remarks>
     private static bool TryShowCrashDialog(Exception ex)
     {
-        // TODO Plan 06-04: marshal to UI thread via Application.Current.Dispatcher,
-        // show ui:ContentDialog with Copy Details / Restart buttons per UI-SPEC.
-        // Reference the exception so the parameter is not "unused" — the production
-        // implementation will pass it to the dialog's "Copy Details" payload.
-        _ = ex;
-        Log.Information("CrashHandler.TryShowCrashDialog stub — Plan 06-04 wires the UI.");
-        return true;
+        try
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is null)
+            {
+                // Application hasn't been constructed yet (crash during Main).
+                // Logging already happened; nothing more we can do.
+                return false;
+            }
+
+            var shown = false;
+            dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    if (System.Windows.Application.Current is not App app)
+                    {
+                        Log.Warning("CrashHandler: Application.Current is not the Deskbridge.App instance");
+                        return;
+                    }
+
+                    var dialogService = app.Services?.GetService<IContentDialogService>();
+                    if (dialogService is null)
+                    {
+                        Log.Warning("CrashHandler: IContentDialogService not available — dialog not shown");
+                        return;
+                    }
+
+                    var dialog = new CrashDialog(ex, dialogService);
+                    // Fire-and-forget ShowAsync — the Task completes when the user clicks
+                    // Restart (ContentDialogButton.Close). Copy Details cancels the close so
+                    // the user can paste + then click Restart. We do NOT await because the
+                    // dispatcher hook must return before the dialog can render.
+                    _ = dialog.ShowAsync();
+                    shown = true;
+                }
+                catch (Exception inner)
+                {
+                    Log.Error(inner, "CrashDialog itself failed to show");
+                }
+            });
+            return shown;
+        }
+        catch (Exception outer)
+        {
+            Log.Error(outer, "Dispatcher.Invoke failed in TryShowCrashDialog");
+            return false;
+        }
     }
 }

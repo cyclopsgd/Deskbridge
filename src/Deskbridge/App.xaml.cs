@@ -22,6 +22,15 @@ public partial class App : Application
 {
     private ServiceProvider? _serviceProvider;
 
+    /// <summary>
+    /// Phase 6 Plan 06-04 (LOG-04): exposes the DI container so
+    /// <see cref="CrashHandler.TryShowCrashDialog"/> can resolve
+    /// <see cref="IContentDialogService"/> without taking a static dependency
+    /// on the service collection. Nullable because a crash during App ctor
+    /// would fire BEFORE the provider is built.
+    /// </summary>
+    internal IServiceProvider? Services => _serviceProvider;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
