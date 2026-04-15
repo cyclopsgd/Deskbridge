@@ -50,14 +50,6 @@ public partial class MainWindow : FluentWindow
     // interfere — each gets its own entry inside HostContainer.
     private readonly Dictionary<Guid, (ReconnectOverlay Control, ReconnectOverlayViewModel Vm, IDisposable? AirspaceToken)> _overlays = new();
 
-    /// <summary>
-    /// Plan 06-04 Task 0 (Wave 0 spike): retain the injected dialog service so the
-    /// throwaway <see cref="LockOverlayDialog"/> instantiation in <see cref="OnLoadedOnce"/>
-    /// can build it via the same host registration every other dialog uses. Remove this
-    /// field AND <see cref="OnLoadedOnce"/> wiring in Task 1 once the chrome is verified.
-    /// </summary>
-    private readonly IContentDialogService _contentDialogService;
-
     public MainWindow(
         ViewModels.MainWindowViewModel viewModel,
         ISnackbarService snackbarService,
@@ -87,13 +79,6 @@ public partial class MainWindow : FluentWindow
         _windowState = windowState;
         _lockState = lockState;
         _paletteFactory = paletteFactory;
-        _contentDialogService = contentDialogService;
-
-        // TODO Plan 06-04 Task 0 (Wave 0 spike, Q4): one-shot throwaway show of
-        // LockOverlayDialog to verify IsFooterVisible=False chrome. Remove this
-        // Loaded hook + _spikeShown guard + OnLoadedOnce method in Task 1 once
-        // the chrome has been approved by the user.
-        Loaded += OnLoadedOnce;
 
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
@@ -119,39 +104,6 @@ public partial class MainWindow : FluentWindow
         // showing through the viewport, blocking the "Ctrl+N to create" empty-
         // state placeholder from being visible.
         _eventBus.Subscribe<TabClosedEvent>(this, OnTabClosedSync);
-    }
-
-    /// <summary>
-    /// Plan 06-04 Task 0 Wave 0 spike (Q4): one-shot guard so the throwaway
-    /// <see cref="LockOverlayDialog"/> instantiation in <see cref="OnLoadedOnce"/>
-    /// only fires on the first <c>Loaded</c> event — WPF's <c>Loaded</c> raises
-    /// again when the window is re-shown after minimise, and we only want the
-    /// spike once per session.
-    /// </summary>
-    private bool _spikeShown;
-
-    /// <summary>
-    /// Plan 06-04 Task 0 Wave 0 spike (Q4): throwaway invocation of the
-    /// <see cref="LockOverlayDialog"/> shell to verify that WPF-UI's
-    /// <c>IsFooterVisible="False"</c> plus the opaque <c>ApplicationBackgroundBrush</c>
-    /// hide both the default footer button row AND any stray title-bar close-X.
-    /// Delete this method (and the <c>Loaded += OnLoadedOnce</c> wiring + the
-    /// <c>_spikeShown</c> field + the <see cref="_contentDialogService"/> field
-    /// below) in Task 1 once the user approves the chrome.
-    /// </summary>
-    private async void OnLoadedOnce(object sender, System.Windows.RoutedEventArgs e)
-    {
-        if (_spikeShown) return;
-        _spikeShown = true;
-        try
-        {
-            var dialog = new LockOverlayDialog(_contentDialogService);
-            await dialog.ShowAsync();
-        }
-        catch (Exception ex)
-        {
-            Serilog.Log.Warning(ex, "Plan 06-04 Task 0 spike failed to render LockOverlayDialog");
-        }
     }
 
     /// <summary>
