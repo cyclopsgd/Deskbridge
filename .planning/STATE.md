@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-02-PLAN.md (toast stack + window state persistence)
-last_updated: "2026-04-15T11:52:13.902Z"
+stopped_at: Completed 06-03-PLAN.md (command palette + keyboard shortcuts)
+last_updated: "2026-04-15T12:12:15.171Z"
 last_activity: 2026-04-15
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 06 (cross-cutting-features) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-15
 
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05-tab-management P02 | 35min | 3 tasks | 7 files |
 | Phase 06 P01 | 11min | 4 tasks | 16 files |
 | Phase 06-cross-cutting-features P02 | 12min | 4 tasks | 20 files |
+| Phase 06-cross-cutting-features P03 | 14 | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,11 @@ Recent decisions affecting current work:
 - [Phase 06-cross-cutting-features]: [Phase 06-02]: AppSettings dual-schema (Window + Security) landed NOW in 06-02 — Plan 06-04 consumes SecuritySettingsRecord unchanged (no migration / no new file).
 - [Phase 06-cross-cutting-features]: [Phase 06-02]: MainWindow.OnClosing TrySaveWindowState called on BOTH first-invocation (before async CloseAllAsync) + second-invocation (after async rejoins) — survives drag/resize during disconnect window; atomic tmp-rename makes redundant write cheap.
 - [Phase 06-cross-cutting-features]: [Phase 06-02]: Reconnect→Reconnected disambiguation via _reconnectingIds HashSet in ToastSubscriptionService — ReconnectingEvent adds id; subsequent ConnectionEstablishedEvent with id-in-set produces 'Reconnected' 3s copy (UI-SPEC line 392). Failed clears id so later retry reads as fresh Connected.
+- [Phase 06-cross-cutting-features]: [Phase 06-03]: Ctrl+Shift+P handled directly in MainWindow.OnPreviewKeyDown (not KeyboardShortcutRouter) because the router is pure-data — IContentDialogService / IAppLockState stay in the Window. VM has a no-op OpenCommandPaletteCommand for router symmetry.
+- [Phase 06-cross-cutting-features]: [Phase 06-03]: Connection-row score proxy = 100 - index instead of refactoring IConnectionQuery.Search to expose numeric scores. Preserves Phase 3 surface; connection rows retain Search ordering; commands interleave via ScoreCommand absolute scores (0-100).
+- [Phase 06-cross-cutting-features]: [Phase 06-03]: ICommandPaletteService registered via DI factory closure (not straight AddSingleton<ICommandPaletteService, CommandPaletteService>). The 4 ExecuteAsync closures delegate to MainWindowViewModel / ConnectionTreeViewModel commands — keeps Deskbridge.Core free of exe types.
+- [Phase 06-cross-cutting-features]: [Phase 06-03]: AppLockState.Lock/Unlock are idempotent — re-entry while already in that state does NOT re-raise LockStateChanged. Protects Plan 06-04 subscribers from duplicate AppLocked/AppUnlocked events on master-password retry flows.
+- [Phase 06-cross-cutting-features]: [Phase 06-03]: Pitfall 8 Enter-in-TextBox handler verified via source-grep (DiComposition test) not direct KeyEventArgs invocation — WPF internal-only ctors make reflection-based testing brittle. Same pattern as Plan 06-01 CrashHandler Dispatcher-hook.
 
 ### Pending Todos
 
@@ -132,6 +138,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T11:52:13.898Z
-Stopped at: Completed 06-02-PLAN.md (toast stack + window state persistence)
+Last session: 2026-04-15T12:12:15.167Z
+Stopped at: Completed 06-03-PLAN.md (command palette + keyboard shortcuts)
 Resume file: None
