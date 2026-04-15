@@ -23,6 +23,7 @@
             <converters:TreeViewItemIndentConverter x:Key="TreeViewItemIndent" IndentSize="19" />
             <converters:BoolToChevronConverter x:Key="BoolToChevron" />
             <converters:EnumToVisibilityConverter x:Key="EnumToVisibility" />
+            <converters:NullToCollapsedConverter x:Key="NullToCollapsed" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
