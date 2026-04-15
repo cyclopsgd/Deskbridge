@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Services;
+using Deskbridge.Core.Settings;
 using Deskbridge.Protocols.Rdp;
 using Deskbridge.ViewModels;
 using Deskbridge.Views;
@@ -19,6 +20,14 @@ public partial class MainWindow : FluentWindow
     private readonly AirspaceSwapper _airspace;
     private readonly ITabHostManager _tabHostManager;
     private readonly IEventBus _eventBus;
+    private readonly IWindowStateService _windowState;
+
+    /// <summary>
+    /// Phase 6 Plan 06-02 (NOTF-04): cached settings snapshot from OnSourceInitialized.
+    /// OnClosing builds the outgoing settings via <c>_loadedSettings with { Window = ... }</c>
+    /// so Security preferences from Plan 06-04 pass through untouched.
+    /// </summary>
+    private AppSettings _loadedSettings = new();
 
     // Phase 5 D-04: per-tab overlay dict keyed by ConnectionId. Replaces the Phase 4
     // single-slot (_overlayControl, _overlayVm, _overlayAirspaceToken) fields. Each
@@ -35,7 +44,8 @@ public partial class MainWindow : FluentWindow
         IConnectionCoordinator coordinator,
         AirspaceSwapper airspace,
         ITabHostManager tabHostManager,
-        IEventBus eventBus)
+        IEventBus eventBus,
+        IWindowStateService windowState)
     {
         DataContext = viewModel;
         InitializeComponent();
@@ -50,6 +60,7 @@ public partial class MainWindow : FluentWindow
         _airspace = airspace;
         _tabHostManager = tabHostManager;
         _eventBus = eventBus;
+        _windowState = windowState;
 
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
@@ -75,10 +86,37 @@ public partial class MainWindow : FluentWindow
     /// <summary>
     /// Attaches the AirspaceSwapper to the window once the HwndSource is realized
     /// (04-RESEARCH Pattern 5 usage). Safe after InitializeComponent + Show.
+    ///
+    /// <para>Phase 6 Plan 06-02 (NOTF-04): hydrate persisted window state from
+    /// <c>settings.json</c> BEFORE <see cref="_airspace"/>.AttachToWindow so the
+    /// window is sized/positioned correctly the first time it renders. Load is
+    /// synchronous (<c>.GetAwaiter().GetResult()</c>) — the file is small (&lt;1 KB)
+    /// and an async load would let the window flicker at default dimensions before
+    /// the async continuation applied the saved bounds.</para>
     /// </summary>
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+
+        // NOTF-04: hydrate window state from settings.json before the window renders.
+        try
+        {
+            _loadedSettings = _windowState.LoadAsync().GetAwaiter().GetResult();
+            var w = _loadedSettings.Window;
+            Left = w.X;
+            Top = w.Y;
+            Width = w.Width;
+            Height = w.Height;
+            if (w.IsMaximized)
+            {
+                WindowState = System.Windows.WindowState.Maximized;
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to apply loaded window state — falling back to XAML defaults");
+        }
+
         _airspace.AttachToWindow(this);
     }
 
@@ -101,11 +139,21 @@ public partial class MainWindow : FluentWindow
         if (_shutdownInProgress)
         {
             // Second invocation (after our async continuation calls Close()). Let it close.
+            // NOTF-04: save again here so the window state captured reflects any
+            // size/position changes made between the first OnClosing and the async
+            // shutdown completing (e.g. user dragged the window while disconnects ran).
+            TrySaveWindowState();
             try { _eventBus.Unsubscribe<TabSwitchedEvent>(this); } catch { /* best-effort */ }
             try { _eventBus.Unsubscribe<TabClosedEvent>(this); } catch { /* best-effort */ }
             base.OnClosing(e);
             return;
         }
+
+        // NOTF-04: first invocation — save window state synchronously BEFORE kicking off
+        // the async shutdown path. Protects against a crash during CloseAllAsync leaving
+        // settings.json unchanged from the previous session. Redundant write on the second
+        // invocation above is cheap (atomic tmp-rename); same-shape updates no-op visibly.
+        TrySaveWindowState();
 
         _shutdownInProgress = true;
         e.Cancel = true;  // cancel THIS close; we'll re-invoke Close() when disconnects finish
@@ -124,6 +172,44 @@ public partial class MainWindow : FluentWindow
             }
             Close();  // re-enters OnClosing; _shutdownInProgress routes to base
         });
+    }
+
+    /// <summary>
+    /// Phase 6 Plan 06-02 (NOTF-04): capture the current window geometry + sidebar
+    /// state and persist to <c>settings.json</c>. Uses <see cref="System.Windows.Window.RestoreBounds"/>
+    /// when maximised so the un-maximised position survives the session. Security
+    /// preferences from Plan 06-04 pass through the <c>_loadedSettings with</c>
+    /// expression untouched.
+    ///
+    /// <para>Swallows every exception — a failure to persist UI preferences must
+    /// never prevent the app from closing. The Serilog warning records the failure
+    /// for diagnosis.</para>
+    /// </summary>
+    private void TrySaveWindowState()
+    {
+        try
+        {
+            var vm = DataContext as ViewModels.MainWindowViewModel;
+            var sidebarOpen = vm?.IsPanelVisible ?? true;
+            var sidebarWidth = 240.0;  // Phase 2 fixed width — bind to VM in a future plan if the panel becomes resizable.
+
+            var isMaximized = WindowState == System.Windows.WindowState.Maximized;
+            var x = isMaximized ? RestoreBounds.Left : Left;
+            var y = isMaximized ? RestoreBounds.Top : Top;
+            var w = isMaximized ? RestoreBounds.Width : Width;
+            var h = isMaximized ? RestoreBounds.Height : Height;
+
+            var updated = _loadedSettings with
+            {
+                Window = new WindowStateRecord(x, y, w, h, isMaximized, sidebarOpen, sidebarWidth)
+            };
+
+            _windowState.SaveAsync(updated).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to save window state on close");
+        }
     }
 
     private void OnHostMounted(object? sender, IProtocolHost host)

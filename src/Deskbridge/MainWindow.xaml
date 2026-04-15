@@ -4,6 +4,7 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:models="clr-namespace:Deskbridge.Models"
     xmlns:behaviors="clr-namespace:Deskbridge.Behaviors"
+    xmlns:controls="clr-namespace:Deskbridge.Controls"
     Title="{Binding Title}"
     Width="1100" Height="700"
     ExtendsContentIntoTitleBar="True"
@@ -336,7 +337,17 @@
         </Border>
 
         <!-- Overlay hosts (LAST children for correct Z-order per Pitfall 4) -->
+        <!-- Phase 5 SnackbarPresenter retained — ConnectionTreeViewModel line 686 raises
+             the 15-session warning through ISnackbarService. Phase 6 bus events route
+             through the new ToastStackControl instead (see Q1 Option B in 06-02). -->
         <ui:SnackbarPresenter x:Name="SnackbarPresenter" Grid.Row="0" Grid.RowSpan="3" />
+        <!-- Phase 6 Plan 06-02 (NOTF-01): custom bottom-right toast stack (max 3 visible,
+             newest on top, 4th evicts oldest, hover-pause). DataContext is bound to the
+             MainWindowViewModel.ToastStack singleton so ToastSubscriptionService and
+             the XAML template share the same ObservableCollection. -->
+        <controls:ToastStackControl x:Name="ToastStack"
+                                    Grid.Row="0" Grid.RowSpan="3"
+                                    DataContext="{Binding ToastStack}" />
         <ui:ContentDialogHost x:Name="RootContentDialog" Grid.Row="0" Grid.RowSpan="3" />
     </Grid>
 </ui:FluentWindow>

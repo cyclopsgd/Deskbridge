@@ -355,7 +355,7 @@ public sealed class HostContainerPersistenceTests
             store.GetById(model.Id).Returns(model);
 
             var tree = new ConnectionTreeViewModel(store, query, creds, dialog, snack, sp, bus, tabHostManager);
-            var vm = new MainWindowViewModel(tree, tabHostManager, bus, store);
+            var vm = new MainWindowViewModel(tree, tabHostManager, bus, store, new ToastStackViewModel());
 
             vm.HasNoTabs.Should().BeTrue("initial state");
 
