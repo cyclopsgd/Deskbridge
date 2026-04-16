@@ -63,6 +63,17 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
+        // Credential Guard fix: migrate legacy TERMSRV/* entries to DESKBRIDGE/CONN/* targets.
+        // One-time idempotent migration -- skips connections that already have new-format credentials.
+        // Must run after IConnectionStore.Load() (which happens in the factory lambda above)
+        // and before any connection attempts.
+        var credService = _serviceProvider.GetRequiredService<ICredentialService>();
+        if (credService is WindowsCredentialService winCredService)
+        {
+            var store = _serviceProvider.GetRequiredService<IConnectionStore>();
+            winCredService.MigrateFromTermsrv(store);
+        }
+
         // Wire stages into pipelines (must happen after container build)
         var connectPipeline = _serviceProvider.GetRequiredService<IConnectionPipeline>();
         foreach (var stage in _serviceProvider.GetServices<IConnectionPipelineStage>())
