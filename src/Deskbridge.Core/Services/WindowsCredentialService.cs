@@ -9,26 +9,24 @@ namespace Deskbridge.Core.Services;
 
 public sealed class WindowsCredentialService : ICredentialService
 {
-    // Windows Credential Manager reserves the TERMSRV/* target prefix for
-    // CRED_TYPE_DOMAIN_PASSWORD (the RDP SSO convention used by mstsc). The
-    // AdysTech wrapper exposes this as CredentialType.Windows (underlying value 2,
-    // which is CRED_TYPE_DOMAIN_PASSWORD in Wincred.h). Writing Generic to a fresh
-    // TERMSRV/* target fails with 0x8 (ERROR_NOT_ENOUGH_MEMORY) because Windows
-    // masks the type-conflict behind that misleading code.
-    private const CredentialType RdpTargetType = CredentialType.Windows;
-
-    // Older installs or cmdkey /generic invocations may have left Generic-type
-    // entries under TERMSRV/*. Read path falls back to this so existing users
-    // don't lose saved credentials after the fix.
-    private const CredentialType LegacyRdpTargetType = CredentialType.Generic;
+    // Connection credentials use DESKBRIDGE/CONN/{connectionId} as the Windows
+    // Credential Manager target. This avoids the TERMSRV/* prefix which Windows
+    // auto-discovers for RDP CredSSP delegation -- on machines with Credential
+    // Guard enabled, TERMSRV/* entries trigger "Windows Defender Credential Guard
+    // does not allow using saved credentials" even though Deskbridge injects the
+    // password directly via IMsTscNonScriptable.ClearTextPassword. The DESKBRIDGE/*
+    // namespace is invisible to CredSSP negotiation, eliminating the conflict.
+    //
+    // CredentialType.Generic is used for all DESKBRIDGE/* targets (both connection
+    // and group). This is consistent and avoids the Windows-reserved
+    // CRED_TYPE_DOMAIN_PASSWORD (CredentialType.Windows) that TERMSRV/* required.
 
     public NetworkCredential? GetForConnection(ConnectionModel connection)
     {
-        var target = $"TERMSRV/{connection.Hostname}";
+        var target = BuildConnectionTarget(connection.Id);
         try
         {
-            return CredentialManager.GetCredentials(target, RdpTargetType)
-                ?? CredentialManager.GetCredentials(target, LegacyRdpTargetType);
+            return CredentialManager.GetCredentials(target, CredentialType.Generic);
         }
         catch (Exception ex)
         {
@@ -39,11 +37,11 @@ public sealed class WindowsCredentialService : ICredentialService
 
     public void StoreForConnection(ConnectionModel connection, string username, string? domain, string password)
     {
-        var target = $"TERMSRV/{connection.Hostname}";
+        var target = BuildConnectionTarget(connection.Id);
         try
         {
             var cred = new NetworkCredential(username, password, domain ?? string.Empty);
-            CredentialManager.SaveCredentials(target, cred, RdpTargetType);
+            CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
         }
         catch (Exception ex)
         {
@@ -54,22 +52,14 @@ public sealed class WindowsCredentialService : ICredentialService
 
     public void DeleteForConnection(ConnectionModel connection)
     {
-        var target = $"TERMSRV/{connection.Hostname}";
+        var target = BuildConnectionTarget(connection.Id);
         try
         {
-            CredentialManager.RemoveCredentials(target, RdpTargetType);
+            CredentialManager.RemoveCredentials(target, CredentialType.Generic);
         }
         catch
         {
             // Credential may not exist -- swallow
-        }
-        try
-        {
-            CredentialManager.RemoveCredentials(target, LegacyRdpTargetType);
-        }
-        catch
-        {
-            // Legacy Generic entry may not exist -- swallow
         }
     }
 
@@ -140,4 +130,62 @@ public sealed class WindowsCredentialService : ICredentialService
     }
 
     public bool HasGroupCredentials(Guid groupId) => GetForGroup(groupId) is not null;
+
+    /// <summary>
+    /// One-time migration: moves credentials from legacy TERMSRV/{hostname} targets
+    /// to DESKBRIDGE/CONN/{connectionId} targets. Idempotent -- skips connections
+    /// that already have credentials under the new target. Called once at startup.
+    /// </summary>
+    public void MigrateFromTermsrv(IConnectionStore connectionStore)
+    {
+        foreach (var connection in connectionStore.GetAll())
+        {
+            try
+            {
+                // Skip if new target already has credentials
+                var newTarget = BuildConnectionTarget(connection.Id);
+                if (CredentialManager.GetCredentials(newTarget, CredentialType.Generic) is not null)
+                    continue;
+
+                // Try to read from old TERMSRV/{hostname} target.
+                // Try DomainPassword first (canonical for TERMSRV/*), then Generic (legacy).
+                var oldTarget = BuildLegacyTarget(connection.Hostname);
+                var oldCred = CredentialManager.GetCredentials(oldTarget, CredentialType.Windows)
+                           ?? CredentialManager.GetCredentials(oldTarget, CredentialType.Generic);
+
+                if (oldCred is null)
+                    continue;
+
+                // Write to new target
+                CredentialManager.SaveCredentials(newTarget, oldCred, CredentialType.Generic);
+                Log.Information("Migrated credentials for {ConnectionName} from {OldTarget} to {NewTarget}",
+                    connection.Name, oldTarget, newTarget);
+
+                // Clean up old entries (both types, swallow failures)
+                try { CredentialManager.RemoveCredentials(oldTarget, CredentialType.Windows); } catch { }
+                try { CredentialManager.RemoveCredentials(oldTarget, CredentialType.Generic); } catch { }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to migrate credentials for connection {ConnectionName} ({ConnectionId})",
+                    connection.Name, connection.Id);
+                // Continue with next connection -- partial migration is fine
+            }
+        }
+    }
+
+    /// <summary>
+    /// Builds the Windows Credential Manager target for a connection.
+    /// Format: DESKBRIDGE/CONN/{connectionId}
+    /// </summary>
+    internal static string BuildConnectionTarget(Guid connectionId) =>
+        $"DESKBRIDGE/CONN/{connectionId}";
+
+    /// <summary>
+    /// Builds the legacy TERMSRV target used before the Credential Guard fix.
+    /// Format: TERMSRV/{hostname}
+    /// Used only by <see cref="MigrateFromTermsrv"/> to locate old entries.
+    /// </summary>
+    internal static string BuildLegacyTarget(string hostname) =>
+        $"TERMSRV/{hostname}";
 }
