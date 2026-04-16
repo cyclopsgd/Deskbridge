@@ -109,7 +109,7 @@ These are non-negotiable. Every task must respect them.
 9. During window drag/resize: suspend RDP control redraw (handle WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE), show static bitmap snapshot of session, resize on drop.
 
 ### Credentials & Security
-10. Use `AdysTech.CredentialManager` with `TERMSRV/<hostname>` target for connection-specific credentials, and `DESKBRIDGE/GROUP/<guid>` target for group-level credentials.
+10. Use `AdysTech.CredentialManager` with `DESKBRIDGE/CONN/<connectionId>` target for connection-specific credentials, and `DESKBRIDGE/GROUP/<guid>` target for group-level credentials.
 11. Never store passwords in JSON config files or log files. The JSON stores `CredentialMode` (Own/Inherit/Prompt) but never the actual password.
 12. Do NOT use `SecureString`.
 
@@ -442,7 +442,7 @@ public enum CredentialMode { Inherit, Own, Prompt }
 
 public interface ICredentialService
 {
-    // Connection-specific credentials (TERMSRV/<hostname>)
+    // Connection-specific credentials (DESKBRIDGE/CONN/<connectionId>)
     NetworkCredential? GetForConnection(ConnectionModel connection);
     void StoreForConnection(ConnectionModel connection, string username, string? domain, string password);
     void DeleteForConnection(ConnectionModel connection);
@@ -532,7 +532,7 @@ During window drag or resize, the RDP ActiveX control flickers due to the WPF/Wi
 - Connection model: Id (GUID), Name, Hostname, Port (3389 default), Username, Domain, Protocol (enum), GroupId, Notes, CreatedAt, UpdatedAt, DisplaySettings, Tags, CredentialMode (Own / Inherit / Prompt)
 - Connection groups: Id, Name, ParentGroupId, SortOrder. Groups can have their own credentials stored in Windows Credential Manager (keyed by group GUID).
 - Storage: JSON at `%AppData%/Deskbridge/connections.json`
-- Credentials: `AdysTech.CredentialManager` with `TERMSRV/<hostname>` target for connections, `DESKBRIDGE/GROUP/<guid>` target for group-level credentials.
+- Credentials: `AdysTech.CredentialManager` with `DESKBRIDGE/CONN/<connectionId>` target for connections, `DESKBRIDGE/GROUP/<guid>` target for group-level credentials.
 - **Credential inheritance:** Credentials resolve recursively up the group tree. If a connection's CredentialMode is `Inherit` (the default), the ResolveCredentialsStage walks up: connection → parent group → grandparent group → root. First match wins. Connections with CredentialMode `Own` use their own stored credentials. CredentialMode `Prompt` always asks the user. Setting credentials on a folder applies to everything inside it unless overridden — this is the default enterprise workflow.
 - Connection tree: TreeView in slide-out panel. Context menu, drag-drop, F2 rename, search filter. Consumes `IConnectionQuery`. Groups show a key icon when they have credentials set.
 - Connection editor: Modal dialog. Tabs: General, Credentials (with Inherit/Own/Prompt selector and "inherited from: [group name]" indicator), Display, Notes.
@@ -603,7 +603,7 @@ During window drag or resize, the RDP ActiveX control flickers due to the WPF/Wi
 ### mRemoteNG Import
 - Parse `confCons.xml`, map fields, import wizard (pick → preview → confirm)
 - Metadata only — no password import, users re-enter credentials
-- Store with `TERMSRV/` prefix
+- Store with `DESKBRIDGE/CONN/` prefix
 - Publishes `ConnectionImportedEvent` to event bus
 - Audit log records import
 
