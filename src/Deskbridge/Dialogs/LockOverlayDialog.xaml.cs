@@ -94,11 +94,22 @@ public partial class LockOverlayDialog : ContentDialog
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Focus the appropriate field on open so the user can type immediately.
+        // Force-apply PIN vs password visibility. DataTriggers bound to IsPinMode may
+        // miss the initial value when it was set in the VM constructor BEFORE
+        // InitializeComponent created the visual tree. Without this, a returning PIN
+        // user sees the PasswordBox instead of the 6-cell PinInputControl on relaunch.
         if (_vm.IsPinMode)
+        {
+            PasswordField.Visibility = Visibility.Collapsed;
+            PinField.Visibility = Visibility.Visible;
             PinField.FocusFirst();
+        }
         else
+        {
+            PasswordField.Visibility = Visibility.Visible;
+            PinField.Visibility = Visibility.Collapsed;
             PasswordField.Focus();
+        }
     }
 
     /// <summary>
