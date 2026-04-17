@@ -15,6 +15,7 @@ using Deskbridge.ViewModels;
 using Deskbridge.Views;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Extensions;
 
 namespace Deskbridge;
 
@@ -39,6 +40,20 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
 
     /// <summary>Phase 6.1: factory for a fresh change password dialog per click.</summary>
     private readonly Func<ChangePasswordDialog>? _changePasswordFactory;
+
+    /// <summary>Phase 6.1: master password service for toggle confirmation.</summary>
+    private IMasterPasswordService? _masterPasswordService;
+
+    /// <summary>Phase 6.1: stored for the disable-password confirmation dialog.</summary>
+    private IContentDialogService? _contentDialogService;
+
+    /// <summary>
+    /// Phase 6.1: set by App.OnStartup after AppLockController is resolved (it can't
+    /// be injected via ctor because of the circular dependency). Used to update
+    /// <see cref="AppLockController.RequireMasterPassword"/> at runtime when the
+    /// toggle changes.
+    /// </summary>
+    internal AppLockController? LockController { get; set; }
 
     /// <summary>Plan 06-03 CMD-01: idempotence guard so a held-down Ctrl+Shift+P doesn't stack dialogs.</summary>
     private bool _paletteOpen;
@@ -74,7 +89,8 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         IWindowStateService windowState,
         IAppLockState lockState,
         Func<CommandPaletteDialog> paletteFactory,
-        Func<ChangePasswordDialog>? changePasswordFactory = null)
+        Func<ChangePasswordDialog>? changePasswordFactory = null,
+        IMasterPasswordService? masterPasswordService = null)
     {
         DataContext = viewModel;
         InitializeComponent();
@@ -93,6 +109,8 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         _lockState = lockState;
         _paletteFactory = paletteFactory;
         _changePasswordFactory = changePasswordFactory;
+        _masterPasswordService = masterPasswordService;
+        _contentDialogService = contentDialogService;
 
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
@@ -611,23 +629,113 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     /// Plan 06-03 D-05 / CMD-04: observe <see cref="MainWindowViewModel.IsFullscreen"/>
     /// and apply WindowStyle+WindowState. Entering fullscreen saves the current
     /// style/state so the restore is exact (including Maximized-before-F11).
+    ///
+    /// Phase 6.1: also handles <see cref="MainWindowViewModel.RequireMasterPassword"/>
+    /// toggle changes — triggers confirmation flow when disabling, setup flow when
+    /// re-enabling without an existing password.
     /// </summary>
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(ViewModels.MainWindowViewModel.IsFullscreen)) return;
-        var vm = (ViewModels.MainWindowViewModel)sender!;
-
-        if (vm.IsFullscreen)
+        if (e.PropertyName == nameof(ViewModels.MainWindowViewModel.IsFullscreen))
         {
-            _savedWindowStyle = WindowStyle;
-            _savedWindowState = WindowState;
-            WindowStyle = System.Windows.WindowStyle.None;
-            WindowState = System.Windows.WindowState.Maximized;
+            var vm = (ViewModels.MainWindowViewModel)sender!;
+            if (vm.IsFullscreen)
+            {
+                _savedWindowStyle = WindowStyle;
+                _savedWindowState = WindowState;
+                WindowStyle = System.Windows.WindowStyle.None;
+                WindowState = System.Windows.WindowState.Maximized;
+            }
+            else
+            {
+                WindowStyle = _savedWindowStyle;
+                WindowState = _savedWindowState;
+            }
+            return;
+        }
+
+        if (e.PropertyName == nameof(ViewModels.MainWindowViewModel.RequireMasterPassword))
+        {
+            _ = HandleRequireMasterPasswordToggleAsync();
+        }
+    }
+
+    /// <summary>
+    /// Phase 6.1: when the user toggles RequireMasterPassword OFF, show a confirmation
+    /// dialog requiring their current password/PIN. On confirm: delete auth.json. On
+    /// cancel: revert the toggle. When toggling ON with no password set: trigger
+    /// first-run setup via the lock overlay.
+    /// </summary>
+    private async Task HandleRequireMasterPasswordToggleAsync()
+    {
+        var vm = ViewModel;
+        if (_masterPasswordService is null || _contentDialogService is null) return;
+
+        if (!vm.RequireMasterPassword)
+        {
+            // Toggling OFF — require confirmation
+            if (!_masterPasswordService.IsMasterPasswordSet())
+            {
+                // No password was set — just let it stay off
+                return;
+            }
+
+            try
+            {
+                var result = await _contentDialogService.ShowSimpleDialogAsync(
+                    new SimpleContentDialogCreateOptions
+                    {
+                        Title = "Disable Password Protection?",
+                        Content = "Your connections and settings will be accessible without a password. This action deletes your stored password.",
+                        PrimaryButtonText = "Disable",
+                        CloseButtonText = "Cancel",
+                    });
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    _masterPasswordService.DeleteAuthFile();
+                    vm.IsMasterPasswordConfigured = false;
+
+                    // Update AppLockController at runtime so Ctrl+L / bus events stop locking
+                    if (LockController is not null)
+                    {
+                        LockController.RequireMasterPassword = false;
+                    }
+                }
+                else
+                {
+                    // Revert toggle without triggering another persist
+                    vm.ApplySecuritySettings(vm.CurrentSecuritySettings with { RequireMasterPassword = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "Failed to show disable-password confirmation dialog");
+                // Revert on error
+                vm.ApplySecuritySettings(vm.CurrentSecuritySettings with { RequireMasterPassword = true });
+            }
         }
         else
         {
-            WindowStyle = _savedWindowStyle;
-            WindowState = _savedWindowState;
+            // Toggling ON — if no password is set, trigger first-run setup
+            if (!_masterPasswordService.IsMasterPasswordSet())
+            {
+                // Update controller FIRST so the lock overlay can proceed
+                if (LockController is not null)
+                {
+                    LockController.RequireMasterPassword = true;
+                }
+                _eventBus.Publish(new AppLockedEvent(LockReason.Manual));
+            }
+            else
+            {
+                // Password already exists, just re-enabling the requirement
+                if (LockController is not null)
+                {
+                    LockController.RequireMasterPassword = true;
+                }
+            }
+            vm.IsMasterPasswordConfigured = _masterPasswordService.IsMasterPasswordSet();
         }
     }
 }

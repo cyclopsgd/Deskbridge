@@ -52,6 +52,14 @@ public sealed class AppLockController
     private readonly IHostContainerProvider _host;
     private readonly IMasterPasswordService _masterPassword;
 
+    /// <summary>
+    /// Phase 6.1: mutable so the confirmation dialog flow can update it at runtime
+    /// when the user disables/re-enables password protection. IdleLockService and
+    /// SessionLockService hold startup-time values and require app restart for
+    /// re-activation of timers/subscriptions.
+    /// </summary>
+    private bool _requireMasterPassword;
+
     // Pitfall 5 Option A: snapshot of every HostContainer child's Visibility
     // at lock time. Restored per-child on unlock so we don't flip a previously-
     // Collapsed WFH (e.g. an inactive tab) to Visible on unlock.
@@ -69,7 +77,8 @@ public sealed class AppLockController
         IAuditLogger audit,
         Func<LockOverlayDialog> dialogFactory,
         IHostContainerProvider host,
-        IMasterPasswordService masterPassword)
+        IMasterPasswordService masterPassword,
+        bool requireMasterPassword = true)
     {
         ArgumentNullException.ThrowIfNull(lockState);
         ArgumentNullException.ThrowIfNull(bus);
@@ -86,6 +95,7 @@ public sealed class AppLockController
         _dialogFactory = dialogFactory;
         _host = host;
         _masterPassword = masterPassword;
+        _requireMasterPassword = requireMasterPassword;
 
         // Bus subscription: IdleLockService + SessionLockService publish
         // AppLockedEvent with the matching LockReason; we fan in here.
@@ -98,6 +108,7 @@ public sealed class AppLockController
     /// </summary>
     public async Task LockAsync(LockReason reason)
     {
+        if (!_requireMasterPassword) return; // Phase 6.1: password disabled — no-op
         if (_lockState.IsLocked) return; // D-18 idempotent
 
         CaptureAndCollapseHosts();
@@ -150,6 +161,17 @@ public sealed class AppLockController
         {
             Log.Warning(ex, "Failed to write AppUnlocked audit record");
         }
+    }
+
+    /// <summary>
+    /// Phase 6.1: allows the MainWindow toggle confirmation flow to update the
+    /// controller's guard at runtime without requiring an app restart. IdleLockService
+    /// and SessionLockService still hold startup-time values (require restart).
+    /// </summary>
+    public bool RequireMasterPassword
+    {
+        get => _requireMasterPassword;
+        set => _requireMasterPassword = value;
     }
 
     /// <summary>

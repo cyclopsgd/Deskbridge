@@ -118,6 +118,10 @@ public partial class App : Application
         // on the bus in its ctor, so resolving here also activates the fan-in.
         var lockController = _serviceProvider.GetRequiredService<AppLockController>();
 
+        // Phase 6.1: wire the LockController reference on MainWindow so the
+        // RequireMasterPassword toggle can update it at runtime.
+        mainWindow.LockController = lockController;
+
         // Startup lock — fire-and-forget so OnStartup returns and the dispatcher
         // can render the overlay. EnsureLockedOnStartupAsync handles both the
         // returning-user (unlock mode) and first-run (setup mode) flows by
@@ -271,21 +275,33 @@ public partial class App : Application
             return new IdleLockService(bus, settings.Security);
         });
         services.AddSingleton<SessionLockService>(sp =>
-            new SessionLockService(sp.GetRequiredService<IEventBus>()));
+        {
+            var windowState = sp.GetRequiredService<IWindowStateService>();
+            var settings = windowState.LoadAsync().GetAwaiter().GetResult();
+            return new SessionLockService(
+                sp.GetRequiredService<IEventBus>(),
+                requireMasterPassword: settings.Security.RequireMasterPassword);
+        });
 
         // AppLockController: singleton factory that takes the MainWindow (as
         // IHostContainerProvider) — resolved at service-build time, so the
         // controller sees the already-constructed window. The controller
         // subscribes to AppLockedEvent in its ctor; ALL lock triggers (bus
         // events + Ctrl+L direct call + startup) fan in here.
-        services.AddSingleton<AppLockController>(sp => new AppLockController(
-            sp.GetRequiredService<IAppLockState>(),
-            sp.GetRequiredService<IEventBus>(),
-            sp.GetRequiredService<IContentDialogService>(),
-            sp.GetRequiredService<IAuditLogger>(),
-            sp.GetRequiredService<Func<LockOverlayDialog>>(),
-            sp.GetRequiredService<MainWindow>(),
-            sp.GetRequiredService<IMasterPasswordService>()));
+        services.AddSingleton<AppLockController>(sp =>
+        {
+            var windowState = sp.GetRequiredService<IWindowStateService>();
+            var settings = windowState.LoadAsync().GetAwaiter().GetResult();
+            return new AppLockController(
+                sp.GetRequiredService<IAppLockState>(),
+                sp.GetRequiredService<IEventBus>(),
+                sp.GetRequiredService<IContentDialogService>(),
+                sp.GetRequiredService<IAuditLogger>(),
+                sp.GetRequiredService<Func<LockOverlayDialog>>(),
+                sp.GetRequiredService<MainWindow>(),
+                sp.GetRequiredService<IMasterPasswordService>(),
+                requireMasterPassword: settings.Security.RequireMasterPassword);
+        });
 
         // ViewModels
         //
@@ -329,7 +345,8 @@ public partial class App : Application
             sp.GetRequiredService<IWindowStateService>(),
             sp.GetRequiredService<IAppLockState>(),
             sp.GetRequiredService<Func<CommandPaletteDialog>>(),
-            sp.GetRequiredService<Func<ChangePasswordDialog>>()));
+            sp.GetRequiredService<Func<ChangePasswordDialog>>(),
+            sp.GetRequiredService<IMasterPasswordService>()));
     }
 
     protected override void OnExit(ExitEventArgs e)

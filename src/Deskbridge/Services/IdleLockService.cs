@@ -74,6 +74,13 @@ public sealed class IdleLockService : IDisposable
         };
         _timer.Tick += OnTick;
 
+        // Phase 6.1: don't start timer or subscribe to input when password is disabled
+        if (!security.RequireMasterPassword)
+        {
+            _handler = (_, _) => { }; // no-op so Dispose() is safe
+            return;
+        }
+
         _handler = (_, e) => HandleInput(e);
         InputManager.Current.PreProcessInput += _handler;
         _timer.Start();

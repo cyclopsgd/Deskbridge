@@ -248,6 +248,21 @@ public partial class MainWindowViewModel : ObservableObject
     // ----------------------------------------------------------- Phase 6 Plan 06-04
 
     /// <summary>
+    /// Phase 6.1: two-way bound to the "Require Password/PIN" toggle in Settings.
+    /// When toggled OFF, the MainWindow code-behind triggers confirmation flow.
+    /// When toggled ON and no password is set, triggers first-run setup.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLockControlsEnabled))]
+    [NotifyPropertyChangedFor(nameof(ChangePasswordLabel))]
+    public partial bool RequireMasterPassword { get; set; } = true;
+
+    /// <summary>Controls whether auto-lock controls are enabled in the Settings panel.</summary>
+    public bool IsLockControlsEnabled => RequireMasterPassword;
+
+    partial void OnRequireMasterPasswordChanged(bool value) => PersistSecuritySettings();
+
+    /// <summary>
     /// Plan 06-04 SEC-03: auto-lock idle timeout in minutes. Two-way bound to
     /// the Settings panel's ui:NumberBox (UI-SPEC §Settings Panel Additions).
     /// Changes persist via <see cref="PersistSecuritySettings"/>.
@@ -289,6 +304,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             AutoLockTimeoutMinutes = security.AutoLockTimeoutMinutes;
             LockOnMinimise = security.LockOnMinimise;
+            RequireMasterPassword = security.RequireMasterPassword;
             IsMasterPasswordConfigured = _masterPassword?.IsMasterPasswordSet() ?? false;
         }
         finally
@@ -299,7 +315,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     /// <summary>Snapshot of the current security preferences for MainWindow.OnClosing persistence.</summary>
     public SecuritySettingsRecord CurrentSecuritySettings =>
-        new(AutoLockTimeoutMinutes: AutoLockTimeoutMinutes, LockOnMinimise: LockOnMinimise);
+        new(AutoLockTimeoutMinutes: AutoLockTimeoutMinutes, LockOnMinimise: LockOnMinimise, RequireMasterPassword: RequireMasterPassword);
 
     // --- settings persistence ---
 
