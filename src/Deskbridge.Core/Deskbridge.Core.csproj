@@ -13,6 +13,11 @@
          abstraction. Any non-UI service in Core that consumed this would still compile;
          nothing in Core instantiates WPF types, it just consumes the interface. -->
     <PackageReference Include="WPF-UI" />
+    <!-- Phase 7 (Plan 07-01): UpdateService wraps Velopack UpdateManager directly.
+         Adding Velopack to Core keeps the service alongside all other Core services
+         (EventBus, ConnectionStore, etc.) and avoids a reverse dependency from Core
+         to the exe project. -->
+    <PackageReference Include="Velopack" />
   </ItemGroup>
   <ItemGroup>
     <!-- Phase 5: TabHostManager LRU tests use a small internal test seam

@@ -11,10 +11,11 @@ namespace Deskbridge.Core.Settings;
 public sealed record AppSettings(
     WindowStateRecord Window,
     SecuritySettingsRecord Security,
+    UpdateSettingsRecord Update,
     int SchemaVersion = 1)
 {
     /// <summary>Default-constructed settings — used as the fallback when <c>settings.json</c> is missing or invalid.</summary>
-    public AppSettings() : this(WindowStateRecord.Default, SecuritySettingsRecord.Default) { }
+    public AppSettings() : this(WindowStateRecord.Default, SecuritySettingsRecord.Default, UpdateSettingsRecord.Default) { }
 }
 
 /// <summary>
@@ -51,4 +52,17 @@ public sealed record SecuritySettingsRecord(
     /// <summary>Defaults match UI-SPEC §Settings Panel Additions (auto-lock = 15 minutes, lock-on-minimise = off, require password = on).</summary>
     public static SecuritySettingsRecord Default { get; } =
         new(AutoLockTimeoutMinutes: 15, LockOnMinimise: false, RequireMasterPassword: true);
+}
+
+/// <summary>
+/// Phase 7 Plan 07-01 (UPD-01): update preferences. <see cref="UseBetaChannel"/>
+/// controls whether <see cref="Services.UpdateService"/> checks the beta Velopack
+/// channel (prerelease GitHub Releases) instead of the stable channel. Toggled
+/// via the Settings panel in a future plan.
+/// </summary>
+public sealed record UpdateSettingsRecord(
+    bool UseBetaChannel = false)
+{
+    /// <summary>Defaults: stable channel (no beta).</summary>
+    public static UpdateSettingsRecord Default { get; } = new();
 }
