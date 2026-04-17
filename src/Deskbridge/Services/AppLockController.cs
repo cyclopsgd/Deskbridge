@@ -175,6 +175,54 @@ public sealed class AppLockController
     }
 
     /// <summary>
+    /// Called when the user disables password protection via the settings toggle.
+    /// Ensures no lingering lock state remains: dismisses any active lock overlay
+    /// dialog, restores HostContainer children visibility from the snapshot, and
+    /// clears <see cref="IAppLockState.IsLocked"/>. Idempotent — safe to call when
+    /// already unlocked or when no dialog is active.
+    ///
+    /// <para>Without this, disabling the password while a lock overlay or collapsed
+    /// hosts exist leaves an invisible blocking layer (the ContentDialog SmokeGrid
+    /// and/or collapsed WFH children persist with no unlock path).</para>
+    /// </summary>
+    public async Task ForceDisableAsync()
+    {
+        _requireMasterPassword = false;
+
+        // Dismiss any active lock overlay dialog so its SmokeGrid is removed.
+        if (_activeDialog is { } dialog)
+        {
+            dialog.Hide();
+            // ShowAsync will complete and the finally block will null _activeDialog.
+        }
+
+        // Restore host visibility if we captured a snapshot during a prior lock.
+        RestoreHostVisibility();
+
+        // Clear locked state if set.
+        if (_lockState.IsLocked)
+        {
+            _lockState.Unlock();
+            _bus.Publish(new AppUnlockedEvent());
+
+            try
+            {
+                await _audit.LogAsync(new AuditRecord(
+                    Ts: DateTime.UtcNow.ToString("O"),
+                    Type: AuditAction.AppUnlocked.ToString(),
+                    ConnectionId: null,
+                    User: Environment.UserName,
+                    Outcome: "success",
+                    ErrorCode: "PasswordDisabled"));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to write AppUnlocked audit record after password disable");
+            }
+        }
+    }
+
+    /// <summary>
     /// Called from <c>App.OnStartup</c> after <c>mainWindow.Show()</c>. If
     /// <c>auth.json</c> exists (returning user), enters unlock mode. If not
     /// (first-run), the same <see cref="LockOverlayDialog"/> will render in
