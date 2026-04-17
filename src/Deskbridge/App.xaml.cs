@@ -127,6 +127,19 @@ public partial class App : Application
         // returning-user (unlock mode) and first-run (setup mode) flows by
         // reading IMasterPasswordService.IsMasterPasswordSet inside the VM.
         _ = lockController.EnsureLockedOnStartupAsync();
+
+        // Phase 7 Plan 07-01 (UPD-01): silent update check on startup.
+        // Runs on a background thread; UpdateAvailableEvent marshals to UI
+        // via the event bus subscription in MainWindowViewModel.
+        var updateService = _serviceProvider.GetRequiredService<IUpdateService>();
+        if (updateService.IsInstalled)
+        {
+            _ = Task.Run(() => updateService.CheckForUpdatesAsync());
+        }
+        else
+        {
+            Log.Information("Update check skipped: app not installed via Velopack (dev mode)");
+        }
     }
 
     private static void ConfigureServices(IServiceCollection services)
@@ -196,6 +209,16 @@ public partial class App : Application
 
         // Phase 6 Plan 06-02 (NOTF-04): window + security settings persistence.
         services.AddSingleton<IWindowStateService, WindowStateService>();
+
+        // ---- Phase 7 Plan 07-01: auto-update (UPD-01 / UPD-02 / UPD-03) ----
+        services.AddSingleton<IUpdateService>(sp =>
+        {
+            var bus = sp.GetRequiredService<IEventBus>();
+            var windowState = sp.GetRequiredService<IWindowStateService>();
+            var appSettings = windowState.LoadAsync().GetAwaiter().GetResult();
+            var useBeta = appSettings.Update?.UseBetaChannel ?? false;
+            return new UpdateService(bus, "https://github.com/cyclopsgd/Deskbridge", useBeta);
+        });
 
         // Phase 6 Plan 06-02 (NOTF-01 / NOTF-03): custom toast stack (Q1 Option B).
         // ToastStackViewModel and ToastSubscriptionService MUST be singletons so the
@@ -318,7 +341,8 @@ public partial class App : Application
             sp.GetRequiredService<IConnectionStore>(),
             sp.GetRequiredService<ViewModels.ToastStackViewModel>(),
             windowState: sp.GetRequiredService<IWindowStateService>(),
-            masterPassword: sp.GetRequiredService<IMasterPasswordService>()));
+            masterPassword: sp.GetRequiredService<IMasterPasswordService>(),
+            updateService: sp.GetRequiredService<IUpdateService>()));
         // Phase 6.1: change password/PIN dialog
         services.AddTransient<ViewModels.ChangePasswordViewModel>();
         services.AddTransient<Dialogs.ChangePasswordDialog>();

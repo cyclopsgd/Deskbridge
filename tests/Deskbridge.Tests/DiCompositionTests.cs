@@ -248,6 +248,42 @@ public sealed class DiCompositionTests
         count.Should().Be(4, "D-04: exactly 4 palette commands must be registered");
     }
 
+    // ----------------------------------------------------------- Phase 7 Plan 07-01
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-01): <see cref="IUpdateService"/> is registered as
+    /// a singleton in App.xaml.cs. Verified via source-grep because the real
+    /// <see cref="UpdateService"/> constructor requires <c>VelopackApp.Build()</c>
+    /// to have been called (not possible in a unit test environment).
+    /// </summary>
+    [Fact]
+    public void IUpdateService_IsRegistered_InAppXamlCs()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var appCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge", "App.xaml.cs"));
+
+        appCs.Should().Contain("IUpdateService", "IUpdateService must be registered in DI");
+        appCs.Should().Contain("new UpdateService(", "UpdateService concrete type must be constructed");
+        appCs.Should().Contain("github.com", "UpdateService must target a GitHub repository");
+    }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-01): App.OnStartup must trigger a background update
+    /// check AFTER mainWindow.Show() so the window is visible when the toast fires.
+    /// </summary>
+    [Fact]
+    public void App_OnStartup_TriggersUpdateCheck_AfterShow()
+    {
+        var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
+        var appCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge", "App.xaml.cs"));
+
+        var showIdx = appCs.IndexOf("mainWindow.Show()", StringComparison.Ordinal);
+        var checkIdx = appCs.IndexOf("CheckForUpdatesAsync", StringComparison.Ordinal);
+
+        showIdx.Should().BeGreaterThan(-1, "mainWindow.Show() must exist");
+        checkIdx.Should().BeGreaterThan(showIdx, "Update check must run AFTER mainWindow.Show()");
+    }
+
     private static string FindSolutionRoot(string startPath)
     {
         var dir = new DirectoryInfo(startPath);

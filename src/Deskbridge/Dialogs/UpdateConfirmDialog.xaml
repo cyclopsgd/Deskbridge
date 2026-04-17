@@ -1,0 +1,34 @@
+<ui:ContentDialog x:Class="Deskbridge.Dialogs.UpdateConfirmDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:local="clr-namespace:Deskbridge.Dialogs"
+    Title="Update Ready"
+    DialogMaxWidth="420"
+    PrimaryButtonText="Restart Now"
+    CloseButtonText="Later"
+    DefaultButton="Close">
+
+    <!-- Phase 7 Plan 07-01 (UPD-02 / T-07-04): restart confirmation dialog.
+         Pitfall 1: custom ContentDialog subclass requires BasedOn style. -->
+    <ui:ContentDialog.Resources>
+        <Style BasedOn="{StaticResource {x:Type ui:ContentDialog}}"
+               TargetType="{x:Type local:UpdateConfirmDialog}" />
+    </ui:ContentDialog.Resources>
+
+    <StackPanel Margin="0,8">
+        <TextBlock TextWrapping="Wrap"
+                   FontSize="14"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+            Update has been downloaded and is ready to install.
+        </TextBlock>
+
+        <!-- T-07-04 mitigation: explicit user action required before restart.
+             InfoBar warns about active RDP sessions being disconnected. -->
+        <ui:InfoBar
+            IsOpen="True" IsClosable="False"
+            Severity="Caution" Margin="0,12,0,0"
+            Title="Active sessions will be disconnected"
+            Message="All open RDP sessions will be closed when the application restarts." />
+    </StackPanel>
+</ui:ContentDialog>

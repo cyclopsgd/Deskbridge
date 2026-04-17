@@ -136,6 +136,14 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         // showing through the viewport, blocking the "Ctrl+N to create" empty-
         // state placeholder from being visible.
         _eventBus.Subscribe<TabClosedEvent>(this, OnTabClosedSync);
+
+        // Phase 7 Plan 07-01 (UPD-02 / T-07-04): wire the update confirmation
+        // dialog callback. After download completes, the VM invokes this to show
+        // the "Restart Now? / Later" dialog. If user confirms, apply + restart.
+        viewModel.SetUpdateConfirmation(() =>
+        {
+            _ = ShowUpdateConfirmDialogAsync();
+        });
     }
 
     /// <summary>
@@ -622,6 +630,31 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         catch (Exception ex)
         {
             Serilog.Log.Warning(ex, "Failed to open change password dialog");
+        }
+    }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-02 / T-07-04): shows the update confirmation dialog
+    /// after download completes. If the user clicks "Restart Now", applies the update
+    /// and restarts. If "Later", the update applies on next manual restart.
+    /// </summary>
+    private async Task ShowUpdateConfirmDialogAsync()
+    {
+        try
+        {
+            var dialog = new UpdateConfirmDialog(RootContentDialog);
+            var result = await dialog.ShowAsync();
+            if (result == Wpf.Ui.Controls.ContentDialogResult.Primary)
+            {
+                // T-07-04: user confirmed restart — apply update.
+                // ApplyUpdatesAndRestart calls Environment.Exit(); active sessions
+                // will be terminated. The confirmation dialog warned the user.
+                ViewModel.UpdateService?.ApplyUpdatesAndRestart();
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to show update confirmation dialog");
         }
     }
 

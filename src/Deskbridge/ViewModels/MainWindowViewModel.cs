@@ -81,6 +81,13 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Phase 7 Plan 07-01: exposes the update service so MainWindow.xaml.cs can
+    /// call <see cref="IUpdateService.ApplyUpdatesAndRestart"/> after the
+    /// confirmation dialog. Read-only — the VM owns the lifecycle.
+    /// </summary>
+    public IUpdateService? UpdateService => _updateService;
+
+    /// <summary>
     /// Phase 7 Plan 07-01: sets the callback that <see cref="ApplyUpdateAsync"/>
     /// invokes after download completes to show the restart confirmation dialog.
     /// Called by <see cref="MainWindow.xaml.cs"/> after construction.
