@@ -1,0 +1,50 @@
+<UserControl x:Class="Deskbridge.Controls.PinInputControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Focusable="False">
+
+    <UserControl.Resources>
+        <!-- Standard WPF TextBox (not ui:TextBox) to avoid WPF-UI template overhead
+             on tiny single-char cells. Pitfall 8a does NOT apply to stock TextBox. -->
+        <Style x:Key="PinCellStyle" TargetType="TextBox">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="MaxLength" Value="1" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Margin" Value="4,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Focusable="False" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel x:Name="CellPanel" Orientation="Horizontal" HorizontalAlignment="Center">
+        <TextBox x:Name="Cell0" Style="{StaticResource PinCellStyle}" />
+        <TextBox x:Name="Cell1" Style="{StaticResource PinCellStyle}" />
+        <TextBox x:Name="Cell2" Style="{StaticResource PinCellStyle}" />
+        <TextBox x:Name="Cell3" Style="{StaticResource PinCellStyle}" />
+        <TextBox x:Name="Cell4" Style="{StaticResource PinCellStyle}" />
+        <TextBox x:Name="Cell5" Style="{StaticResource PinCellStyle}" />
+    </StackPanel>
+</UserControl>
