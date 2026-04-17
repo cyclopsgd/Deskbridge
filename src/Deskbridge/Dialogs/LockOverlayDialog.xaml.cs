@@ -40,6 +40,21 @@ public partial class LockOverlayDialog : ContentDialog
         Loaded += OnLoaded;
         PreviewKeyDown += Dialog_PreviewKeyDown;
 
+        // Clear password fields when mode changes (first-run only) so switching
+        // from password to PIN doesn't leave 12-char text in the field.
+        _vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(LockOverlayViewModel.IsPinMode))
+            {
+                PasswordField.Password = "";
+                ConfirmField.Password = "";
+                _vm.Password = "";
+                _vm.ConfirmPassword = "";
+                _vm.ErrorMessage = null;
+                PasswordField.Focus();
+            }
+        };
+
         // RequestFocusPassword fires after a failed unlock — the VM clears the
         // password, then raises this so we re-focus the field (and clear the UI-side
         // PasswordBox.Password which isn't two-way bound).

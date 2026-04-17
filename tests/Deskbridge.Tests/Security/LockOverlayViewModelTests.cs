@@ -108,7 +108,7 @@ public sealed class LockOverlayViewModelTests
         vm.UnlockCommand.Execute(null);
 
         vm.ErrorMessage.Should().Be("Password must be at least 8 characters.");
-        svc.DidNotReceiveWithAnyArgs().SetMasterPassword(default!);
+        svc.DidNotReceiveWithAnyArgs().SetMasterPassword(default!, default!);
         unlockSucceeded.Should().Be(0);
     }
 
@@ -127,7 +127,7 @@ public sealed class LockOverlayViewModelTests
         vm.UnlockCommand.Execute(null);
 
         vm.ErrorMessage.Should().Be("Passwords do not match.");
-        svc.DidNotReceiveWithAnyArgs().SetMasterPassword(default!);
+        svc.DidNotReceiveWithAnyArgs().SetMasterPassword(default!, default!);
     }
 
     // --------------------------------------------------------------------
@@ -147,11 +147,103 @@ public sealed class LockOverlayViewModelTests
 
         vm.UnlockCommand.Execute(null);
 
-        svc.Received(1).SetMasterPassword("goodpassword");
+        svc.Received(1).SetMasterPassword("goodpassword", "password");
         fired.Should().Be(1);
         vm.ErrorMessage.Should().BeNull();
         vm.Password.Should().BeEmpty("T-06-05: Password scrubbed after Set");
         vm.ConfirmPassword.Should().BeEmpty("T-06-05: ConfirmPassword scrubbed after Set");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 9 — First-run PIN mode: BodyCopy + ButtonCopy + Placeholder match PIN copy
+    // --------------------------------------------------------------------
+    [Fact]
+    public void IsFirstRun_True_PinMode_HasPinCopy()
+    {
+        var svc = Substitute.For<IMasterPasswordService>();
+        svc.IsMasterPasswordSet().Returns(false);
+        var vm = new LockOverlayViewModel(svc);
+        vm.IsPinMode = true;
+
+        vm.BodyCopy.Should().Contain("6-digit PIN");
+        vm.ButtonCopy.Should().Be("Set PIN");
+        vm.PasswordPlaceholder.Should().Be("6-digit PIN");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 10 — First-run PIN mode: too few digits shows error
+    // --------------------------------------------------------------------
+    [Fact]
+    public void Unlock_FirstRun_PinMode_TooFewDigits_ShowsError()
+    {
+        var svc = Substitute.For<IMasterPasswordService>();
+        svc.IsMasterPasswordSet().Returns(false);
+        var vm = new LockOverlayViewModel(svc);
+        vm.IsPinMode = true;
+        vm.Password = "123";
+        vm.ConfirmPassword = "123";
+
+        vm.UnlockCommand.Execute(null);
+
+        vm.ErrorMessage.Should().Be("PIN must be exactly 6 digits.");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 11 — First-run PIN mode: non-digits shows error
+    // --------------------------------------------------------------------
+    [Fact]
+    public void Unlock_FirstRun_PinMode_NonDigits_ShowsError()
+    {
+        var svc = Substitute.For<IMasterPasswordService>();
+        svc.IsMasterPasswordSet().Returns(false);
+        var vm = new LockOverlayViewModel(svc);
+        vm.IsPinMode = true;
+        vm.Password = "abcdef";
+        vm.ConfirmPassword = "abcdef";
+
+        vm.UnlockCommand.Execute(null);
+
+        vm.ErrorMessage.Should().Be("PIN must be exactly 6 digits.");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 12 — First-run PIN mode: valid PIN calls SetMasterPassword with "pin"
+    // --------------------------------------------------------------------
+    [Fact]
+    public void Unlock_FirstRun_PinMode_ValidPin_CallsSetWithPinMode()
+    {
+        var svc = Substitute.For<IMasterPasswordService>();
+        svc.IsMasterPasswordSet().Returns(false);
+        var vm = new LockOverlayViewModel(svc);
+        vm.IsPinMode = true;
+        vm.Password = "123456";
+        vm.ConfirmPassword = "123456";
+
+        var fired = 0;
+        vm.UnlockSucceeded += (_, _) => fired++;
+
+        vm.UnlockCommand.Execute(null);
+
+        svc.Received(1).SetMasterPassword("123456", "pin");
+        fired.Should().Be(1);
+        vm.Password.Should().BeEmpty();
+        vm.ConfirmPassword.Should().BeEmpty();
+    }
+
+    // --------------------------------------------------------------------
+    // Test 13 — Unlock mode: PIN mode read from service
+    // --------------------------------------------------------------------
+    [Fact]
+    public void Unlock_UnlockMode_PinMode_ReadFromService()
+    {
+        var svc = Substitute.For<IMasterPasswordService>();
+        svc.IsMasterPasswordSet().Returns(true);
+        svc.GetAuthMode().Returns("pin");
+        var vm = new LockOverlayViewModel(svc);
+
+        vm.IsPinMode.Should().BeTrue();
+        vm.IsPasswordMode.Should().BeFalse();
+        vm.PasswordPlaceholder.Should().Be("PIN");
     }
 
     // --------------------------------------------------------------------

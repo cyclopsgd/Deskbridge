@@ -24,8 +24,30 @@ public interface IMasterPasswordService
     /// <summary>
     /// Computes a fresh PBKDF2 hash for <paramref name="password"/> and writes
     /// <c>auth.json</c> atomically (tmp-rename). Overwrites any existing hash.
+    /// Uses <c>"password"</c> as the default auth mode.
     /// </summary>
     void SetMasterPassword(string password);
+
+    /// <summary>
+    /// Computes a fresh PBKDF2 hash for <paramref name="password"/> and writes
+    /// <c>auth.json</c> atomically (tmp-rename) with the specified <paramref name="authMode"/>.
+    /// </summary>
+    /// <param name="password">The plaintext password or PIN.</param>
+    /// <param name="authMode"><c>"password"</c> or <c>"pin"</c>.</param>
+    void SetMasterPassword(string password, string authMode);
+
+    /// <summary>
+    /// Returns the stored authMode (<c>"password"</c> or <c>"pin"</c>).
+    /// Returns <c>"password"</c> if no auth.json exists or the field is absent
+    /// (backward compatibility with pre-PIN installs).
+    /// </summary>
+    string GetAuthMode();
+
+    /// <summary>
+    /// Deletes <c>auth.json</c> entirely. Used when disabling master password.
+    /// No-op if the file does not exist.
+    /// </summary>
+    void DeleteAuthFile();
 
     /// <summary>
     /// Loads <c>auth.json</c> and verifies <paramref name="password"/> against the
