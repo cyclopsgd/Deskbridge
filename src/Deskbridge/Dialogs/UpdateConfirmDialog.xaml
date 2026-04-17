@@ -27,7 +27,7 @@
              InfoBar warns about active RDP sessions being disconnected. -->
         <ui:InfoBar
             IsOpen="True" IsClosable="False"
-            Severity="Caution" Margin="0,12,0,0"
+            Severity="Warning" Margin="0,12,0,0"
             Title="Active sessions will be disconnected"
             Message="All open RDP sessions will be closed when the application restarts." />
     </StackPanel>
