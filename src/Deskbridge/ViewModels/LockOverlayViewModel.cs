@@ -40,6 +40,14 @@ public partial class LockOverlayViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(masterPassword);
         _masterPassword = masterPassword;
         IsFirstRun = !masterPassword.IsMasterPasswordSet();
+
+        // In unlock mode, read the stored authMode so the UI adapts (PIN vs password input).
+        // In first-run mode, default to password — user can switch via radio buttons.
+        if (!IsFirstRun)
+        {
+            IsPinMode = masterPassword.GetAuthMode() == "pin";
+            IsPasswordMode = !IsPinMode;
+        }
     }
 
     [ObservableProperty]
@@ -47,6 +55,20 @@ public partial class LockOverlayViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ButtonCopy))]
     [NotifyPropertyChangedFor(nameof(PasswordPlaceholder))]
     public partial bool IsFirstRun { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BodyCopy))]
+    [NotifyPropertyChangedFor(nameof(ButtonCopy))]
+    [NotifyPropertyChangedFor(nameof(PasswordPlaceholder))]
+    public partial bool IsPinMode { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsPasswordMode { get; set; } = true;
+
+    partial void OnIsPinModeChanged(bool value)
+    {
+        IsPasswordMode = !value;
+    }
 
     [ObservableProperty]
     public partial string Password { get; set; } = "";
@@ -60,12 +82,20 @@ public partial class LockOverlayViewModel : ObservableObject
     // -------------- copy (UI-SPEC §Lock Overlay Copywriting lines 398-420) --------------
 
     public string BodyCopy => IsFirstRun
-        ? "Set a master password to protect your connections. This password cannot be recovered — choose something memorable."
-        : "Locked. Enter your master password to continue.";
+        ? (IsPinMode
+            ? "Set a 6-digit PIN to protect your connections. This PIN cannot be recovered — choose something memorable."
+            : "Set a master password to protect your connections. This password cannot be recovered — choose something memorable.")
+        : (IsPinMode
+            ? "Locked. Enter your PIN to continue."
+            : "Locked. Enter your master password to continue.");
 
-    public string ButtonCopy => IsFirstRun ? "Set Password" : "Unlock";
+    public string ButtonCopy => IsFirstRun
+        ? (IsPinMode ? "Set PIN" : "Set Password")
+        : "Unlock";
 
-    public string PasswordPlaceholder => IsFirstRun ? "New master password" : "Master password";
+    public string PasswordPlaceholder => IsFirstRun
+        ? (IsPinMode ? "6-digit PIN" : "New master password")
+        : (IsPinMode ? "PIN" : "Master password");
 
     // -------------- command --------------
 
@@ -82,17 +112,36 @@ public partial class LockOverlayViewModel : ObservableObject
 
         if (IsFirstRun)
         {
-            if (Password.Length < 8)
+            if (IsPinMode)
             {
-                ErrorMessage = "Password must be at least 8 characters.";
-                return;
+                // PIN: exactly 6 digits
+                if (Password.Length != 6 || !Password.All(char.IsDigit))
+                {
+                    ErrorMessage = "PIN must be exactly 6 digits.";
+                    return;
+                }
+                if (!string.Equals(Password, ConfirmPassword, StringComparison.Ordinal))
+                {
+                    ErrorMessage = "PINs do not match.";
+                    return;
+                }
+                _masterPassword.SetMasterPassword(Password, "pin");
             }
-            if (!string.Equals(Password, ConfirmPassword, StringComparison.Ordinal))
+            else
             {
-                ErrorMessage = "Passwords do not match.";
-                return;
+                // Password: 8+ chars
+                if (Password.Length < 8)
+                {
+                    ErrorMessage = "Password must be at least 8 characters.";
+                    return;
+                }
+                if (!string.Equals(Password, ConfirmPassword, StringComparison.Ordinal))
+                {
+                    ErrorMessage = "Passwords do not match.";
+                    return;
+                }
+                _masterPassword.SetMasterPassword(Password, "password");
             }
-            _masterPassword.SetMasterPassword(Password);
 
             // T-06-05: scrub in-memory password ASAP — best-effort since SecureString is banned.
             Password = "";
@@ -103,7 +152,7 @@ public partial class LockOverlayViewModel : ObservableObject
 
         if (!_masterPassword.VerifyMasterPassword(Password))
         {
-            ErrorMessage = "Incorrect password. Try again.";
+            ErrorMessage = IsPinMode ? "Incorrect PIN. Try again." : "Incorrect password. Try again.";
             Password = "";
             RequestFocusPassword?.Invoke(this, EventArgs.Empty);
             return;

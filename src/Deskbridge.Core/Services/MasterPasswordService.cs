@@ -143,10 +143,45 @@ public sealed class MasterPasswordService : IMasterPasswordService
 
     public void SetMasterPassword(string password)
     {
+        SetMasterPassword(password, "password");
+    }
+
+    public void SetMasterPassword(string password, string authMode)
+    {
         ArgumentNullException.ThrowIfNull(password);
+        ArgumentNullException.ThrowIfNull(authMode);
         var hash = HashNewPassword(password);
-        var auth = new AuthFile(hash, SchemaVersion: CurrentSchemaVersion);
+        var auth = new AuthFile(hash, AuthMode: authMode, SchemaVersion: CurrentSchemaVersion);
         WriteAuthFileAtomically(auth);
+    }
+
+    public string GetAuthMode()
+    {
+        try
+        {
+            var auth = ReadAuthFile();
+            return auth?.AuthMode ?? "password";
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to read authMode from auth.json — defaulting to password");
+            return "password";
+        }
+    }
+
+    public void DeleteAuthFile()
+    {
+        try
+        {
+            if (File.Exists(_filePath))
+            {
+                File.Delete(_filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to delete auth.json at {Path}", _filePath);
+        }
     }
 
     public bool VerifyMasterPassword(string password)

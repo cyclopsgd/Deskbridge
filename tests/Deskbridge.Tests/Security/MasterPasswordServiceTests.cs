@@ -208,4 +208,96 @@ public sealed class MasterPasswordServiceTests
 
         svc.VerifyMasterPassword("anything").Should().BeFalse();
     }
+
+    // --------------------------------------------------------------------
+    // Test 12 — SetMasterPassword with pin authMode writes authMode to auth.json
+    // --------------------------------------------------------------------
+    [Fact]
+    public void SetMasterPassword_WithPinAuthMode_WritesAuthModeToAuthJson()
+    {
+        using var scope = new TempDirScope();
+        var svc = new MasterPasswordService(scope.Path);
+
+        svc.SetMasterPassword("123456", "pin");
+
+        var path = Path.Combine(scope.Path, "auth.json");
+        var json = File.ReadAllText(path);
+        var auth = JsonSerializer.Deserialize<AuthFile>(json, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        auth.Should().NotBeNull();
+        auth!.AuthMode.Should().Be("pin");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 13 — GetAuthMode with no auth.json returns "password"
+    // --------------------------------------------------------------------
+    [Fact]
+    public void GetAuthMode_NoAuthJson_ReturnsPassword()
+    {
+        using var scope = new TempDirScope();
+        var svc = new MasterPasswordService(scope.Path);
+
+        svc.GetAuthMode().Should().Be("password");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 14 — GetAuthMode with existing password mode returns "password"
+    // --------------------------------------------------------------------
+    [Fact]
+    public void GetAuthMode_ExistingPasswordMode_ReturnsPassword()
+    {
+        using var scope = new TempDirScope();
+        var svc = new MasterPasswordService(scope.Path);
+        svc.SetMasterPassword("hunter2");
+
+        svc.GetAuthMode().Should().Be("password");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 15 — GetAuthMode with pin mode returns "pin"
+    // --------------------------------------------------------------------
+    [Fact]
+    public void GetAuthMode_PinMode_ReturnsPin()
+    {
+        using var scope = new TempDirScope();
+        var svc = new MasterPasswordService(scope.Path);
+        svc.SetMasterPassword("123456", "pin");
+
+        svc.GetAuthMode().Should().Be("pin");
+    }
+
+    // --------------------------------------------------------------------
+    // Test 16 — DeleteAuthFile removes file
+    // --------------------------------------------------------------------
+    [Fact]
+    public void DeleteAuthFile_RemovesFile()
+    {
+        using var scope = new TempDirScope();
+        var svc = new MasterPasswordService(scope.Path);
+        svc.SetMasterPassword("hunter2");
+        svc.IsMasterPasswordSet().Should().BeTrue();
+
+        svc.DeleteAuthFile();
+        svc.IsMasterPasswordSet().Should().BeFalse();
+    }
+
+    // --------------------------------------------------------------------
+    // Test 17 — Backward compat: missing authMode field defaults to "password"
+    // --------------------------------------------------------------------
+    [Fact]
+    public void BackwardCompat_MissingAuthModeField_DefaultsToPassword()
+    {
+        using var scope = new TempDirScope();
+        var svc = new MasterPasswordService(scope.Path);
+
+        // Manually write auth.json WITHOUT authMode field (simulates pre-PIN install)
+        var hash = svc.HashNewPassword("hunter2");
+        var json = $$"""{"passwordHash":"{{hash}}","schemaVersion":1}""";
+        File.WriteAllText(Path.Combine(scope.Path, "auth.json"), json);
+
+        svc.GetAuthMode().Should().Be("password");
+        svc.VerifyMasterPassword("hunter2").Should().BeTrue();
+    }
 }

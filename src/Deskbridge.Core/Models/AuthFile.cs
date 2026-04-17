@@ -11,8 +11,15 @@ namespace Deskbridge.Core.Models;
 /// PBKDF2 to the recovery channel's strength. To reset, delete this file.
 /// </summary>
 /// <param name="PasswordHash">v1-envelope hash string; never a plaintext password.</param>
+/// <param name="AuthMode">
+/// <c>"password"</c> or <c>"pin"</c>. Controls which UI the lock overlay presents
+/// (full password field vs 6-digit PIN). The PBKDF2 hash is mode-agnostic — AuthMode
+/// is purely a presentation hint. Default <c>"password"</c> ensures backward compatibility
+/// with existing installs where the field is absent in JSON (System.Text.Json defaults
+/// missing properties to the record default).
+/// </param>
 /// <param name="SchemaVersion">Reserves the shape for a future algorithm bump (e.g. Argon2id).</param>
-public sealed record AuthFile(string PasswordHash, int SchemaVersion = 1);
+public sealed record AuthFile(string PasswordHash, string AuthMode = "password", int SchemaVersion = 1);
 
 /// <summary>
 /// Source-generated <see cref="JsonSerializerContext"/> for <see cref="AuthFile"/>.
