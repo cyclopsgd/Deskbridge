@@ -41,6 +41,9 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     /// <summary>Phase 6.1: factory for a fresh change password dialog per click.</summary>
     private readonly Func<ChangePasswordDialog>? _changePasswordFactory;
 
+    /// <summary>Phase 7 Plan 07-04: factory for a fresh import wizard dialog per click.</summary>
+    private Func<ImportWizardDialog>? _importWizardFactory;
+
     /// <summary>Phase 6.1: master password service for toggle confirmation.</summary>
     private IMasterPasswordService? _masterPasswordService;
 
@@ -630,6 +633,91 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         catch (Exception ex)
         {
             Serilog.Log.Warning(ex, "Failed to open change password dialog");
+        }
+    }
+
+    // ----------------------------------------------------------- Phase 7 Plan 07-04 import/export
+
+    /// <summary>
+    /// Phase 7 Plan 07-04: sets the import wizard factory after DI build so
+    /// the settings panel import button can open the wizard. Called from
+    /// App.OnStartup after the service provider is built.
+    /// </summary>
+    internal void SetImportWizardFactory(Func<ImportWizardDialog> factory) =>
+        _importWizardFactory = factory;
+
+    /// <summary>
+    /// Phase 7 Plan 07-04 (MIG-02): Settings panel "Import Connections..." button.
+    /// Opens the import wizard ContentDialog.
+    /// </summary>
+    private async void ImportConnectionsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_lockState.IsLocked) return;
+        if (_importWizardFactory is null) return;
+        try
+        {
+            var dialog = _importWizardFactory();
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to open import wizard");
+        }
+    }
+
+    /// <summary>
+    /// Phase 7 Plan 07-04 (MIG-06): Settings panel "Export as JSON" button.
+    /// Shows SaveFileDialog then writes JSON export (no credentials).
+    /// </summary>
+    private async void ExportJsonButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_lockState.IsLocked) return;
+        try
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "JSON Files (*.json)|*.json",
+                FileName = "deskbridge-connections.json"
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                if (((App)Application.Current).Services?.GetService(typeof(IConnectionStore)) is not IConnectionStore store)
+                    return;
+                var json = ConnectionExporter.ExportJson(store.GetAll(), store.GetGroups());
+                await System.IO.File.WriteAllTextAsync(dlg.FileName, json);
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to export connections as JSON");
+        }
+    }
+
+    /// <summary>
+    /// Phase 7 Plan 07-04 (MIG-06): Settings panel "Export as CSV" button.
+    /// Shows SaveFileDialog then writes CSV export (no credentials).
+    /// </summary>
+    private async void ExportCsvButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_lockState.IsLocked) return;
+        try
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                FileName = "deskbridge-connections.csv"
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                if (((App)Application.Current).Services?.GetService(typeof(IConnectionStore)) is not IConnectionStore store)
+                    return;
+                var csv = ConnectionExporter.ExportCsv(store.GetAll(), store.GetGroups());
+                await System.IO.File.WriteAllTextAsync(dlg.FileName, csv);
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to export connections as CSV");
         }
     }
 

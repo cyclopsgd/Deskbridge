@@ -110,7 +110,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **MIG-01**: mRemoteNG import parses confCons.xml with field mapping
 - [ ] **MIG-02**: Import wizard: pick file -> preview connections -> confirm import
 - [x] **MIG-03**: Metadata only -- no password import, users re-enter credentials
-- [x] **MIG-04**: Imported connections stored with TERMSRV/ credential prefix
+- [x] **MIG-04**: Imported connections stored with DESKBRIDGE/CONN/{connectionId} credential target (changed from TERMSRV/ in quick task 260416-9wt)
 - [x] **MIG-05**: ConnectionImportedEvent published to event bus, import recorded in audit log
 - [x] **MIG-06**: Export as JSON (no credentials) and CSV
 

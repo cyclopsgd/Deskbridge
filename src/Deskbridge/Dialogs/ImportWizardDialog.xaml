@@ -1,0 +1,95 @@
+<ui:ContentDialog x:Class="Deskbridge.Dialogs.ImportWizardDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:local="clr-namespace:Deskbridge.Dialogs"
+    xmlns:vm="clr-namespace:Deskbridge.ViewModels"
+    xmlns:models="clr-namespace:Deskbridge.Core.Models;assembly=Deskbridge.Core"
+    Title="Import Connections"
+    DialogMaxWidth="560"
+    PrimaryButtonText="{Binding PrimaryButtonText}"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <!-- BasedOn style for WPF-UI theming (Pitfall 1) -->
+    <ui:ContentDialog.Resources>
+        <Style BasedOn="{StaticResource {x:Type ui:ContentDialog}}"
+               TargetType="{x:Type local:ImportWizardDialog}" />
+    </ui:ContentDialog.Resources>
+
+    <Grid MinWidth="440" MinHeight="200">
+        <!-- Step 1: Source Selection -->
+        <StackPanel Visibility="{Binding IsStep1, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="Import from:" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <ComboBox ItemsSource="{Binding AvailableImporters}"
+                      SelectedItem="{Binding SelectedImporter}"
+                      DisplayMemberPath="SourceName"
+                      MinWidth="200" />
+            <TextBlock Text="Select the application to import connections from."
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Margin="0,8,0,0" FontSize="12" />
+        </StackPanel>
+
+        <!-- Step 2: File Picker -->
+        <StackPanel Visibility="{Binding IsStep2, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="Select configuration file:" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Text="{Binding FilePath}" IsReadOnly="True" />
+                <ui:Button Grid.Column="1" Content="Browse..."
+                           Command="{Binding BrowseFileCommand}" Margin="8,0,0,0" />
+            </Grid>
+            <!-- Error display for invalid/encrypted files -->
+            <ui:InfoBar IsOpen="{Binding ErrorMessage, Converter={StaticResource NullToBool}}"
+                        Severity="Error" Title="Import Error"
+                        Message="{Binding ErrorMessage}" Margin="0,8,0,0"
+                        IsClosable="False" />
+        </StackPanel>
+
+        <!-- Step 3: Tree Preview with Checkboxes -->
+        <Grid Visibility="{Binding IsStep3, Converter={StaticResource BoolToVisibility}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" FontWeight="SemiBold" Margin="0,0,0,8">
+                <Run Text="Select connections to import:" />
+            </TextBlock>
+            <TreeView Grid.Row="1" ItemsSource="{Binding PreviewItems}"
+                      MaxHeight="300" MinHeight="200">
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox IsChecked="{Binding IsChecked}" Margin="0,0,4,0" />
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Protocol}" Margin="8,0,0,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       FontSize="11" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </Grid>
+
+        <!-- Step 4: Confirmation/Summary -->
+        <StackPanel Visibility="{Binding IsStep4, Converter={StaticResource BoolToVisibility}}">
+            <ui:InfoBar IsOpen="True" IsClosable="False" Severity="Success"
+                        Title="Import Complete"
+                        Message="{Binding ImportSummary}" />
+        </StackPanel>
+
+        <!-- Processing overlay -->
+        <Grid Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
+            <Border Background="{DynamicResource ApplicationBackgroundBrush}" Opacity="0.7" />
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ui:ProgressRing IsIndeterminate="True" Width="32" Height="32" />
+                <TextBlock Text="Processing..." Margin="0,8,0,0"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:ContentDialog>
