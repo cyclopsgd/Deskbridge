@@ -5,6 +5,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:local="clr-namespace:Deskbridge.Dialogs"
+    xmlns:ctrl="clr-namespace:Deskbridge.Controls"
     xmlns:vm="clr-namespace:Deskbridge.ViewModels"
     d:DataContext="{d:DesignInstance vm:LockOverlayViewModel}"
     mc:Ignorable="d"
@@ -71,11 +72,10 @@
                                  IsChecked="{Binding IsPinMode}" />
                 </StackPanel>
 
-                <!-- Password field (40px tall). PasswordBox.Password is NOT a DP (by
-                     design — avoids plaintext in the WPF binding pipeline) so we push
-                     into the VM via PasswordField_PasswordChanged in code-behind. Using
-                     ui:PasswordBox for the PlaceholderText DP (stock PasswordBox has none).
-                     MaxLength via DataTrigger: 6 for PIN mode, 0 (unlimited) for password. -->
+                <!-- Password field — password mode (PasswordBox) vs PIN mode (PinInputControl).
+                     Both share the same grid slot; Visibility toggled by IsPinMode DataTrigger.
+                     PasswordBox.Password is NOT a DP so we push via code-behind PasswordChanged.
+                     PinInputControl.Pin IS a DP and binds two-way to Password. -->
                 <ui:PasswordBox x:Name="PasswordField"
                                 Height="40"
                                 PlaceholderText="{Binding PasswordPlaceholder}"
@@ -85,33 +85,74 @@
                             <Setter Property="MaxLength" Value="0" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsPinMode}" Value="True">
-                                    <Setter Property="MaxLength" Value="6" />
+                                    <Setter Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </ui:PasswordBox.Style>
                 </ui:PasswordBox>
 
-                <!-- Confirm field — only visible in first-run setup mode. 8px gap above.
-                     PlaceholderText adapts to PIN vs password via DataTrigger. -->
+                <!-- PIN field — 6-cell masked digit input, visible only in PIN mode.
+                     Pin DP binds two-way to VM.Password (no code-behind handler needed). -->
+                <ctrl:PinInputControl x:Name="PinField"
+                                      Pin="{Binding Password, Mode=TwoWay}"
+                                      Margin="0,4,0,0">
+                    <ctrl:PinInputControl.Style>
+                        <Style TargetType="ctrl:PinInputControl">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPinMode}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ctrl:PinInputControl.Style>
+                </ctrl:PinInputControl>
+
+                <!-- Confirm field — password mode. Visible only when IsFirstRun AND NOT IsPinMode.
+                     PlaceholderText is always "Confirm password" (PIN mode uses PinInputControl below). -->
                 <ui:PasswordBox x:Name="ConfirmField"
                                 Height="40"
                                 Margin="0,8,0,0"
-                                Visibility="{Binding IsFirstRun, Converter={StaticResource BoolToVisibility}}"
+                                PlaceholderText="Confirm password"
                                 PasswordChanged="ConfirmField_PasswordChanged">
                     <ui:PasswordBox.Style>
                         <Style TargetType="ui:PasswordBox" BasedOn="{StaticResource {x:Type ui:PasswordBox}}">
-                            <Setter Property="PlaceholderText" Value="Confirm password" />
-                            <Setter Property="MaxLength" Value="0" />
+                            <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsPinMode}" Value="True">
-                                    <Setter Property="PlaceholderText" Value="Confirm PIN" />
-                                    <Setter Property="MaxLength" Value="6" />
-                                </DataTrigger>
+                                <!-- Visible only when IsFirstRun=True AND IsPinMode=False -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsFirstRun}" Value="True" />
+                                        <Condition Binding="{Binding IsPinMode}" Value="False" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
                     </ui:PasswordBox.Style>
                 </ui:PasswordBox>
+
+                <!-- Confirm PIN field — visible only when IsFirstRun AND IsPinMode.
+                     Pin DP binds two-way to VM.ConfirmPassword. -->
+                <ctrl:PinInputControl x:Name="ConfirmPinField"
+                                      Pin="{Binding ConfirmPassword, Mode=TwoWay}"
+                                      Margin="0,8,0,0">
+                    <ctrl:PinInputControl.Style>
+                        <Style TargetType="ctrl:PinInputControl">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsFirstRun}" Value="True" />
+                                        <Condition Binding="{Binding IsPinMode}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ctrl:PinInputControl.Style>
+                </ctrl:PinInputControl>
 
                 <!-- 12px gap → error slot (reserves space via NullToCollapsed) -->
                 <TextBlock Text="{Binding ErrorMessage}"

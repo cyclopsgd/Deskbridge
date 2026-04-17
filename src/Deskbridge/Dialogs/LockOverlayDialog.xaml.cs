@@ -15,13 +15,14 @@ namespace Deskbridge.Dialogs;
 /// <para><b>Pitfall 8</b> (WPF-UI Issue #1404): even with IsFooterVisible="False"
 /// the dialog's built-in Enter handler fires the PrimaryButton. We mitigate by
 /// intercepting Enter in <see cref="Dialog_PreviewKeyDown"/> and invoking the
-/// VM's UnlockCommand when a PasswordBox (either stock or ui:) has focus.</para>
+/// VM's UnlockCommand when a PasswordBox or TextBox (PIN cells) has focus.</para>
 ///
 /// <para>PasswordBox.Password is NOT a <see cref="DependencyProperty"/> (by
 /// design — to avoid the plaintext living in the WPF binding pipeline). We
 /// push the value into the VM on every PasswordChanged event via the code-behind
-/// hook. The two password fields in XAML are <see cref="Wpf.Ui.Controls.PasswordBox"/>
-/// (for PlaceholderText DP support).</para>
+/// hook. The password-mode fields use <see cref="Wpf.Ui.Controls.PasswordBox"/>
+/// (for PlaceholderText DP support). PIN-mode fields use
+/// <see cref="Controls.PinInputControl"/> with two-way Pin DP binding.</para>
 /// </summary>
 public partial class LockOverlayDialog : ContentDialog
 {
@@ -48,10 +49,16 @@ public partial class LockOverlayDialog : ContentDialog
             {
                 PasswordField.Password = "";
                 ConfirmField.Password = "";
+                PinField.Clear();
+                ConfirmPinField.Clear();
                 _vm.Password = "";
                 _vm.ConfirmPassword = "";
                 _vm.ErrorMessage = null;
-                PasswordField.Focus();
+
+                if (_vm.IsPinMode)
+                    PinField.FocusFirst();
+                else
+                    PasswordField.Focus();
             }
         };
 
@@ -61,9 +68,25 @@ public partial class LockOverlayDialog : ContentDialog
         _vm.RequestFocusPassword += (_, _) =>
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                PasswordField.Password = "";
-                PasswordField.Focus();
+                if (_vm.IsPinMode)
+                {
+                    PinField.Clear();
+                    PinField.FocusFirst();
+                }
+                else
+                {
+                    PasswordField.Password = "";
+                    PasswordField.Focus();
+                }
             }));
+
+        // Auto-submit when 6th PIN digit is entered during unlock mode (not first-run,
+        // where the user still needs to fill the confirm field).
+        PinField.PinComplete += (_, _) =>
+        {
+            if (!_vm.IsFirstRun && _vm.UnlockCommand.CanExecute(null))
+                _vm.UnlockCommand.Execute(null);
+        };
     }
 
     /// <summary>Exposes the VM to <see cref="Services.AppLockController"/> so it can subscribe to <see cref="LockOverlayViewModel.UnlockSucceeded"/>.</summary>
@@ -71,8 +94,11 @@ public partial class LockOverlayDialog : ContentDialog
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Focus the password field on open so the user can type immediately.
-        PasswordField.Focus();
+        // Focus the appropriate field on open so the user can type immediately.
+        if (_vm.IsPinMode)
+            PinField.FocusFirst();
+        else
+            PasswordField.Focus();
     }
 
     /// <summary>
@@ -80,15 +106,18 @@ public partial class LockOverlayDialog : ContentDialog
     /// otherwise fire the built-in PrimaryButton (a phantom button because
     /// IsFooterVisible=False). Intercept here and route to the VM's UnlockCommand.
     /// <c>internal</c> so DiComposition source-grep tests can verify the regression
-    /// guard by file-read. Handles BOTH <see cref="Wpf.Ui.Controls.PasswordBox"/>
-    /// (what the XAML uses) and <see cref="System.Windows.Controls.PasswordBox"/>
-    /// (defense-in-depth if the XAML changes).
+    /// guard by file-read. Handles <see cref="Wpf.Ui.Controls.PasswordBox"/>
+    /// (password mode), <see cref="System.Windows.Controls.PasswordBox"/>
+    /// (defense-in-depth), and <see cref="System.Windows.Controls.TextBox"/>
+    /// (PinInputControl cells are standard TextBox instances).
     /// </summary>
     internal void Dialog_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
         var focused = Keyboard.FocusedElement;
-        if (focused is Wpf.Ui.Controls.PasswordBox or System.Windows.Controls.PasswordBox)
+        if (focused is Wpf.Ui.Controls.PasswordBox
+                     or System.Windows.Controls.PasswordBox
+                     or System.Windows.Controls.TextBox)
         {
             if (_vm.UnlockCommand.CanExecute(null))
             {
