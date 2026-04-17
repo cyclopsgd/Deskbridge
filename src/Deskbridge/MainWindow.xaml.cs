@@ -817,10 +817,14 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                     _masterPasswordService.DeleteAuthFile();
                     vm.IsMasterPasswordConfigured = false;
 
-                    // Update AppLockController at runtime so Ctrl+L / bus events stop locking
+                    // ForceDisableAsync dismisses any active lock overlay, restores
+                    // collapsed HostContainer children, clears lock state, and sets
+                    // RequireMasterPassword = false — all in one atomic call. Without
+                    // this, disabling password while an RDP session is active could
+                    // leave an invisible blocking layer (SmokeGrid / collapsed WFH).
                     if (LockController is not null)
                     {
-                        LockController.RequireMasterPassword = false;
+                        await LockController.ForceDisableAsync();
                     }
                 }
                 else
