@@ -301,7 +301,14 @@ public partial class App : Application
             sp.GetRequiredService<IEventBus>(),
             sp.GetRequiredService<IConnectionStore>(),
             sp.GetRequiredService<ViewModels.ToastStackViewModel>(),
-            windowState: sp.GetRequiredService<IWindowStateService>()));
+            windowState: sp.GetRequiredService<IWindowStateService>(),
+            masterPassword: sp.GetRequiredService<IMasterPasswordService>()));
+        // Phase 6.1: change password/PIN dialog
+        services.AddTransient<ViewModels.ChangePasswordViewModel>();
+        services.AddTransient<Dialogs.ChangePasswordDialog>();
+        services.AddTransient<Func<Dialogs.ChangePasswordDialog>>(sp =>
+            () => sp.GetRequiredService<Dialogs.ChangePasswordDialog>());
+
         services.AddSingleton<ViewModels.ConnectionTreeViewModel>();
         services.AddTransient<ViewModels.ConnectionEditorViewModel>();
         services.AddTransient<ViewModels.GroupEditorViewModel>();
@@ -310,7 +317,19 @@ public partial class App : Application
         services.AddSingleton<Views.ConnectionTreeControl>();
         services.AddTransient<Dialogs.ConnectionEditorDialog>();
         services.AddTransient<Dialogs.GroupEditorDialog>();
-        services.AddSingleton<MainWindow>();
+        services.AddSingleton<MainWindow>(sp => new MainWindow(
+            sp.GetRequiredService<ViewModels.MainWindowViewModel>(),
+            sp.GetRequiredService<ISnackbarService>(),
+            sp.GetRequiredService<IContentDialogService>(),
+            sp.GetRequiredService<Views.ConnectionTreeControl>(),
+            sp.GetRequiredService<IConnectionCoordinator>(),
+            sp.GetRequiredService<AirspaceSwapper>(),
+            sp.GetRequiredService<ITabHostManager>(),
+            sp.GetRequiredService<IEventBus>(),
+            sp.GetRequiredService<IWindowStateService>(),
+            sp.GetRequiredService<IAppLockState>(),
+            sp.GetRequiredService<Func<CommandPaletteDialog>>(),
+            sp.GetRequiredService<Func<ChangePasswordDialog>>()));
     }
 
     protected override void OnExit(ExitEventArgs e)
