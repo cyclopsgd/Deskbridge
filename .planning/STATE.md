@@ -136,6 +136,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260416-9wt | Fix Credential Guard blocking by changing CredMan target from TERMSRV to DESKBRIDGE/CONN | 2026-04-16 | fc18102 | [260416-9wt](./quick/260416-9wt-fix-credential-guard-blocking-by-changin/) |
+| 260417-9ms | Phase 6.1: master password UX — PIN mode, change password, disable toggle | 2026-04-17 | f99573a | [260417-9ms](./quick/260417-9ms-phase-6-1-master-password-ux-change-pass/) |
 
 ### Blockers/Concerns
 
