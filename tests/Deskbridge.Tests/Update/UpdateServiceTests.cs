@@ -83,12 +83,12 @@ public sealed class UpdateServiceTests
         await sut.CheckForUpdatesAsync(Ct);
 
         var progressValues = new List<int>();
-        var progress = new Progress<int>(v => progressValues.Add(v));
+        var progress = new SynchronousProgress<int>(v => progressValues.Add(v));
 
         await sut.DownloadUpdatesAsync(progress, Ct);
 
-        // The testable service simulates progress reports at 0, 50, 100
         progressValues.Should().NotBeEmpty("progress should have been reported");
+        progressValues.Should().ContainInOrder(0, 50, 100);
     }
 
     /// <summary>
@@ -182,4 +182,9 @@ internal sealed class TestableUpdateService : UpdateService
     {
         // No-op in tests — would call Environment.Exit() in production
     }
+}
+
+internal sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
+{
+    public void Report(T value) => handler(value);
 }
