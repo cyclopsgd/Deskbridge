@@ -22,6 +22,11 @@
     <ProjectReference Include="..\..\src\Deskbridge.Core\Deskbridge.Core.csproj" />
     <ProjectReference Include="..\..\src\Deskbridge.Protocols.Rdp\Deskbridge.Protocols.Rdp.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Fixtures\sample-confcons.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <!-- Classic aximp interop DLLs — <Reference> does not flow transitively through
        ProjectReference, so the test project re-references them directly. See
        CLAUDE.md "Classic aximp.exe interop only". -->

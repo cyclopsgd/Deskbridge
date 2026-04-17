@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Connections Name="Connections"
+             Export="false"
+             EncryptionEngine="AES"
+             BlockCipherMode="GCM"
+             KdfIterations="1000"
+             FullFileEncryption="false"
+             Protected="GiIJi/PiCE4="
+             ConfVersion="2.6">
+    <Node Name="Production Servers" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General">
+        <Node Name="Web Server 01" Type="Connection"
+              Protocol="RDP" Hostname="web01.prod.local" Port="3389"
+              Username="admin" Domain="PROD" Password="encryptedvalue123"
+              Description="Primary web server" Icon="mRemoteNG" Panel="General" />
+        <Node Name="DB Server 01" Type="Connection"
+              Protocol="RDP" Hostname="db01.prod.local" Port="3389"
+              Username="dbadmin" Domain="PROD" Password="encryptedvalue456"
+              Description="Primary database" Icon="mRemoteNG" Panel="General" />
+    </Node>
+    <Node Name="Dev Environment" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General">
+        <Node Name="Dev Linux Box" Type="Connection"
+              Protocol="SSH2" Hostname="devbox.local" Port="22"
+              Username="developer" Domain="" Password=""
+              Description="SSH dev server" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Dev Windows" Type="Connection"
+              Protocol="RDP" Hostname="devwin.local" Port="3389"
+              Username="" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+    </Node>
+    <Node Name="Standalone Server" Type="Connection"
+          Protocol="RDP" Hostname="standalone.local" Port="3390"
+          Username="root" Domain="" Password=""
+          Description="Custom port server" Icon="mRemoteNG" Panel="General" />
+</Connections>
