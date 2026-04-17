@@ -9,21 +9,23 @@ namespace Deskbridge.Core.Pipeline.Stages;
 /// <summary>
 /// Resolves credentials per <see cref="ConnectionModel.CredentialMode"/>: Own walks
 /// <c>ICredentialService.GetForConnection</c>; Inherit walks the group chain via
-/// <c>ICredentialService.ResolveInherited</c>; Prompt publishes
-/// <see cref="CredentialRequestedEvent"/> and fails. On resolution, username + domain
-/// flow into <see cref="ConnectionContext.Connection"/> and password into
+/// <c>ICredentialService.ResolveInherited</c>; Prompt awaits
+/// <see cref="ICredentialPromptService.PromptAsync"/> for user-entered one-time
+/// credentials. On resolution, username + domain flow into
+/// <see cref="ConnectionContext.Connection"/> and password into
 /// <see cref="ConnectionContext.ResolvedPassword"/> — never logged.
 /// </summary>
 public sealed class ResolveCredentialsStage(
     ICredentialService creds,
     IConnectionStore store,
     IEventBus bus,
-    ILogger<ResolveCredentialsStage> log) : IConnectionPipelineStage
+    ILogger<ResolveCredentialsStage> log,
+    ICredentialPromptService? promptService = null) : IConnectionPipelineStage
 {
     public string Name => "ResolveCredentials";
     public int Order => 100;
 
-    public Task<PipelineResult> ExecuteAsync(ConnectionContext ctx)
+    public async Task<PipelineResult> ExecuteAsync(ConnectionContext ctx)
     {
         var c = ctx.Connection;
         switch (c.CredentialMode)
@@ -35,11 +37,11 @@ public sealed class ResolveCredentialsStage(
                 {
                     log.LogInformation("No own credential for {Hostname} — prompting", c.Hostname);
                     bus.Publish(new CredentialRequestedEvent(c));
-                    return Task.FromResult(new PipelineResult(false, "Credentials not found (own)"));
+                    return new PipelineResult(false, "Credentials not found (own)");
                 }
                 ApplyCredential(ctx, cred);
                 log.LogInformation("Credentials resolved for {Hostname}", c.Hostname);
-                return Task.FromResult(new PipelineResult(true));
+                return new PipelineResult(true);
             }
             case CredentialMode.Inherit:
             {
@@ -48,17 +50,41 @@ public sealed class ResolveCredentialsStage(
                 {
                     log.LogInformation("No inherited credential for {Hostname} — prompting", c.Hostname);
                     bus.Publish(new CredentialRequestedEvent(c));
-                    return Task.FromResult(new PipelineResult(false, "No inherited credential found"));
+                    return new PipelineResult(false, "No inherited credential found");
                 }
                 ApplyCredential(ctx, cred);
                 log.LogInformation("Inherited credentials resolved for {Hostname}", c.Hostname);
-                return Task.FromResult(new PipelineResult(true));
+                return new PipelineResult(true);
             }
             case CredentialMode.Prompt:
             default:
-                bus.Publish(new CredentialRequestedEvent(c));
-                return Task.FromResult(new PipelineResult(false, "Credentials require prompt"));
+                return await PromptForCredentialsAsync(ctx);
         }
+    }
+
+    private async Task<PipelineResult> PromptForCredentialsAsync(ConnectionContext ctx)
+    {
+        if (promptService is null)
+        {
+            log.LogWarning(
+                "CredentialMode.Prompt for {Hostname} but no ICredentialPromptService registered",
+                ctx.Connection.Hostname);
+            bus.Publish(new CredentialRequestedEvent(ctx.Connection));
+            return new PipelineResult(false, "Credential prompt service not available");
+        }
+
+        log.LogInformation("Prompting user for credentials for {Hostname}", ctx.Connection.Hostname);
+        var cred = await promptService.PromptAsync(ctx.Connection);
+
+        if (cred is null)
+        {
+            log.LogInformation("User cancelled credential prompt for {Hostname}", ctx.Connection.Hostname);
+            return new PipelineResult(false, "User cancelled credential prompt");
+        }
+
+        ApplyCredential(ctx, cred);
+        log.LogInformation("Credentials provided via prompt for {Hostname}", ctx.Connection.Hostname);
+        return new PipelineResult(true);
     }
 
     private static void ApplyCredential(ConnectionContext ctx, NetworkCredential cred)

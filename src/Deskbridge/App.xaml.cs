@@ -212,6 +212,10 @@ public partial class App : Application
         services.AddSingleton<ISnackbarService, SnackbarService>();
         services.AddSingleton<IContentDialogService, ContentDialogService>();
 
+        // Credential prompt dialog service — CredentialMode.Prompt shows a ContentDialog
+        // for one-time credentials (not persisted to Credential Manager).
+        services.AddSingleton<ICredentialPromptService, CredentialPromptService>();
+
         // Phase 6 Plan 06-02 (NOTF-04): window + security settings persistence.
         services.AddSingleton<IWindowStateService, WindowStateService>();
 

@@ -343,11 +343,10 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     }
 
     /// <summary>
-    /// Phase 4 stop-gap (Phase 6 scope: real prompt dialog). <c>CredentialMode.Prompt</c> and
-    /// unresolved Own/Inherit cases publish <see cref="CredentialRequestedEvent"/>, but there's
-    /// no prompt UI yet. Before this handler existed the event vanished silently and the user
-    /// saw nothing. Log a warning and surface a <see cref="ConnectionFailedEvent"/> so the
-    /// existing failure UI path shows feedback.
+    /// Fallback handler for <see cref="CredentialRequestedEvent"/>. With the credential
+    /// prompt dialog wired into <c>ResolveCredentialsStage</c>, this event now only fires
+    /// for unresolved Own/Inherit cases (stored credential missing). Surface a
+    /// <see cref="ConnectionFailedEvent"/> so the failure toast shows feedback.
     /// </summary>
     private void OnCredentialRequested(CredentialRequestedEvent evt)
     {
@@ -359,12 +358,12 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
 
         _logger.LogWarning(
-            "CredentialRequestedEvent for {Hostname} — prompt mode not yet implemented. " +
-            "Use CredentialMode.Own with stored password for now.",
+            "CredentialRequestedEvent for {Hostname} — no stored credential found. " +
+            "Configure credentials via Edit Connection or use CredentialMode.Prompt.",
             evt.Connection.Hostname);
         _bus.Publish(new ConnectionFailedEvent(
             evt.Connection,
-            "Prompt mode not yet implemented — use Own mode with stored password (Phase 6 scope).",
+            "No credentials found — configure via Edit Connection or switch to Prompt mode.",
             null));
     }
 
