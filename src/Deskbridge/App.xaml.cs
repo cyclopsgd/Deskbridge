@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Media;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Logging;
+using Deskbridge.Core.Models;
 using Deskbridge.Core.Pipeline;
 using Deskbridge.Core.Pipeline.Stages;
 using Deskbridge.Core.Services;
@@ -122,6 +123,10 @@ public partial class App : Application
         // RequireMasterPassword toggle can update it at runtime.
         mainWindow.LockController = lockController;
 
+        // Phase 7 Plan 07-04 (MIG-02): wire the import wizard factory on MainWindow
+        // so the settings panel import button can open the wizard.
+        mainWindow.SetImportWizardFactory(_serviceProvider.GetRequiredService<Func<ImportWizardDialog>>());
+
         // Startup lock — fire-and-forget so OnStartup returns and the dispatcher
         // can render the overlay. EnsureLockedOnStartupAsync handles both the
         // returning-user (unlock mode) and first-run (setup mode) flows by
@@ -235,10 +240,14 @@ public partial class App : Application
         // ICommandPaletteService singleton — command closures delegate to the
         // MainWindowViewModel / ConnectionTreeViewModel singletons so the palette
         // entries invoke the SAME commands as the global keyboard shortcuts.
+        // Phase 7 Plan 07-04: adds import + export commands via optional parameters.
         services.AddSingleton<ICommandPaletteService>(sp =>
         {
             var main = sp.GetRequiredService<MainWindowViewModel>();
             var tree = sp.GetRequiredService<ConnectionTreeViewModel>();
+            var connStore = sp.GetRequiredService<IConnectionStore>();
+            var importerFactory = sp.GetRequiredService<Func<ImportWizardDialog>>();
+            var contentDialog = sp.GetRequiredService<IContentDialogService>();
             return new CommandPaletteService(
                 newConnection: () => tree.NewConnectionCommand.ExecuteAsync(null),
                 openSettings: () =>
@@ -247,7 +256,38 @@ public partial class App : Application
                     return Task.CompletedTask;
                 },
                 disconnectAll: () => main.DisconnectAllCommand.ExecuteAsync(null),
-                quickConnect: () => main.QuickConnectCommand.ExecuteAsync(null));
+                quickConnect: () => main.QuickConnectCommand.ExecuteAsync(null),
+                importConnections: async () =>
+                {
+                    var dialog = importerFactory();
+                    await dialog.ShowAsync();
+                },
+                exportJson: async () =>
+                {
+                    var dlg = new Microsoft.Win32.SaveFileDialog
+                    {
+                        Filter = "JSON Files (*.json)|*.json",
+                        FileName = "deskbridge-connections.json"
+                    };
+                    if (dlg.ShowDialog() == true)
+                    {
+                        var json = ConnectionExporter.ExportJson(connStore.GetAll(), connStore.GetGroups());
+                        await File.WriteAllTextAsync(dlg.FileName, json);
+                    }
+                },
+                exportCsv: async () =>
+                {
+                    var dlg = new Microsoft.Win32.SaveFileDialog
+                    {
+                        Filter = "CSV Files (*.csv)|*.csv",
+                        FileName = "deskbridge-connections.csv"
+                    };
+                    if (dlg.ShowDialog() == true)
+                    {
+                        var csv = ConnectionExporter.ExportCsv(connStore.GetAll(), connStore.GetGroups());
+                        await File.WriteAllTextAsync(dlg.FileName, csv);
+                    }
+                });
         });
 
         // CommandPaletteViewModel + CommandPaletteDialog are transient — one
@@ -260,6 +300,33 @@ public partial class App : Application
         // holding a reference to IServiceProvider directly.
         services.AddTransient<Func<CommandPaletteDialog>>(sp =>
             () => sp.GetRequiredService<CommandPaletteDialog>());
+
+        // ---- Phase 7 Plan 07-04: import wizard + export (MIG-02 / MIG-05) ----
+        //
+        // IConnectionImporter: all importers registered (multi-source architecture).
+        // Phase 7 ships MRemoteNGImporter only; future importers add registrations here.
+        services.AddSingleton<IConnectionImporter, MRemoteNGImporter>();
+
+        // ImportWizardViewModel: transient — fresh per wizard session so
+        // step state and preview items are clean each open.
+        services.AddTransient<ImportWizardViewModel>(sp =>
+            new ImportWizardViewModel(
+                sp.GetServices<IConnectionImporter>().ToList(),
+                sp.GetRequiredService<IConnectionStore>(),
+                sp.GetRequiredService<IEventBus>(),
+                sp.GetRequiredService<IAuditLogger>()));
+
+        // ImportWizardDialog: transient — one dialog per import session.
+        services.AddTransient<ImportWizardDialog>(sp =>
+            new ImportWizardDialog(
+                sp.GetRequiredService<MainWindow>().FindName("RootContentDialog") as Wpf.Ui.Controls.ContentDialogHost
+                    ?? throw new InvalidOperationException("RootContentDialog host not found"),
+                sp.GetRequiredService<ImportWizardViewModel>()));
+
+        // Factory so command palette + settings panel can open the import wizard
+        // without holding a reference to IServiceProvider.
+        services.AddTransient<Func<ImportWizardDialog>>(sp =>
+            () => sp.GetRequiredService<ImportWizardDialog>());
 
         // ---- Phase 6 Plan 06-04: app security (SEC-01..SEC-05) ----
         //

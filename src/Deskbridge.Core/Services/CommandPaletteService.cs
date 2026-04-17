@@ -5,12 +5,15 @@ using Wpf.Ui.Controls;
 namespace Deskbridge.Core.Services;
 
 /// <summary>
-/// Phase 6 Plan 06-03 (CMD-02 / CMD-03): registry of the 4 D-04 palette commands +
-/// the command-side fuzzy scorer. The 4 <see cref="Func{Task}"/> ctor parameters
+/// Phase 6 Plan 06-03 (CMD-02 / CMD-03): registry of palette commands +
+/// the command-side fuzzy scorer. The core 4 <see cref="Func{Task}"/> ctor parameters
 /// are closures that delegate to the ViewModel-hosted commands — this keeps
 /// <c>Deskbridge.Core</c> free of WPF exe dependencies while still letting the DI
 /// factory in <c>App.ConfigureServices</c> wire <c>MainWindowViewModel</c> /
 /// <c>ConnectionTreeViewModel</c> methods as the actual handlers.
+///
+/// Phase 7 Plan 07-04 adds 3 optional commands (import, export-json, export-csv)
+/// via optional parameters to preserve backward compatibility with existing tests.
 /// </summary>
 public sealed class CommandPaletteService : ICommandPaletteService
 {
@@ -20,7 +23,10 @@ public sealed class CommandPaletteService : ICommandPaletteService
         Func<Task> newConnection,
         Func<Task> openSettings,
         Func<Task> disconnectAll,
-        Func<Task> quickConnect)
+        Func<Task> quickConnect,
+        Func<Task>? importConnections = null,
+        Func<Task>? exportJson = null,
+        Func<Task>? exportCsv = null)
     {
         ArgumentNullException.ThrowIfNull(newConnection);
         ArgumentNullException.ThrowIfNull(openSettings);
@@ -67,6 +73,41 @@ public sealed class CommandPaletteService : ICommandPaletteService
                 Shortcut: "Ctrl+T",
                 ExecuteAsync: quickConnect),
         };
+
+        // Phase 7 Plan 07-04: import + export commands (optional for backward compat)
+        if (importConnections is not null)
+        {
+            _commands.Add(new(
+                Id: "import-connections",
+                Title: "Import Connections",
+                Subtitle: "Import from mRemoteNG or other apps",
+                Aliases: new[] { "import", "migrate" },
+                Icon: SymbolRegular.ArrowImport24,
+                Shortcut: null,
+                ExecuteAsync: importConnections));
+        }
+        if (exportJson is not null)
+        {
+            _commands.Add(new(
+                Id: "export-json",
+                Title: "Export Connections as JSON",
+                Subtitle: "Tree structure, no credentials",
+                Aliases: new[] { "export", "json", "backup" },
+                Icon: SymbolRegular.ArrowExportLtr24,
+                Shortcut: null,
+                ExecuteAsync: exportJson));
+        }
+        if (exportCsv is not null)
+        {
+            _commands.Add(new(
+                Id: "export-csv",
+                Title: "Export Connections as CSV",
+                Subtitle: "Flat list for spreadsheets",
+                Aliases: new[] { "export", "csv", "spreadsheet" },
+                Icon: SymbolRegular.ArrowExportLtr24,
+                Shortcut: null,
+                ExecuteAsync: exportCsv));
+        }
     }
 
     public IEnumerable<CommandEntry> Commands => _commands;

@@ -229,13 +229,13 @@ public sealed class DiCompositionTests
     }
 
     /// <summary>
-    /// Phase 6 Plan 06-03 CMD-02 source check: exactly 4 <c>new(</c> CommandEntry
-    /// ctor invocations inside CommandPaletteService — safer than reflecting on
-    /// the runtime type because it catches regressions that add command rows
-    /// without a corresponding test update.
+    /// Phase 6 Plan 06-03 CMD-02 source check: CommandEntry ctor invocations inside
+    /// CommandPaletteService — safer than reflecting on the runtime type because it
+    /// catches regressions that add command rows without a corresponding test update.
+    /// Phase 7 Plan 07-04 added 3 optional import/export commands (7 total).
     /// </summary>
     [Fact]
-    public void CommandPaletteService_Source_Registers_ExactlyFour_Commands()
+    public void CommandPaletteService_Source_Registers_SevenCommands()
     {
         var solutionRoot = FindSolutionRoot(AppContext.BaseDirectory);
         var svcCs = File.ReadAllText(Path.Combine(solutionRoot, "src", "Deskbridge.Core",
@@ -245,7 +245,7 @@ public sealed class DiCompositionTests
         // service source uses the positional syntax `new(\n    Id: "...", ...`.
         var count = System.Text.RegularExpressions.Regex.Matches(svcCs, @"new\(\s*\n\s*Id:").Count;
 
-        count.Should().Be(4, "D-04: exactly 4 palette commands must be registered");
+        count.Should().Be(7, "D-04: 4 core + 3 Phase 7 import/export palette commands must be registered");
     }
 
     // ----------------------------------------------------------- Phase 7 Plan 07-01

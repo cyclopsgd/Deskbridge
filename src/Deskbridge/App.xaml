@@ -24,6 +24,7 @@
             <converters:BoolToChevronConverter x:Key="BoolToChevron" />
             <converters:EnumToVisibilityConverter x:Key="EnumToVisibility" />
             <converters:NullToCollapsedConverter x:Key="NullToCollapsed" />
+            <converters:NullToBoolConverter x:Key="NullToBool" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
