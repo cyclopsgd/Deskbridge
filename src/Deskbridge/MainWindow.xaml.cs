@@ -37,6 +37,9 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     /// <summary>Plan 06-03 CMD-01: factory for a fresh palette dialog instance per open.</summary>
     private readonly Func<CommandPaletteDialog> _paletteFactory;
 
+    /// <summary>Phase 6.1: factory for a fresh change password dialog per click.</summary>
+    private readonly Func<ChangePasswordDialog>? _changePasswordFactory;
+
     /// <summary>Plan 06-03 CMD-01: idempotence guard so a held-down Ctrl+Shift+P doesn't stack dialogs.</summary>
     private bool _paletteOpen;
 
@@ -70,7 +73,8 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         IEventBus eventBus,
         IWindowStateService windowState,
         IAppLockState lockState,
-        Func<CommandPaletteDialog> paletteFactory)
+        Func<CommandPaletteDialog> paletteFactory,
+        Func<ChangePasswordDialog>? changePasswordFactory = null)
     {
         DataContext = viewModel;
         InitializeComponent();
@@ -88,6 +92,7 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         _windowState = windowState;
         _lockState = lockState;
         _paletteFactory = paletteFactory;
+        _changePasswordFactory = changePasswordFactory;
 
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
@@ -579,6 +584,26 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         finally
         {
             _paletteOpen = false;
+        }
+    }
+
+    /// <summary>
+    /// Phase 6.1: opens the change password/PIN dialog from the Settings panel button.
+    /// Same pattern as the command palette — factory-created transient dialog shown
+    /// via the ContentDialogHost.
+    /// </summary>
+    private async void ChangePasswordButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_lockState.IsLocked) return;
+        if (_changePasswordFactory is null) return;
+        try
+        {
+            var dialog = _changePasswordFactory();
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to open change password dialog");
         }
     }
 

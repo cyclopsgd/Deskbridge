@@ -197,7 +197,18 @@
                                     <TextBlock Text="Lock on minimise"
                                                FontSize="14" />
                                     <ui:ToggleSwitch IsChecked="{Binding LockOnMinimise}"
-                                                     Margin="0,4,0,0" />
+                                                     Margin="0,4,0,12" />
+
+                                    <!-- Separator -->
+                                    <Border Height="1" Margin="0,0,0,12"
+                                            Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+                                    <!-- Change Password/PIN button -->
+                                    <ui:Button x:Name="ChangePasswordButton"
+                                               Content="{Binding ChangePasswordLabel}"
+                                               Appearance="Secondary"
+                                               HorizontalAlignment="Stretch"
+                                               Click="ChangePasswordButton_Click" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>

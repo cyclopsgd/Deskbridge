@@ -22,13 +22,21 @@ public partial class MainWindowViewModel : ObservableObject
     /// </summary>
     private readonly IWindowStateService? _windowState;
 
+    /// <summary>
+    /// Phase 6.1: optional — used for <see cref="IsMasterPasswordConfigured"/>
+    /// and <see cref="ChangePasswordLabel"/>. Nullable for backward-compatible
+    /// test call-sites.
+    /// </summary>
+    private readonly IMasterPasswordService? _masterPassword;
+
     public MainWindowViewModel(
         ConnectionTreeViewModel connectionTree,
         ITabHostManager tabHostManager,
         IEventBus eventBus,
         IConnectionStore connectionStore,
         ToastStackViewModel toastStack,
-        IWindowStateService? windowState = null)
+        IWindowStateService? windowState = null,
+        IMasterPasswordService? masterPassword = null)
     {
         ConnectionTree = connectionTree;
         _tabHostManager = tabHostManager;
@@ -36,6 +44,7 @@ public partial class MainWindowViewModel : ObservableObject
         _connectionStore = connectionStore;
         ToastStack = toastStack;
         _windowState = windowState;
+        _masterPassword = masterPassword;
 
         // Phase 5: subscribe to TabHostManager lifecycle events so the ObservableCollection
         // and status bar stay in sync. All handlers marshal to the UI dispatcher because
@@ -219,6 +228,23 @@ public partial class MainWindowViewModel : ObservableObject
         if (IsFullscreen) IsFullscreen = false;
     }
 
+    // ----------------------------------------------------------- Phase 6.1
+
+    /// <summary>True when a master password/PIN is currently configured. Controls Change Password button visibility.</summary>
+    [ObservableProperty]
+    public partial bool IsMasterPasswordConfigured { get; set; }
+
+    /// <summary>Label for the change button: "Change Password" or "Change PIN".</summary>
+    public string ChangePasswordLabel => _masterPassword?.GetAuthMode() == "pin" ? "Change PIN" : "Change Password";
+
+    /// <summary>
+    /// Phase 6.1: no-op placeholder command. The actual dialog open lives in
+    /// MainWindow.xaml.cs code-behind (same pattern as command palette) because
+    /// the dialog needs IContentDialogService which the VM should not carry.
+    /// </summary>
+    [RelayCommand]
+    private void ChangePassword() { }
+
     // ----------------------------------------------------------- Phase 6 Plan 06-04
 
     /// <summary>
@@ -263,6 +289,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             AutoLockTimeoutMinutes = security.AutoLockTimeoutMinutes;
             LockOnMinimise = security.LockOnMinimise;
+            IsMasterPasswordConfigured = _masterPassword?.IsMasterPasswordSet() ?? false;
         }
         finally
         {
