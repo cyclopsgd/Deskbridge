@@ -681,8 +681,8 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             };
             if (dlg.ShowDialog() == true)
             {
-                if (((App)Application.Current).Services?.GetService(typeof(IConnectionStore)) is not IConnectionStore store)
-                    return;
+                var store = ((App)Application.Current).Services?.GetService(typeof(IConnectionStore)) as IConnectionStore
+                    ?? throw new InvalidOperationException("IConnectionStore not available");
                 var json = ConnectionExporter.ExportJson(store.GetAll(), store.GetGroups());
                 await System.IO.File.WriteAllTextAsync(dlg.FileName, json);
             }
@@ -709,8 +709,8 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             };
             if (dlg.ShowDialog() == true)
             {
-                if (((App)Application.Current).Services?.GetService(typeof(IConnectionStore)) is not IConnectionStore store)
-                    return;
+                var store = ((App)Application.Current).Services?.GetService(typeof(IConnectionStore)) as IConnectionStore
+                    ?? throw new InvalidOperationException("IConnectionStore not available");
                 var csv = ConnectionExporter.ExportCsv(store.GetAll(), store.GetGroups());
                 await System.IO.File.WriteAllTextAsync(dlg.FileName, csv);
             }

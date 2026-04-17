@@ -26,6 +26,7 @@ public class UpdateService : IUpdateService
 {
     private readonly IEventBus _bus;
     private readonly UpdateManager? _mgr;
+    private readonly SemaphoreSlim _checkLock = new(1, 1);
     private UpdateInfo? _pendingUpdate;
 
     /// <summary>
@@ -78,6 +79,9 @@ public class UpdateService : IUpdateService
             return false;
         }
 
+        if (!await _checkLock.WaitAsync(0, ct).ConfigureAwait(false))
+            return false;
+
         try
         {
             var version = await CheckForUpdatesInternalAsync(ct).ConfigureAwait(false);
@@ -93,6 +97,10 @@ public class UpdateService : IUpdateService
         {
             Log.Warning(ex, "Update check failed — will retry on next startup");
             return false;
+        }
+        finally
+        {
+            _checkLock.Release();
         }
     }
 
