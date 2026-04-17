@@ -143,7 +143,7 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md -- Auto-Update Service + Status Bar Badge + Confirmation UI (Wave 1): IUpdateService, UpdateService (Velopack wrapper), AppSettings UpdateSettingsRecord, status bar badge with download progress, UpdateConfirmDialog, DI wiring, startup check trigger
 - [x] 07-02-PLAN.md -- GitHub Actions Release Pipeline (Wave 1): Extend build.yml with release job triggered by v*.*.* tags, vpk pack/upload, stable + beta channels, version from tag
-- [ ] 07-03-PLAN.md -- Import Parser + Export Services (Wave 1): IConnectionImporter, MRemoteNGImporter (confCons.xml with XXE prevention), ConnectionExporter (JSON tree + CSV flat), test fixtures, unit tests
+- [x] 07-03-PLAN.md -- Import Parser + Export Services (Wave 1): IConnectionImporter, MRemoteNGImporter (confCons.xml with XXE prevention), ConnectionExporter (JSON tree + CSV flat), test fixtures, unit tests
 - [ ] 07-04-PLAN.md -- Import Wizard UI + Export Commands (Wave 2): ImportWizardDialog 4-step flow, ImportWizardViewModel, duplicate handling, command palette export commands, settings panel import/export buttons, MIG-04 REQUIREMENTS.md fix
 
 ## Progress
