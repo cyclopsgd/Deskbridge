@@ -30,23 +30,22 @@ jobs:
         run: dotnet build Deskbridge.sln --configuration Release --no-restore
 
       - name: Test (unit + integration, skip UAT + Slow)
-        run: dotnet test Deskbridge.sln --configuration Release --no-build --filter "Category!=UAT&Category!=Slow" --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test Deskbridge.sln --configuration Release --no-build --filter "Category!=UAT&Category!=Slow" --logger "console;verbosity=detailed" --logger "trx;LogFileName=test-results.trx" -- --results-directory TestResults
 
-      - name: Show test failures
+      - name: Show test failure log
         if: failure()
         shell: bash
         run: |
-          find . -name "*.log" -path "*/TestResults/*" | while read f; do
-            echo "=== $f ==="
-            cat "$f" | grep -B 2 -A 10 "fail\|Failed\|Assert\|Exception" || true
-          done
+          find . -name "*.log" -path "*/TestResults/*" -exec cat {} \; 2>/dev/null || echo "No log files found"
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ github.run_id }}
-          path: "**/*.trx"
+          path: |
+            **/*.trx
+            **/TestResults/*.log
           retention-days: 14
 
       - name: Publish (win-x64 self-contained single-file)
