@@ -49,5 +49,6 @@ public static class RdpConnectionConfigurator
         rdp.AdvancedSettings9.GrabFocusOnConnect = false;
         rdp.AdvancedSettings9.EnableAutoReconnect = false;
         rdp.AdvancedSettings9.ContainerHandledFullScreen = 0;
+        rdp.AdvancedSettings9.RedirectClipboard = true;
     }
 }
