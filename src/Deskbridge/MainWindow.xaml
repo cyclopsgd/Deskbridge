@@ -6,6 +6,7 @@
     xmlns:behaviors="clr-namespace:Deskbridge.Behaviors"
     xmlns:controls="clr-namespace:Deskbridge.Controls"
     Title="{Binding Title}"
+    Icon="Assets/app.ico"
     Width="1100" Height="700"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica"
