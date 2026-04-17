@@ -25,6 +25,10 @@ releases/
 
 # GSD workflow
 .gsd/
+.planning/
+
+# Claude Code
+CLAUDE.md
 
 # Secrets
 *.pfx
