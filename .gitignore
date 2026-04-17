@@ -1,7 +1,31 @@
+# Build output
 bin/
 obj/
-*.user
+publish/
+artifacts/
+
+# IDE
 .vs/
+*.user
 *.suo
 *.DotSettings.user
+.idea/
+
+# Test results
+TestResults/
+*.trx
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Velopack
+releases/
+*.nupkg
+
+# GSD workflow
 .gsd/
+
+# Secrets
+*.pfx
+*.snk
