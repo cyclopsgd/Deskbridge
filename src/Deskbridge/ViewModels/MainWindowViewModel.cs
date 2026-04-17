@@ -29,6 +29,20 @@ public partial class MainWindowViewModel : ObservableObject
     /// </summary>
     private readonly IMasterPasswordService? _masterPassword;
 
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-01 / UPD-02): optional — update service for
+    /// background update checks, download, and restart. Nullable so existing
+    /// VM test call-sites don't need to construct the full update subsystem.
+    /// </summary>
+    private readonly IUpdateService? _updateService;
+
+    /// <summary>
+    /// Phase 7 Plan 07-01: callback set by <see cref="MainWindow.xaml.cs"/>
+    /// after construction to show the <see cref="Dialogs.UpdateConfirmDialog"/>.
+    /// Same pattern as existing dialog callbacks (palette, change-password).
+    /// </summary>
+    private Action? _showUpdateConfirmation;
+
     public MainWindowViewModel(
         ConnectionTreeViewModel connectionTree,
         ITabHostManager tabHostManager,
@@ -36,7 +50,8 @@ public partial class MainWindowViewModel : ObservableObject
         IConnectionStore connectionStore,
         ToastStackViewModel toastStack,
         IWindowStateService? windowState = null,
-        IMasterPasswordService? masterPassword = null)
+        IMasterPasswordService? masterPassword = null,
+        IUpdateService? updateService = null)
     {
         ConnectionTree = connectionTree;
         _tabHostManager = tabHostManager;
@@ -45,6 +60,7 @@ public partial class MainWindowViewModel : ObservableObject
         ToastStack = toastStack;
         _windowState = windowState;
         _masterPassword = masterPassword;
+        _updateService = updateService;
 
         // Phase 5: subscribe to TabHostManager lifecycle events so the ObservableCollection
         // and status bar stay in sync. All handlers marshal to the UI dispatcher because
@@ -54,7 +70,22 @@ public partial class MainWindowViewModel : ObservableObject
         _eventBus.Subscribe<TabClosedEvent>(this, OnTabClosed);
         _eventBus.Subscribe<TabSwitchedEvent>(this, OnTabSwitched);
         _eventBus.Subscribe<TabStateChangedEvent>(this, OnTabStateChanged);
+
+        // Phase 7 Plan 07-01 (UPD-03): subscribe to UpdateAvailableEvent so the
+        // status bar badge appears when the service publishes an update discovery.
+        _eventBus.Subscribe<UpdateAvailableEvent>(this, e => Dispatch(() =>
+        {
+            UpdateAvailable = true;
+            UpdateVersion = e.Version;
+        }));
     }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01: sets the callback that <see cref="ApplyUpdateAsync"/>
+    /// invokes after download completes to show the restart confirmation dialog.
+    /// Called by <see cref="MainWindow.xaml.cs"/> after construction.
+    /// </summary>
+    public void SetUpdateConfirmation(Action callback) => _showUpdateConfirmation = callback;
 
     // Expose ConnectionTreeViewModel for Ctrl+N binding in MainWindow
     [ObservableProperty]
@@ -99,6 +130,83 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string StatusSecondary { get; set; } = string.Empty;
+
+    // ----------------------------------------------------------- Phase 7 Plan 07-01 update badge
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-02): true when an update has been discovered.
+    /// Drives the status bar badge visibility. Persists until user acts
+    /// (downloads + restarts) or explicitly dismisses.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool UpdateAvailable { get; set; }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-02): version string of the available update
+    /// (e.g. "2.1.0"). Displayed in the status bar badge tooltip and text.
+    /// </summary>
+    [ObservableProperty]
+    public partial string UpdateVersion { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-02): 0-100 progress during update download.
+    /// Bound to the status bar progress ring.
+    /// </summary>
+    [ObservableProperty]
+    public partial int DownloadProgress { get; set; }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-02): true while the update package is being
+    /// downloaded. Drives the download progress indicator visibility in
+    /// the status bar (replaces the badge during download).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsDownloading { get; set; }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-01): kicks off a background update check.
+    /// Called from App.OnStartup after window is shown.
+    /// </summary>
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        if (_updateService is null) return;
+        await _updateService.CheckForUpdatesAsync();
+    }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-02): triggered by clicking the status bar
+    /// update badge. Downloads the update with progress reporting, then
+    /// invokes the confirmation dialog callback.
+    /// </summary>
+    [RelayCommand]
+    private async Task ApplyUpdateAsync()
+    {
+        if (_updateService is null || !UpdateAvailable) return;
+        IsDownloading = true;
+        try
+        {
+            var progress = new Progress<int>(p => Dispatch(() => DownloadProgress = p));
+            await _updateService.DownloadUpdatesAsync(progress);
+            // Show confirmation dialog via the callback wired by MainWindow.xaml.cs
+            _showUpdateConfirmation?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to download update");
+        }
+        finally
+        {
+            IsDownloading = false;
+        }
+    }
+
+    /// <summary>
+    /// Phase 7 Plan 07-01 (UPD-02): dismisses the update badge without
+    /// applying. The update will apply on next manual restart.
+    /// </summary>
+    [RelayCommand]
+    private void DismissUpdate() => UpdateAvailable = false;
 
     /// <summary>
     /// Phase 6 Plan 06-03 D-05 (CMD-04): APP-level fullscreen flag. The
