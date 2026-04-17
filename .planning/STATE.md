@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-03-PLAN.md (command palette + keyboard shortcuts)
-last_updated: "2026-04-15T19:50:08.797Z"
-last_activity: 2026-04-15
+stopped_at: Completed 07-01-PLAN.md (auto-update service + badge + dialog)
+last_updated: "2026-04-17T08:42:38.870Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
-  percent: 100
+  total_plans: 23
+  completed_plans: 20
+  percent: 87
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 06 — cross-cutting-features
+**Current focus:** Phase 07 — update-migration
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
+Phase: 07 (update-migration) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-04-16 - Completed quick task 260416-9wt: Fix Credential Guard blocking
+Last activity: 2026-04-17
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06 P01 | 11min | 4 tasks | 16 files |
 | Phase 06-cross-cutting-features P02 | 12min | 4 tasks | 20 files |
 | Phase 06-cross-cutting-features P03 | 14 | 3 tasks | 19 files |
+| Phase 07 P01 | 14min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,9 @@ Recent decisions affecting current work:
 - [Phase 06-cross-cutting-features]: [Phase 06-03]: ICommandPaletteService registered via DI factory closure (not straight AddSingleton<ICommandPaletteService, CommandPaletteService>). The 4 ExecuteAsync closures delegate to MainWindowViewModel / ConnectionTreeViewModel commands — keeps Deskbridge.Core free of exe types.
 - [Phase 06-cross-cutting-features]: [Phase 06-03]: AppLockState.Lock/Unlock are idempotent — re-entry while already in that state does NOT re-raise LockStateChanged. Protects Plan 06-04 subscribers from duplicate AppLocked/AppUnlocked events on master-password retry flows.
 - [Phase 06-cross-cutting-features]: [Phase 06-03]: Pitfall 8 Enter-in-TextBox handler verified via source-grep (DiComposition test) not direct KeyEventArgs invocation — WPF internal-only ctors make reflection-based testing brittle. Same pattern as Plan 06-01 CrashHandler Dispatcher-hook.
+- [Phase 07]: Velopack NuGet added to Deskbridge.Core for UpdateService co-location with other Core services
+- [Phase 07]: Protected constructor + virtual seams on UpdateService for testability without VelopackApp.Build() runtime
+- [Phase 07]: Source-grep DiComposition tests for IUpdateService (real UpdateManager requires VelopackApp.Build())
 
 ### Pending Todos
 
@@ -147,6 +151,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T12:12:15.167Z
-Stopped at: Completed 06-03-PLAN.md (command palette + keyboard shortcuts)
+Last session: 2026-04-17T08:42:38.865Z
+Stopped at: Completed 07-01-PLAN.md (auto-update service + badge + dialog)
 Resume file: None

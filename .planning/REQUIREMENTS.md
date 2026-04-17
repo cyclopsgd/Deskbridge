@@ -99,9 +99,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Auto-Update
 
-- [ ] **UPD-01**: Velopack checks GitHub Releases via GithubSource silently on startup
-- [ ] **UPD-02**: Status bar notification when update available, with download/apply/restart flow
-- [ ] **UPD-03**: UpdateAvailableEvent published to event bus
+- [x] **UPD-01**: Velopack checks GitHub Releases via GithubSource silently on startup
+- [x] **UPD-02**: Status bar notification when update available, with download/apply/restart flow
+- [x] **UPD-03**: UpdateAvailableEvent published to event bus
 - [ ] **UPD-04**: Self-contained publish with SemVer2 versioning, user data in %AppData% (not alongside exe)
 - [ ] **UPD-05**: GitHub Actions workflow triggered on version tag push: build, vpk pack, upload to release
 
@@ -227,9 +227,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-03 | Phase 6 | Pending |
 | SEC-04 | Phase 6 | Pending |
 | SEC-05 | Phase 6 | Pending |
-| UPD-01 | Phase 7 | Pending |
-| UPD-02 | Phase 7 | Pending |
-| UPD-03 | Phase 7 | Pending |
+| UPD-01 | Phase 7 | Complete |
+| UPD-02 | Phase 7 | Complete |
+| UPD-03 | Phase 7 | Complete |
 | UPD-04 | Phase 7 | Pending |
 | UPD-05 | Phase 7 | Pending |
 | MIG-01 | Phase 7 | Pending |
