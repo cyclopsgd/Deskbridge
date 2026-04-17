@@ -107,12 +107,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Import & Export
 
-- [ ] **MIG-01**: mRemoteNG import parses confCons.xml with field mapping
+- [x] **MIG-01**: mRemoteNG import parses confCons.xml with field mapping
 - [ ] **MIG-02**: Import wizard: pick file -> preview connections -> confirm import
-- [ ] **MIG-03**: Metadata only -- no password import, users re-enter credentials
-- [ ] **MIG-04**: Imported connections stored with TERMSRV/ credential prefix
-- [ ] **MIG-05**: ConnectionImportedEvent published to event bus, import recorded in audit log
-- [ ] **MIG-06**: Export as JSON (no credentials) and CSV
+- [x] **MIG-03**: Metadata only -- no password import, users re-enter credentials
+- [x] **MIG-04**: Imported connections stored with TERMSRV/ credential prefix
+- [x] **MIG-05**: ConnectionImportedEvent published to event bus, import recorded in audit log
+- [x] **MIG-06**: Export as JSON (no credentials) and CSV
 
 ## v2 Requirements
 
@@ -232,12 +232,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UPD-03 | Phase 7 | Complete |
 | UPD-04 | Phase 7 | Complete |
 | UPD-05 | Phase 7 | Complete |
-| MIG-01 | Phase 7 | Pending |
+| MIG-01 | Phase 7 | Complete |
 | MIG-02 | Phase 7 | Pending |
-| MIG-03 | Phase 7 | Pending |
-| MIG-04 | Phase 7 | Pending |
-| MIG-05 | Phase 7 | Pending |
-| MIG-06 | Phase 7 | Pending |
+| MIG-03 | Phase 7 | Complete |
+| MIG-04 | Phase 7 | Complete |
+| MIG-05 | Phase 7 | Complete |
+| MIG-06 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 71 total
