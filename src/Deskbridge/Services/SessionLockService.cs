@@ -37,12 +37,19 @@ public sealed class SessionLockService : IDisposable
     private readonly SessionSwitchEventHandler _handler;
     private bool _disposed;
 
-    public SessionLockService(IEventBus bus)
+    public SessionLockService(IEventBus bus, bool requireMasterPassword = true)
     {
         ArgumentNullException.ThrowIfNull(bus);
         _bus = bus;
         _uiDispatcher = System.Windows.Application.Current?.Dispatcher
                         ?? Dispatcher.CurrentDispatcher;
+
+        // Phase 6.1: don't subscribe to SessionSwitch when password is disabled
+        if (!requireMasterPassword)
+        {
+            _handler = (_, _) => { }; // no-op so Dispose() is safe
+            return;
+        }
 
         // Store the delegate in a field so we can unsubscribe with the same
         // reference (static-event invocation-list equality is by delegate value,

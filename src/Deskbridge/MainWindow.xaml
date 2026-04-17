@@ -188,27 +188,40 @@
                                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                                     BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="Auto-lock timeout"
-                                               FontSize="14"
-                                               Margin="0,0,0,4" />
-                                    <ui:NumberBox Minimum="1" Maximum="1440"
-                                                  Value="{Binding AutoLockTimeoutMinutes, UpdateSourceTrigger=LostFocus}"
-                                                  Margin="0,0,0,12" />
-                                    <TextBlock Text="Lock on minimise"
+                                    <!-- Require Password/PIN toggle -->
+                                    <TextBlock Text="Require password/PIN"
                                                FontSize="14" />
-                                    <ui:ToggleSwitch IsChecked="{Binding LockOnMinimise}"
+                                    <ui:ToggleSwitch IsChecked="{Binding RequireMasterPassword}"
                                                      Margin="0,4,0,12" />
 
                                     <!-- Separator -->
                                     <Border Height="1" Margin="0,0,0,12"
                                             Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
 
-                                    <!-- Change Password/PIN button -->
-                                    <ui:Button x:Name="ChangePasswordButton"
-                                               Content="{Binding ChangePasswordLabel}"
-                                               Appearance="Secondary"
-                                               HorizontalAlignment="Stretch"
-                                               Click="ChangePasswordButton_Click" />
+                                    <!-- Auto-lock controls greyed out when password disabled -->
+                                    <StackPanel IsEnabled="{Binding IsLockControlsEnabled}">
+                                        <TextBlock Text="Auto-lock timeout"
+                                                   FontSize="14"
+                                                   Margin="0,0,0,4" />
+                                        <ui:NumberBox Minimum="1" Maximum="1440"
+                                                      Value="{Binding AutoLockTimeoutMinutes, UpdateSourceTrigger=LostFocus}"
+                                                      Margin="0,0,0,12" />
+                                        <TextBlock Text="Lock on minimise"
+                                                   FontSize="14" />
+                                        <ui:ToggleSwitch IsChecked="{Binding LockOnMinimise}"
+                                                         Margin="0,4,0,12" />
+
+                                        <!-- Separator -->
+                                        <Border Height="1" Margin="0,0,0,12"
+                                                Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+                                        <!-- Change Password/PIN button -->
+                                        <ui:Button x:Name="ChangePasswordButton"
+                                                   Content="{Binding ChangePasswordLabel}"
+                                                   Appearance="Secondary"
+                                                   HorizontalAlignment="Stretch"
+                                                   Click="ChangePasswordButton_Click" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

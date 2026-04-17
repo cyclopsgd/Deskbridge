@@ -45,9 +45,10 @@ public sealed record WindowStateRecord(
 /// </summary>
 public sealed record SecuritySettingsRecord(
     int AutoLockTimeoutMinutes,
-    bool LockOnMinimise)
+    bool LockOnMinimise,
+    bool RequireMasterPassword = true)
 {
-    /// <summary>Defaults match UI-SPEC §Settings Panel Additions (auto-lock = 15 minutes, lock-on-minimise = off).</summary>
+    /// <summary>Defaults match UI-SPEC §Settings Panel Additions (auto-lock = 15 minutes, lock-on-minimise = off, require password = on).</summary>
     public static SecuritySettingsRecord Default { get; } =
-        new(AutoLockTimeoutMinutes: 15, LockOnMinimise: false);
+        new(AutoLockTimeoutMinutes: 15, LockOnMinimise: false, RequireMasterPassword: true);
 }
