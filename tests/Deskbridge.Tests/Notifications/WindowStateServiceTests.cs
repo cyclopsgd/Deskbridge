@@ -48,7 +48,8 @@ public sealed class WindowStateServiceTests
         var settings = new AppSettings(
             new WindowStateRecord(X: 42, Y: 84, Width: 1024, Height: 768,
                 IsMaximized: true, SidebarOpen: false, SidebarWidth: 320),
-            new SecuritySettingsRecord(AutoLockTimeoutMinutes: 30, LockOnMinimise: true));
+            new SecuritySettingsRecord(AutoLockTimeoutMinutes: 30, LockOnMinimise: true),
+            UpdateSettingsRecord.Default);
 
         await svc.SaveAsync(settings, Ct);
         var roundTrip = await svc.LoadAsync(Ct);
@@ -68,7 +69,8 @@ public sealed class WindowStateServiceTests
 
         var settings = new AppSettings(
             new WindowStateRecord(10, 20, 800, 600, true, false, 260),
-            new SecuritySettingsRecord(30, true));
+            new SecuritySettingsRecord(30, true),
+            UpdateSettingsRecord.Default);
 
         await svc.SaveAsync(settings, Ct);
 
