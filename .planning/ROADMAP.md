@@ -137,13 +137,14 @@ Plans:
   3. A GitHub Actions workflow triggered by a version tag push builds, packages (vpk), and uploads the release
   4. User can import an mRemoteNG confCons.xml file via a wizard that previews connections before confirming (metadata only, no passwords)
   5. User can export connections as JSON (no credentials) or CSV
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
-- [ ] 07-03: TBD
+- [ ] 07-01-PLAN.md -- Auto-Update Service + Status Bar Badge + Confirmation UI (Wave 1): IUpdateService, UpdateService (Velopack wrapper), AppSettings UpdateSettingsRecord, status bar badge with download progress, UpdateConfirmDialog, DI wiring, startup check trigger
+- [ ] 07-02-PLAN.md -- GitHub Actions Release Pipeline (Wave 1): Extend build.yml with release job triggered by v*.*.* tags, vpk pack/upload, stable + beta channels, version from tag
+- [ ] 07-03-PLAN.md -- Import Parser + Export Services (Wave 1): IConnectionImporter, MRemoteNGImporter (confCons.xml with XXE prevention), ConnectionExporter (JSON tree + CSV flat), test fixtures, unit tests
+- [ ] 07-04-PLAN.md -- Import Wizard UI + Export Commands (Wave 2): ImportWizardDialog 4-step flow, ImportWizardViewModel, duplicate handling, command palette export commands, settings panel import/export buttons, MIG-04 REQUIREMENTS.md fix
 
 ## Progress
 
@@ -159,4 +160,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. RDP Integration | 0/3 | Planning complete | - |
 | 5. Tab Management | 2/3 | In Progress|  |
 | 6. Cross-Cutting Features | 0/4 | Planning complete | - |
-| 7. Update & Migration | 0/3 | Not started | - |
+| 7. Update & Migration | 0/4 | Planning complete | - |
