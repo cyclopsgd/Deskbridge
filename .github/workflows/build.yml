@@ -32,6 +32,15 @@ jobs:
       - name: Test (unit + integration, skip UAT + Slow)
         run: dotnet test Deskbridge.sln --configuration Release --no-build --filter "Category!=UAT&Category!=Slow" --logger "trx;LogFileName=test-results.trx"
 
+      - name: Show test failures
+        if: failure()
+        shell: bash
+        run: |
+          find . -name "*.log" -path "*/TestResults/*" | while read f; do
+            echo "=== $f ==="
+            cat "$f" | grep -B 2 -A 10 "fail\|Failed\|Assert\|Exception" || true
+          done
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
