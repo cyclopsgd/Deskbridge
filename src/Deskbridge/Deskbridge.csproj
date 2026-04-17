@@ -9,6 +9,9 @@
     <Page Include="App.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Deskbridge.Tests" />
   </ItemGroup>
   <ItemGroup>
