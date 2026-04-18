@@ -114,6 +114,13 @@ public partial class ConnectionEditorViewModel : ObservableValidator
 
     // --- Password handling (not stored in ViewModel as observable property per T-03-09) ---
 
+    /// <summary>
+    /// True when a password is already stored in Windows Credential Manager for
+    /// this connection. Used by the dialog code-behind to show placeholder dots
+    /// in the password field (matching the quick properties panel pattern).
+    /// </summary>
+    public bool HasStoredPassword { get; private set; }
+
     public void SetPassword(string password)
     {
         _password = password;
@@ -166,6 +173,7 @@ public partial class ConnectionEditorViewModel : ObservableValidator
                 {
                     Username = cred.UserName;
                     Domain = cred.Domain;
+                    HasStoredPassword = true;
                 }
             }
 
@@ -196,6 +204,8 @@ public partial class ConnectionEditorViewModel : ObservableValidator
         connection.Port = Port;
         connection.GroupId = GroupId;
         connection.CredentialMode = CredentialMode;
+        connection.Username = Username;
+        connection.Domain = Domain;
         connection.Notes = Notes;
         connection.UpdatedAt = DateTime.UtcNow;
 

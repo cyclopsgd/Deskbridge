@@ -108,7 +108,7 @@
 
                     <TextBlock Text="Password" FontSize="14"
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                    <PasswordBox x:Name="PasswordBox"
+                    <ui:PasswordBox x:Name="PasswordBox"
                         IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="0,0,0,12" />
 
                     <TextBlock Text="Domain" FontSize="14"
