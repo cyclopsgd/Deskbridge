@@ -20,7 +20,7 @@ public partial class ConnectionTreeControl : UserControl
     // HeaderHeight + ~80px of body = 108.
     private const double HeaderHeight = 28;
     private const double MinExpandedPanelHeight = 108;
-    private GridLength _savedPanelHeight = new(200, GridUnitType.Pixel);
+    private GridLength _savedPanelHeight = new(290, GridUnitType.Pixel);
 
     public ConnectionTreeControl(ConnectionTreeViewModel viewModel)
     {
@@ -74,6 +74,11 @@ public partial class ConnectionTreeControl : UserControl
         else if (e.PropertyName == nameof(ConnectionTreeViewModel.IsQuickPropertiesExpanded))
         {
             UpdateQuickPropertiesRowHeight();
+        }
+        else if (e.PropertyName == nameof(ConnectionTreeViewModel.HasStoredCredential)
+              || e.PropertyName == nameof(ConnectionTreeViewModel.PrimarySelectedItem))
+        {
+            UpdatePasswordFieldVisibility();
         }
     }
 
@@ -356,13 +361,47 @@ public partial class ConnectionTreeControl : UserControl
         }
     }
 
+    private const string PasswordPlaceholder = "••••••••••";
+    private bool _suppressPasswordChanged;
+
+    private void UpdatePasswordFieldVisibility()
+    {
+        _suppressPasswordChanged = true;
+        QuickPasswordBox.Password = _viewModel.HasStoredCredential ? PasswordPlaceholder : "";
+        _suppressPasswordChanged = false;
+    }
+
+    private void QuickPassword_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (QuickPasswordBox.Password == PasswordPlaceholder)
+        {
+            _suppressPasswordChanged = true;
+            QuickPasswordBox.Password = "";
+            _suppressPasswordChanged = false;
+        }
+    }
+
+    private void QuickPassword_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (_suppressPasswordChanged) return;
+        // Save handled on LostFocus via QuickProperty_LostFocus or dedicated handler
+    }
+
     private void QuickPassword_LostFocus(object sender, RoutedEventArgs e)
     {
         try
         {
-            if (sender is System.Windows.Controls.PasswordBox pb)
+            var pw = QuickPasswordBox.Password;
+            if (string.IsNullOrEmpty(pw) && _viewModel.HasStoredCredential)
             {
-                _viewModel.SaveQuickPassword(pb.Password);
+                _suppressPasswordChanged = true;
+                QuickPasswordBox.Password = PasswordPlaceholder;
+                _suppressPasswordChanged = false;
+            }
+            else if (!string.IsNullOrEmpty(pw) && pw != PasswordPlaceholder)
+            {
+                _viewModel.SaveQuickPassword(pw);
+                _viewModel.RefreshStoredCredentialState();
             }
         }
         catch (Exception ex)
@@ -384,6 +423,17 @@ public partial class ConnectionTreeControl : UserControl
         {
             Serilog.Log.Error(ex, "GroupQuickProperty_LostFocus handler threw");
         }
+    }
+
+    private void ComboBox_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        e.Handled = true;
+        var parent = FindAncestor<System.Windows.Controls.ScrollViewer>((DependencyObject)sender);
+        parent?.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+        {
+            RoutedEvent = UIElement.MouseWheelEvent,
+            Source = sender
+        });
     }
 
     // --- Visual tree helper ---

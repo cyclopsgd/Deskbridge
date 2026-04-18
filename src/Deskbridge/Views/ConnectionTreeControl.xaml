@@ -245,7 +245,7 @@
             <RowDefinition Height="*" MinHeight="100" />      <!-- Row 1: TreeView -->
             <RowDefinition Height="Auto" />   <!-- Row 2: GridSplitter -->
             <!-- Row 3: Combined panel (header + body). GridSplitter resizes this row. -->
-            <RowDefinition x:Name="QuickPropertiesRow" Height="200" MinHeight="28" MaxHeight="500" />
+            <RowDefinition x:Name="QuickPropertiesRow" Height="290" MinHeight="28" MaxHeight="500" />
         </Grid.RowDefinitions>
 
         <!-- Search filter (Row 0) -->
@@ -403,10 +403,10 @@
                              cleanly to zero height when hidden in Prompt mode.
                         -->
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" MinHeight="28" />
-                            <RowDefinition Height="Auto" MinHeight="28" />
-                            <RowDefinition Height="Auto" MinHeight="28" />
-                            <RowDefinition Height="Auto" MinHeight="32" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -414,48 +414,38 @@
 
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" />
-                        <TextBox Grid.Row="0" Grid.Column="1"
-                                 Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
-                                 Height="24" Padding="4,2" FontSize="14"
-                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                 x:Name="ConnectionNameTextBox" LostFocus="QuickProperty_LostFocus" />
+                                   VerticalAlignment="Center" Margin="0,3" />
+                        <ui:TextBox Grid.Row="0" Grid.Column="1"
+                                    Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
+                                    FontSize="14" Margin="0,3"
+                                    x:Name="ConnectionNameTextBox" LostFocus="QuickProperty_LostFocus" />
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Hostname"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" />
-                        <TextBox Grid.Row="1" Grid.Column="1"
-                                 Text="{Binding PrimarySelectedItem.Hostname, UpdateSourceTrigger=LostFocus}"
-                                 Height="24" Padding="4,2" FontSize="14"
-                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                 x:Name="HostnameTextBox" LostFocus="QuickProperty_LostFocus" />
+                                   VerticalAlignment="Center" Margin="0,3" />
+                        <ui:TextBox Grid.Row="1" Grid.Column="1"
+                                    Text="{Binding PrimarySelectedItem.Hostname, UpdateSourceTrigger=LostFocus}"
+                                    FontSize="14" Margin="0,3"
+                                    x:Name="HostnameTextBox" LostFocus="QuickProperty_LostFocus" />
 
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="Port"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" />
-                        <TextBox Grid.Row="2" Grid.Column="1"
-                                 Text="{Binding PrimarySelectedItem.Port, UpdateSourceTrigger=LostFocus}"
-                                 Height="24" Padding="4,2" FontSize="14"
-                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                 x:Name="PortTextBox" LostFocus="QuickProperty_LostFocus" />
+                                   VerticalAlignment="Center" Margin="0,3" />
+                        <ui:TextBox Grid.Row="2" Grid.Column="1"
+                                    Text="{Binding PrimarySelectedItem.Port, UpdateSourceTrigger=LostFocus}"
+                                    FontSize="14" Margin="0,3"
+                                    x:Name="PortTextBox" LostFocus="QuickProperty_LostFocus" />
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="Credentials"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" />
-                        <!--
-                             Explicit ItemTemplate is required so SelectionBoxItem
-                             renders via the same template as dropdown items. With
-                             SelectedValuePath="Value", SelectionBoxItem is otherwise
-                             the raw enum and WPF-UI's ComboBox template renders it
-                             as "-" placeholder glyphs.
-                        -->
+                                   VerticalAlignment="Center" Margin="0,3" />
                         <ComboBox Grid.Row="3" Grid.Column="1"
                                   ItemsSource="{Binding CredentialModes}"
                                   SelectedValue="{Binding SelectedItemCredentialMode}"
                                   SelectedValuePath="Value"
-                                  FontSize="14" MinHeight="32"
-                                  Margin="0,2"
-                                  x:Name="CredentialModeCombo">
+                                  FontSize="14" Margin="0,3"
+                                  x:Name="CredentialModeCombo"
+                                  PreviewMouseWheel="ComboBox_PreviewMouseWheel">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding DisplayName}" />
@@ -463,47 +453,39 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
 
-                        <!--
-                             Username/Domain rows: visibility and enablement follow the
-                             CredentialMode. Prompt hides both rows entirely (credentials
-                             requested at connect time); Inherit shows them disabled
-                             (values for reference only); Own shows them enabled for edit.
-                             The label TextBlocks share the same Visibility binding so the
-                             rows collapse cleanly to zero height when hidden.
-                        -->
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="Username"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center"
+                                   VerticalAlignment="Center" Margin="0,3"
                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBox Grid.Row="4" Grid.Column="1"
-                                 Text="{Binding PrimarySelectedItem.Username, UpdateSourceTrigger=LostFocus}"
-                                 Height="24" Padding="4,2" FontSize="14"
-                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                 Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}"
-                                 IsEnabled="{Binding IsQuickCredentialFieldsEnabled}"
-                                 x:Name="UsernameTextBox" LostFocus="QuickProperty_LostFocus" />
+                        <ui:TextBox Grid.Row="4" Grid.Column="1"
+                                    Text="{Binding PrimarySelectedItem.Username, UpdateSourceTrigger=LostFocus}"
+                                    FontSize="14" Margin="0,3"
+                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}"
+                                    IsEnabled="{Binding IsQuickCredentialFieldsEnabled}"
+                                    x:Name="UsernameTextBox" LostFocus="QuickProperty_LostFocus" />
 
                         <TextBlock Grid.Row="5" Grid.Column="0" Text="Password"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center"
+                                   VerticalAlignment="Center" Margin="0,3"
                                    Visibility="{Binding IsQuickPasswordVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <PasswordBox Grid.Row="5" Grid.Column="1"
-                                     Padding="4,2" FontSize="14"
-                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                     Visibility="{Binding IsQuickPasswordVisible, Converter={StaticResource BoolToVisibility}}"
-                                     x:Name="QuickPasswordBox" LostFocus="QuickPassword_LostFocus" />
+                        <ui:PasswordBox Grid.Row="5" Grid.Column="1"
+                                        FontSize="14" Margin="0,3"
+                                        Visibility="{Binding IsQuickPasswordVisible, Converter={StaticResource BoolToVisibility}}"
+                                        x:Name="QuickPasswordBox"
+                                        GotFocus="QuickPassword_GotFocus"
+                                        LostFocus="QuickPassword_LostFocus"
+                                        PasswordChanged="QuickPassword_PasswordChanged" />
 
                         <TextBlock Grid.Row="6" Grid.Column="0" Text="Domain"
                                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center"
+                                   VerticalAlignment="Center" Margin="0,3"
                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBox Grid.Row="6" Grid.Column="1"
-                                 Text="{Binding PrimarySelectedItem.Domain, UpdateSourceTrigger=LostFocus}"
-                                 Height="24" Padding="4,2" FontSize="14"
-                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                 Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}"
-                                 IsEnabled="{Binding IsQuickCredentialFieldsEnabled}"
-                                 x:Name="DomainTextBox" LostFocus="QuickProperty_LostFocus" />
+                        <ui:TextBox Grid.Row="6" Grid.Column="1"
+                                    Text="{Binding PrimarySelectedItem.Domain, UpdateSourceTrigger=LostFocus}"
+                                    FontSize="14" Margin="0,3"
+                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}"
+                                    IsEnabled="{Binding IsQuickCredentialFieldsEnabled}"
+                                    x:Name="DomainTextBox" LostFocus="QuickProperty_LostFocus" />
                     </Grid>
 
                     <!-- Group properties -->

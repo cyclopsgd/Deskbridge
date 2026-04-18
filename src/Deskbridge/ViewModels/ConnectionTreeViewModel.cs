@@ -68,6 +68,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsQuickCredentialFieldsVisible))]
     [NotifyPropertyChangedFor(nameof(IsQuickCredentialFieldsEnabled))]
     [NotifyPropertyChangedFor(nameof(IsQuickPasswordVisible))]
+    [NotifyPropertyChangedFor(nameof(HasStoredCredential))]
     public partial TreeItemViewModel? PrimarySelectedItem { get; set; }
 
     /// <summary>
@@ -91,6 +92,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsQuickCredentialFieldsVisible));
                 OnPropertyChanged(nameof(IsQuickCredentialFieldsEnabled));
                 OnPropertyChanged(nameof(IsQuickPasswordVisible));
+                OnPropertyChanged(nameof(HasStoredCredential));
             }
         }
     }
@@ -102,6 +104,33 @@ public partial class ConnectionTreeViewModel : ObservableObject
     /// </summary>
     public bool IsQuickPasswordVisible =>
         SelectedItemCredentialMode == CredentialMode.Own;
+
+    public void RefreshStoredCredentialState() => OnPropertyChanged(nameof(HasStoredCredential));
+
+    public void RefreshQuickProperties()
+    {
+        OnPropertyChanged(nameof(PrimarySelectedItem));
+        OnPropertyChanged(nameof(SelectedItemCredentialMode));
+        OnPropertyChanged(nameof(IsQuickPasswordVisible));
+        OnPropertyChanged(nameof(IsQuickCredentialFieldsVisible));
+        OnPropertyChanged(nameof(IsQuickCredentialFieldsEnabled));
+        OnPropertyChanged(nameof(HasStoredCredential));
+    }
+
+    public bool HasStoredCredential
+    {
+        get
+        {
+            if (PrimarySelectedItem is not ConnectionTreeItemViewModel item) return false;
+            if (SelectedItemCredentialMode != CredentialMode.Own) return false;
+            try
+            {
+                var lookup = new ConnectionModel { Id = item.Id };
+                return _credentialService.GetForConnection(lookup) is not null;
+            }
+            catch { return false; }
+        }
+    }
 
     /// <summary>
     /// True when the current selection's CredentialMode is Inherit or Own (i.e.
@@ -470,6 +499,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
             {
                 vm.Save();
                 RefreshTree();
+                RefreshQuickProperties();
             }
         }
         catch (Exception ex)
@@ -550,6 +580,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 {
                     vm.Save();
                     RefreshTree();
+                    RefreshQuickProperties();
                 }
             }
             else if (item is GroupTreeItemViewModel groupItem)
