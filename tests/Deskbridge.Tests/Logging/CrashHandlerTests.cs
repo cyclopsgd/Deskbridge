@@ -210,12 +210,14 @@ public sealed class CrashHandlerTests
         var programCs = File.ReadAllText(
             Path.Combine(solutionRoot, "src", "Deskbridge", "Program.cs"));
 
-        var velopackIdx = programCs.IndexOf("VelopackApp.Build().Run()", StringComparison.Ordinal);
+        var velopackIdx = programCs.IndexOf("VelopackApp.Build()", StringComparison.Ordinal);
+        var runIdx = programCs.IndexOf(".Run()", velopackIdx >= 0 ? velopackIdx : 0, StringComparison.Ordinal);
         var installIdx = programCs.IndexOf("CrashHandler.Install()", StringComparison.Ordinal);
         var newAppIdx = programCs.IndexOf("new App()", StringComparison.Ordinal);
 
-        velopackIdx.Should().BeGreaterThan(-1, "Program.Main must invoke VelopackApp.Build().Run()");
-        installIdx.Should().BeGreaterThan(velopackIdx,
+        velopackIdx.Should().BeGreaterThan(-1, "Program.Main must invoke VelopackApp.Build()");
+        runIdx.Should().BeGreaterThan(velopackIdx, "VelopackApp.Build() chain must call .Run()");
+        installIdx.Should().BeGreaterThan(runIdx,
             "CrashHandler.Install() must follow VelopackApp.Build().Run() (D-11)");
         newAppIdx.Should().BeGreaterThan(installIdx,
             "CrashHandler hooks MUST land before App is constructed (Pattern 4 + A9)");
