@@ -91,26 +91,7 @@
                             </ui:Button.Style>
                         </ui:Button>
 
-                        <ui:Button
-                            Appearance="Transparent"
-                            Icon="{ui:SymbolIcon Search24}"
-                            Width="36" Height="36"
-                            Padding="0"
-                            Command="{Binding TogglePanelCommand}"
-                            CommandParameter="{x:Static models:PanelMode.Search}"
-                            AutomationProperties.Name="Search">
-                            <ui:Button.Style>
-                                <Style TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
-                                    <Setter Property="BorderThickness" Value="2,0,0,0" />
-                                    <Setter Property="BorderBrush" Value="Transparent" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsSearchActive}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ui:Button.Style>
-                        </ui:Button>
+                        <!-- Search icon hidden — feature not yet implemented -->
                     </StackPanel>
                 </DockPanel>
             </Border>
