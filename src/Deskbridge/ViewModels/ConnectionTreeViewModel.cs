@@ -110,11 +110,50 @@ public partial class ConnectionTreeViewModel : ObservableObject
     public void RefreshQuickProperties()
     {
         OnPropertyChanged(nameof(PrimarySelectedItem));
+        OnPropertyChanged(nameof(IsConnectionSelected));
+        OnPropertyChanged(nameof(IsGroupSelected));
         OnPropertyChanged(nameof(SelectedItemCredentialMode));
         OnPropertyChanged(nameof(IsQuickPasswordVisible));
         OnPropertyChanged(nameof(IsQuickCredentialFieldsVisible));
         OnPropertyChanged(nameof(IsQuickCredentialFieldsEnabled));
         OnPropertyChanged(nameof(HasStoredCredential));
+    }
+
+    /// <summary>
+    /// After <see cref="RefreshTree"/> rebuilds the tree with new ViewModel instances,
+    /// re-select the item matching <paramref name="itemId"/> so that
+    /// <see cref="PrimarySelectedItem"/> points to the fresh instance and quick
+    /// properties bindings reflect updated data.
+    /// </summary>
+    private void RestoreSelectionById(Guid itemId)
+    {
+        var match = FindItemById(RootItems, itemId);
+        if (match is null) return;
+
+        // Clear old selection state
+        foreach (var sel in SelectedItems.ToList())
+            sel.IsSelected = false;
+        SelectedItems.Clear();
+
+        // Select the new instance
+        match.IsSelected = true;
+        SelectedItems.Add(match);
+        PrimarySelectedItem = match;
+    }
+
+    private static TreeItemViewModel? FindItemById(
+        IEnumerable<TreeItemViewModel> items, Guid id)
+    {
+        foreach (var item in items)
+        {
+            if (item.Id == id) return item;
+            if (item is GroupTreeItemViewModel group)
+            {
+                var found = FindItemById(group.Children, id);
+                if (found is not null) return found;
+            }
+        }
+        return null;
     }
 
     public bool HasStoredCredential
@@ -497,8 +536,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
             if (result == ContentDialogResult.Primary)
             {
-                vm.Save();
+                var saved = vm.Save();
                 RefreshTree();
+                RestoreSelectionById(saved.Id);
                 RefreshQuickProperties();
             }
         }
@@ -578,8 +618,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
                 if (result == ContentDialogResult.Primary)
                 {
-                    vm.Save();
+                    var saved = vm.Save();
                     RefreshTree();
+                    RestoreSelectionById(saved.Id);
                     RefreshQuickProperties();
                 }
             }
@@ -598,6 +639,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 {
                     vm.Save();
                     RefreshTree();
+                    RestoreSelectionById(groupItem.Id);
+                    RefreshQuickProperties();
                 }
             }
         }
