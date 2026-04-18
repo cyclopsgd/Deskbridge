@@ -803,25 +803,32 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
 
             try
             {
-                var result = await _contentDialogService.ShowSimpleDialogAsync(
-                    new SimpleContentDialogCreateOptions
-                    {
-                        Title = "Disable Password Protection?",
-                        Content = "Your connections and settings will be accessible without a password. This action deletes your stored password.",
-                        PrimaryButtonText = "Disable",
-                        CloseButtonText = "Cancel",
-                    });
+                var isPinMode = _masterPasswordService.GetAuthMode() == "pin";
+                var prompt = new CredentialPromptDialog(
+                    _contentDialogService.GetDialogHostEx()!,
+                    "Disable Protection",
+                    prefillUsername: null,
+                    prefillDomain: null);
+                prompt.Title = isPinMode
+                    ? "Enter your PIN to disable protection"
+                    : "Enter your password to disable protection";
+                prompt.HideUsernameAndDomain();
+                if (isPinMode) prompt.UsePinMode();
+                prompt.PrimaryButtonText = "Disable";
+
+                var result = await prompt.ShowAsync();
 
                 if (result == ContentDialogResult.Primary)
                 {
+                    if (!_masterPasswordService.VerifyMasterPassword(prompt.EnteredPassword))
+                    {
+                        vm.ApplySecuritySettings(vm.CurrentSecuritySettings with { RequireMasterPassword = true });
+                        return;
+                    }
+
                     _masterPasswordService.DeleteAuthFile();
                     vm.IsMasterPasswordConfigured = false;
 
-                    // ForceDisableAsync dismisses any active lock overlay, restores
-                    // collapsed HostContainer children, clears lock state, and sets
-                    // RequireMasterPassword = false — all in one atomic call. Without
-                    // this, disabling password while an RDP session is active could
-                    // leave an invisible blocking layer (SmokeGrid / collapsed WFH).
                     if (LockController is not null)
                     {
                         await LockController.ForceDisableAsync();
@@ -829,7 +836,6 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 }
                 else
                 {
-                    // Revert toggle without triggering another persist
                     vm.ApplySecuritySettings(vm.CurrentSecuritySettings with { RequireMasterPassword = true });
                 }
             }

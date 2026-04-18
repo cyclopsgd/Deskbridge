@@ -55,10 +55,7 @@ public partial class LockOverlayDialog : ContentDialog
                 _vm.ConfirmPassword = "";
                 _vm.ErrorMessage = null;
 
-                if (_vm.IsPinMode)
-                    PinField.FocusFirst();
-                else
-                    PasswordField.Focus();
+                ApplyFieldVisibility();
             }
         };
 
@@ -94,20 +91,25 @@ public partial class LockOverlayDialog : ContentDialog
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Force-apply PIN vs password visibility. DataTriggers bound to IsPinMode may
-        // miss the initial value when it was set in the VM constructor BEFORE
-        // InitializeComponent created the visual tree. Without this, a returning PIN
-        // user sees the PasswordBox instead of the 6-cell PinInputControl on relaunch.
+        ApplyFieldVisibility();
+    }
+
+    private void ApplyFieldVisibility()
+    {
         if (_vm.IsPinMode)
         {
             PasswordField.Visibility = Visibility.Collapsed;
             PinField.Visibility = Visibility.Visible;
+            ConfirmField.Visibility = Visibility.Collapsed;
+            ConfirmPinField.Visibility = _vm.IsFirstRun ? Visibility.Visible : Visibility.Collapsed;
             PinField.FocusFirst();
         }
         else
         {
             PasswordField.Visibility = Visibility.Visible;
             PinField.Visibility = Visibility.Collapsed;
+            ConfirmPinField.Visibility = Visibility.Collapsed;
+            ConfirmField.Visibility = _vm.IsFirstRun ? Visibility.Visible : Visibility.Collapsed;
             PasswordField.Focus();
         }
     }

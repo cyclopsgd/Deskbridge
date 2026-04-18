@@ -20,8 +20,10 @@ public partial class CredentialPromptDialog : ContentDialog
     /// <summary>Domain entered by the user (read after dialog closes).</summary>
     public string EnteredDomain => DomainBox.Text;
 
-    /// <summary>Password entered by the user (read after dialog closes).</summary>
-    public string EnteredPassword => PasswordBox.Password;
+    private bool _isPinMode;
+
+    /// <summary>Password or PIN entered by the user (read after dialog closes).</summary>
+    public string EnteredPassword => _isPinMode ? PinField.Pin : PasswordBox.Password;
 
     public CredentialPromptDialog(
         ContentDialogHost dialogHost,
@@ -53,6 +55,38 @@ public partial class CredentialPromptDialog : ContentDialog
             else
                 UsernameBox.Focus();
         };
+    }
+
+    /// <summary>
+    /// Switches the dialog to PIN mode — hides the PasswordBox and shows the
+    /// 6-cell PinInputControl instead.
+    /// </summary>
+    public void UsePinMode()
+    {
+        _isPinMode = true;
+        PasswordBox.Visibility = System.Windows.Visibility.Collapsed;
+        PasswordLabel.Visibility = System.Windows.Visibility.Collapsed;
+        PinField.Visibility = System.Windows.Visibility.Visible;
+        Loaded += (_, _) => PinField.FocusFirst();
+    }
+
+    /// <summary>
+    /// Hides the username and domain fields — used when repurposing this dialog
+    /// as a password/PIN verification prompt (e.g. disable password confirmation).
+    /// </summary>
+    public void HideUsernameAndDomain()
+    {
+        UsernameBox.Visibility = System.Windows.Visibility.Collapsed;
+        DomainBox.Visibility = System.Windows.Visibility.Collapsed;
+        // Also hide the labels above them
+        foreach (var child in ((System.Windows.Controls.StackPanel)Content).Children)
+        {
+            if (child is System.Windows.Controls.TextBlock tb &&
+                (tb.Text == "Username" || tb.Text == "Domain"))
+                tb.Visibility = System.Windows.Visibility.Collapsed;
+        }
+
+        Loaded += (_, _) => PasswordBox.Focus();
     }
 
     /// <summary>
