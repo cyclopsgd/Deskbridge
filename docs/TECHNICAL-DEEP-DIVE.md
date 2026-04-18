@@ -996,6 +996,31 @@ Release steps:
 4. `vpk pack` with channel flag
 5. `vpk upload github` with `--publish` flag
 
+### 11.3 Dependency Vulnerability Management
+
+Dependabot is configured (`.github/dependabot.yml`) with two ecosystems:
+
+- **NuGet packages** — weekly scan for outdated or vulnerable dependencies
+- **GitHub Actions** — weekly scan for outdated action versions
+
+**Automated response pipeline:**
+
+| Severity | Response | Human review required |
+|----------|----------|----------------------|
+| Patch/minor updates | Auto-merge after CI passes (dependabot-automerge.yml) | No |
+| Major updates | PR opened, awaits manual review | Yes |
+| Security advisories | Dependabot alert raised, security update PR opened | Yes (triaged) |
+| Malware advisories | Immediate alert via GitHub security notifications | Yes |
+
+**GitHub security features enabled:**
+- Dependency graph — maps all transitive dependencies
+- Dependabot alerts — flags known CVEs in dependency tree
+- Dependabot security updates — auto-creates PRs for vulnerable packages
+- Grouped security updates — bundles related fixes into single PRs
+- Malware detection — flags dependencies with known malware advisories
+
+All dependency updates flow through the CI pipeline (build + 548 tests) before merge. Major version bumps require manual review to assess breaking changes against the RDP ActiveX interop layer and WPF-UI control templates, which are the most sensitive integration surfaces.
+
 ---
 
 ## 12. Testing Strategy
