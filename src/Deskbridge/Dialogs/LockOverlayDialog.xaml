@@ -43,7 +43,7 @@
 
     <!-- UI-SPEC §Lock Overlay Internal Layout lines 123-143 -->
     <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Border Width="360" Padding="32" CornerRadius="8"
+        <Border Width="360" Padding="32,24,32,32" CornerRadius="8"
                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="1">
@@ -154,18 +154,19 @@
                     </ctrl:PinInputControl.Style>
                 </ctrl:PinInputControl>
 
-                <!-- 12px gap → error slot (reserves space via NullToCollapsed) -->
+                <!-- error slot (reserves space via NullToCollapsed) -->
                 <TextBlock Text="{Binding ErrorMessage}"
                            FontSize="12"
                            Foreground="{DynamicResource DeskbridgeErrorBrush}"
                            TextWrapping="Wrap"
-                           Margin="0,12,0,16"
+                           Margin="0,12,0,0"
                            Visibility="{Binding ErrorMessage, Converter={StaticResource NullToCollapsed}}" />
 
-                <!-- 16px gap → primary Unlock / Set Password button -->
+                <!-- primary Unlock / Set Password button -->
                 <ui:Button Content="{Binding ButtonCopy}"
                            Appearance="Primary"
                            Height="40"
+                           Margin="0,20,0,0"
                            HorizontalAlignment="Stretch"
                            HorizontalContentAlignment="Center"
                            Command="{Binding UnlockCommand}" />
