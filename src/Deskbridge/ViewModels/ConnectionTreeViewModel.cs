@@ -3,6 +3,7 @@ using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Dialogs;
+using Deskbridge.Protocols.Rdp;
 using Microsoft.Extensions.DependencyInjection;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -27,6 +28,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private readonly IServiceProvider _serviceProvider;
     private readonly IEventBus _eventBus;
     private readonly ITabHostManager _tabHostManager;
+    private readonly AirspaceSwapper _airspace;
 
     // Cached full tree for restoring after search filter clears
     private ObservableCollection<TreeItemViewModel> _fullTree = [];
@@ -42,7 +44,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
         ISnackbarService snackbarService,
         IServiceProvider serviceProvider,
         IEventBus eventBus,
-        ITabHostManager tabHostManager)
+        ITabHostManager tabHostManager,
+        AirspaceSwapper airspace)
     {
         _connectionStore = connectionStore;
         _connectionQuery = connectionQuery;
@@ -52,6 +55,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _serviceProvider = serviceProvider;
         _eventBus = eventBus;
         _tabHostManager = tabHostManager;
+        _airspace = airspace;
     }
 
     // Data
@@ -558,14 +562,23 @@ public partial class ConnectionTreeViewModel : ObservableObject
             }
 
             var dialog = new ConnectionEditorDialog(host, vm);
-            var result = await dialog.ShowAsync();
 
-            if (result == ContentDialogResult.Primary)
+            _airspace.SnapshotAndHideAll();
+            try
             {
-                var saved = vm.Save();
-                RefreshTree();
-                RestoreSelectionById(saved.Id);
-                RefreshQuickProperties();
+                var result = await dialog.ShowAsync();
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    var saved = vm.Save();
+                    RefreshTree();
+                    RestoreSelectionById(saved.Id);
+                    RefreshQuickProperties();
+                }
+            }
+            finally
+            {
+                _airspace.RestoreAll();
             }
         }
         catch (Exception ex)
@@ -597,12 +610,21 @@ public partial class ConnectionTreeViewModel : ObservableObject
             vm.Initialize();
 
             var dialog = new GroupEditorDialog(host, vm);
-            var result = await dialog.ShowAsync();
 
-            if (result == ContentDialogResult.Primary)
+            _airspace.SnapshotAndHideAll();
+            try
             {
-                vm.Save();
-                RefreshTree();
+                var result = await dialog.ShowAsync();
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    vm.Save();
+                    RefreshTree();
+                }
+            }
+            finally
+            {
+                _airspace.RestoreAll();
             }
         }
         catch (Exception ex)
@@ -624,6 +646,17 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _isDialogOpen = true;
         try
         {
+            // Flush pending quick-panel bindings (race: right-click from TextBox to Edit
+            // may not have triggered LostFocus yet -- context menu captures focus first).
+            if (item is ConnectionTreeItemViewModel pendingConn)
+            {
+                SaveConnectionFromQuickEdit(pendingConn);
+            }
+            else if (item is GroupTreeItemViewModel pendingGroup)
+            {
+                SaveGroupFromQuickEdit(pendingGroup);
+            }
+
             var host = _contentDialogService.GetDialogHostEx();
             if (host is null)
             {
@@ -640,14 +673,23 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 vm.Initialize(existing);
 
                 var dialog = new ConnectionEditorDialog(host, vm);
-                var result = await dialog.ShowAsync();
 
-                if (result == ContentDialogResult.Primary)
+                _airspace.SnapshotAndHideAll();
+                try
                 {
-                    var saved = vm.Save();
-                    RefreshTree();
-                    RestoreSelectionById(saved.Id);
-                    RefreshQuickProperties();
+                    var result = await dialog.ShowAsync();
+
+                    if (result == ContentDialogResult.Primary)
+                    {
+                        var saved = vm.Save();
+                        RefreshTree();
+                        RestoreSelectionById(saved.Id);
+                        RefreshQuickProperties();
+                    }
+                }
+                finally
+                {
+                    _airspace.RestoreAll();
                 }
             }
             else if (item is GroupTreeItemViewModel groupItem)
@@ -659,14 +701,23 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 vm.Initialize(existing);
 
                 var dialog = new GroupEditorDialog(host, vm);
-                var result = await dialog.ShowAsync();
 
-                if (result == ContentDialogResult.Primary)
+                _airspace.SnapshotAndHideAll();
+                try
                 {
-                    vm.Save();
-                    RefreshTree();
-                    RestoreSelectionById(groupItem.Id);
-                    RefreshQuickProperties();
+                    var result = await dialog.ShowAsync();
+
+                    if (result == ContentDialogResult.Primary)
+                    {
+                        vm.Save();
+                        RefreshTree();
+                        RestoreSelectionById(groupItem.Id);
+                        RefreshQuickProperties();
+                    }
+                }
+                finally
+                {
+                    _airspace.RestoreAll();
                 }
             }
         }
@@ -719,14 +770,22 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _isDialogOpen = true;
         try
         {
-            result = await _contentDialogService.ShowSimpleDialogAsync(
-                new SimpleContentDialogCreateOptions
-                {
-                    Title = title,
-                    Content = content,
-                    PrimaryButtonText = "Delete",
-                    CloseButtonText = "Cancel"
-                });
+            _airspace.SnapshotAndHideAll();
+            try
+            {
+                result = await _contentDialogService.ShowSimpleDialogAsync(
+                    new SimpleContentDialogCreateOptions
+                    {
+                        Title = title,
+                        Content = content,
+                        PrimaryButtonText = "Delete",
+                        CloseButtonText = "Cancel"
+                    });
+            }
+            finally
+            {
+                _airspace.RestoreAll();
+            }
         }
         finally
         {

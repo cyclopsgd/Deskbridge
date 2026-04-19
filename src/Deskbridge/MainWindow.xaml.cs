@@ -604,7 +604,15 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         try
         {
             var dialog = _paletteFactory();
-            await dialog.ShowAsync();
+            _airspace.SnapshotAndHideAll();
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _airspace.RestoreAll();
+            }
         }
         catch (Exception ex)
         {
@@ -628,7 +636,15 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         try
         {
             var dialog = _changePasswordFactory();
-            await dialog.ShowAsync();
+            _airspace.SnapshotAndHideAll();
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _airspace.RestoreAll();
+            }
         }
         catch (Exception ex)
         {
@@ -657,7 +673,15 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         try
         {
             var dialog = _importWizardFactory();
-            await dialog.ShowAsync();
+            _airspace.SnapshotAndHideAll();
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _airspace.RestoreAll();
+            }
         }
         catch (Exception ex)
         {
@@ -731,13 +755,21 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         try
         {
             var dialog = new UpdateConfirmDialog(RootContentDialog);
-            var result = await dialog.ShowAsync();
-            if (result == Wpf.Ui.Controls.ContentDialogResult.Primary)
+            _airspace.SnapshotAndHideAll();
+            try
             {
-                // T-07-04: user confirmed restart — apply update.
-                // ApplyUpdatesAndRestart calls Environment.Exit(); active sessions
-                // will be terminated. The confirmation dialog warned the user.
-                ViewModel.UpdateService?.ApplyUpdatesAndRestart();
+                var result = await dialog.ShowAsync();
+                if (result == Wpf.Ui.Controls.ContentDialogResult.Primary)
+                {
+                    // T-07-04: user confirmed restart — apply update.
+                    // ApplyUpdatesAndRestart calls Environment.Exit(); active sessions
+                    // will be terminated. The confirmation dialog warned the user.
+                    ViewModel.UpdateService?.ApplyUpdatesAndRestart();
+                }
+            }
+            finally
+            {
+                _airspace.RestoreAll();
             }
         }
         catch (Exception ex)
@@ -816,7 +848,16 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 if (isPinMode) prompt.UsePinMode();
                 prompt.PrimaryButtonText = "Disable";
 
-                var result = await prompt.ShowAsync();
+                _airspace.SnapshotAndHideAll();
+                ContentDialogResult result;
+                try
+                {
+                    result = await prompt.ShowAsync();
+                }
+                finally
+                {
+                    _airspace.RestoreAll();
+                }
 
                 if (result == ContentDialogResult.Primary)
                 {

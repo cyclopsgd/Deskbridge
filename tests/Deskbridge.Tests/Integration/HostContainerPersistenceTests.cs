@@ -8,6 +8,7 @@ using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Core.Services;
+using Deskbridge.Protocols.Rdp;
 using Deskbridge.Tests.Fixtures;
 using Deskbridge.ViewModels;
 using Deskbridge.Views;
@@ -354,7 +355,7 @@ public sealed class HostContainerPersistenceTests
             var model = new ConnectionModel { Id = Guid.NewGuid(), Name = "test", Hostname = "h" };
             store.GetById(model.Id).Returns(model);
 
-            var tree = new ConnectionTreeViewModel(store, query, creds, dialog, snack, sp, bus, tabHostManager);
+            var tree = new ConnectionTreeViewModel(store, query, creds, dialog, snack, sp, bus, tabHostManager, new AirspaceSwapper());
             var vm = new MainWindowViewModel(tree, tabHostManager, bus, store, new ToastStackViewModel());
 
             vm.HasNoTabs.Should().BeTrue("initial state");

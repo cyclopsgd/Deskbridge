@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Dialogs;
+using Deskbridge.Protocols.Rdp;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -22,10 +23,12 @@ namespace Deskbridge.Services;
 public sealed class CredentialPromptService : ICredentialPromptService
 {
     private readonly IContentDialogService _contentDialogService;
+    private readonly AirspaceSwapper _airspace;
 
-    public CredentialPromptService(IContentDialogService contentDialogService)
+    public CredentialPromptService(IContentDialogService contentDialogService, AirspaceSwapper airspace)
     {
         _contentDialogService = contentDialogService;
+        _airspace = airspace;
     }
 
     public async Task<NetworkCredential?> PromptAsync(ConnectionModel connection)
@@ -50,7 +53,16 @@ public sealed class CredentialPromptService : ICredentialPromptService
             connection.Username,
             connection.Domain);
 
-        var result = await dialog.ShowAsync();
+        _airspace.SnapshotAndHideAll();
+        ContentDialogResult result;
+        try
+        {
+            result = await dialog.ShowAsync();
+        }
+        finally
+        {
+            _airspace.RestoreAll();
+        }
 
         if (result != ContentDialogResult.Primary)
             return null;

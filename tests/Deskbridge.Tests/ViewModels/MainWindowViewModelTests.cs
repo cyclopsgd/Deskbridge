@@ -3,6 +3,7 @@ using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Core.Services;
 using Deskbridge.Models;
+using Deskbridge.Protocols.Rdp;
 using Deskbridge.ViewModels;
 using NSubstitute;
 using Wpf.Ui;
@@ -29,7 +30,8 @@ public class MainWindowViewModelTests
 
         var treeVm = new ConnectionTreeViewModel(
             _connectionStore, connectionQuery, credentialService,
-            contentDialogService, snackbarService, serviceProvider, _bus, _tabHostManager);
+            contentDialogService, snackbarService, serviceProvider, _bus, _tabHostManager,
+            new AirspaceSwapper());
 
         _sut = new MainWindowViewModel(treeVm, _tabHostManager, _bus, _connectionStore, new ToastStackViewModel());
     }
