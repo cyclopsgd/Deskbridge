@@ -21,9 +21,8 @@
     <!-- UI-SPEC §Crash Dialog Internal Layout (lines 149-161). No stack trace
          visible — details flow to the clipboard via Copy Details. -->
     <StackPanel>
-        <TextBlock FontSize="14"
+        <TextBlock Style="{StaticResource BodyStyle}"
                    TextWrapping="Wrap"
-                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Text="An unexpected error occurred. A log file with details has been saved to your AppData folder. You can copy the error details to clipboard for support, or restart the application." />
     </StackPanel>
 </ui:ContentDialog>

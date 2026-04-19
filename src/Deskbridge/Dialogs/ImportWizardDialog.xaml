@@ -26,8 +26,8 @@
                       DisplayMemberPath="SourceName"
                       MinWidth="200" />
             <TextBlock Text="Select the application to import connections from."
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Margin="0,8,0,0" FontSize="12" />
+                       Style="{StaticResource CaptionStyle}"
+                       Margin="0,8,0,0" />
         </StackPanel>
 
         <!-- Step 2: File Picker -->
@@ -88,7 +88,7 @@
                 <ui:ProgressRing IsIndeterminate="True" Width="32" Height="32" />
                 <TextBlock Text="Processing..." Margin="0,8,0,0"
                            HorizontalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                           Style="{StaticResource BodyMutedStyle}" />
             </StackPanel>
         </Grid>
     </Grid>

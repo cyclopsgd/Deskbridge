@@ -17,9 +17,8 @@
     </ui:ContentDialog.Resources>
 
     <StackPanel Margin="0,8">
-        <TextBlock TextWrapping="Wrap"
-                   FontSize="14"
-                   Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+        <TextBlock Style="{StaticResource BodyStyle}"
+                   TextWrapping="Wrap">
             Update has been downloaded and is ready to install.
         </TextBlock>
 
