@@ -194,7 +194,7 @@ Plans:
 
 Plans:
 - [x] 09-01-PLAN.md -- ViewModel + Settings: PropertiesPanelRecord in AppSettings, card expand properties, connection state tracking via TabStateChangedEvent, save/load in MainWindow, unit tests
-- [ ] 09-02-PLAN.md -- XAML rewrite: CardHeaderToggleStyle, ReadOnlyFieldStyle, collapsible card sections, status dot in header, read-only field distinction, scrollbar fix, visual checkpoint
+- [x] 09-02-PLAN.md -- XAML rewrite: CardHeaderToggleStyle, ReadOnlyFieldStyle, collapsible card sections, status dot in header, read-only field distinction, scrollbar fix, visual checkpoint
 
 ### Phase 10: Tree View Polish
 **Goal**: The connection tree communicates connection state at a glance, feels responsive to interaction, and shows structural hierarchy through visual guides
