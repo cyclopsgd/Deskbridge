@@ -42,8 +42,8 @@
 
             <!-- Icon Rail (Column 0) -->
             <Border Grid.Column="0"
-                Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{StaticResource PanelEdgeGradientVertical}"
                 BorderThickness="0,0,1,0">
                 <DockPanel>
                     <!-- Settings button pinned to bottom (VS Code convention, D-05) -->
@@ -100,8 +100,8 @@
             <Border Grid.Column="1"
                 Width="240"
                 Visibility="{Binding IsPanelVisible, Converter={StaticResource BoolToVisibility}}"
-                Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{StaticResource PanelEdgeGradientVertical}"
                 BorderThickness="0,0,1,0">
                 <DockPanel>
                     <!-- Panel header -->
@@ -110,8 +110,8 @@
                             <Style TargetType="ContentControl">
                                 <Setter Property="Content">
                                     <Setter.Value>
-                                        <TextBlock Text="CONNECTIONS"
-                                            Style="{StaticResource SectionLabelStyle}"
+                                        <TextBlock Text="CONNECTIONS" FontSize="11"
+                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                             Margin="12,8" />
                                     </Setter.Value>
                                 </Setter>
@@ -119,8 +119,8 @@
                                     <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Search}">
                                         <Setter Property="Content">
                                             <Setter.Value>
-                                                <TextBlock Text="SEARCH"
-                                                    Style="{StaticResource SectionLabelStyle}"
+                                                <TextBlock Text="SEARCH" FontSize="11"
+                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                     Margin="12,8" />
                                             </Setter.Value>
                                         </Setter>
@@ -128,8 +128,8 @@
                                     <DataTrigger Binding="{Binding ActivePanelMode}" Value="{x:Static models:PanelMode.Settings}">
                                         <Setter Property="Content">
                                             <Setter.Value>
-                                                <TextBlock Text="SETTINGS"
-                                                    Style="{StaticResource SectionLabelStyle}"
+                                                <TextBlock Text="SETTINGS" FontSize="11"
+                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                     Margin="12,8" />
                                             </Setter.Value>
                                         </Setter>
@@ -158,36 +158,44 @@
                             bound via MainWindowViewModel.AutoLockTimeoutMinutes / LockOnMinimise
                             with persistence through IWindowStateService (Plan 06-02 NOTF-04).
                         -->
-                        <StackPanel Margin="{StaticResource PanelContentMargin}"
+                        <StackPanel Margin="12,8,12,12"
                                     Visibility="{Binding IsSettingsActive, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="SECURITY"
-                                       Style="{StaticResource SectionLabelStyle}"
-                                       Margin="{StaticResource SectionLabelMargin}" />
-                            <Border Style="{StaticResource CardContainerStyle}">
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Margin="0,8,0,4" />
+                            <Border Padding="12"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    CornerRadius="4"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                    BorderThickness="1">
                                 <StackPanel>
                                     <!-- Require Password/PIN toggle -->
                                     <TextBlock Text="Require password/PIN"
-                                               Style="{StaticResource BodyStyle}" />
+                                               FontSize="14" />
                                     <ui:ToggleSwitch IsChecked="{Binding RequireMasterPassword}"
                                                      Margin="0,4,0,12" />
 
                                     <!-- Separator -->
-                                    <Border Style="{StaticResource SeparatorStyle}" />
+                                    <Border Height="1" Margin="0,0,0,12"
+                                            Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
 
                                     <!-- Auto-lock controls greyed out when password disabled -->
                                     <StackPanel IsEnabled="{Binding IsLockControlsEnabled}">
                                         <TextBlock Text="Auto-lock timeout"
-                                                   Style="{StaticResource FieldLabelStyle}" />
+                                                   FontSize="14"
+                                                   Margin="0,0,0,4" />
                                         <ui:NumberBox Minimum="1" Maximum="1440"
                                                       Value="{Binding AutoLockTimeoutMinutes, UpdateSourceTrigger=LostFocus}"
-                                                      Margin="{StaticResource FormFieldSpacing}" />
+                                                      Margin="0,0,0,12" />
                                         <TextBlock Text="Lock on minimise"
-                                                   Style="{StaticResource BodyStyle}" />
+                                                   FontSize="14" />
                                         <ui:ToggleSwitch IsChecked="{Binding LockOnMinimise}"
                                                          Margin="0,4,0,12" />
 
                                         <!-- Separator -->
-                                        <Border Style="{StaticResource SeparatorStyle}" />
+                                        <Border Height="1" Margin="0,0,0,12"
+                                                Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
 
                                         <!-- Change Password/PIN button -->
                                         <ui:Button x:Name="ChangePasswordButton"
@@ -200,10 +208,14 @@
                             </Border>
 
                             <!-- Phase 7 Plan 07-04: DATA section for import/export -->
-                            <TextBlock Text="DATA"
-                                       Style="{StaticResource SectionLabelStyle}"
+                            <TextBlock Text="DATA" FontSize="11"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        Margin="0,16,0,4" />
-                            <Border Style="{StaticResource CardContainerStyle}">
+                            <Border Padding="12"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    CornerRadius="4"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                    BorderThickness="1">
                                 <StackPanel>
                                     <ui:Button Content="Import Connections..."
                                                Icon="{ui:SymbolIcon ArrowImport24}"
@@ -234,8 +246,8 @@
                 <!-- Tab Bar (Editor Row 0, D-06 custom, D-07 always visible) -->
                 <Border Grid.Row="0"
                     Height="30"
-                    Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
-                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{StaticResource PanelEdgeGradientHorizontal}"
                     BorderThickness="0,0,0,1">
                     <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Disabled">
@@ -248,18 +260,22 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border x:Name="TabBorder" Height="30" Padding="8,0"
-                                        Margin="0,0,1,0"
-                                        Cursor="Hand"
+                                    <Border Height="30" Padding="8,0"
+                                        Background="Transparent" Cursor="Hand"
                                         BorderThickness="0,2,0,0"
                                         ToolTip="{Binding TooltipText}">
-                                        <!-- TAB-01v2: Named brush for Storyboard animation targeting (Phase 10 pattern) -->
-                                        <Border.Background>
-                                            <SolidColorBrush x:Name="TabBrush" Color="Transparent" />
-                                        </Border.Background>
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="BorderBrush" Value="Transparent" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                    </DataTrigger>
+                                                    <!-- Plan 05-03 UI-SPEC line 231: inactive tabs had no hover visual. Add subtle hover. -->
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                                    </Trigger>
+                                                </Style.Triggers>
                                             </Style>
                                         </Border.Style>
 
@@ -285,134 +301,48 @@
                                                 Command="{Binding DataContext.SwitchTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}" />
                                         </Border.InputBindings>
-
-                                        <Grid>
-                                            <!-- TAB-03v2: State tint overlay (behind content, does not compete with hover/active animation) -->
-                                            <Rectangle x:Name="StateTint" Opacity="0.05" IsHitTestVisible="False"
-                                                Margin="-8,0,-8,0">
-                                                <Rectangle.Style>
-                                                    <Style TargetType="Rectangle">
-                                                        <Setter Property="Fill" Value="Transparent" />
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <!-- D-12 Connecting indicator (12px ProgressRing). Mutually exclusive with amber/red dots. -->
+                                            <ui:ProgressRing IsIndeterminate="True"
+                                                Width="12" Height="12" Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding IsConnecting, Converter={StaticResource BoolToVisibility}}" />
+                                            <!-- D-12 Reconnecting dot (8px amber Ellipse, DeskbridgeWarningBrush #FFCC02). -->
+                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Fill="{DynamicResource DeskbridgeWarningBrush}"
+                                                Visibility="{Binding IsReconnecting, Converter={StaticResource BoolToVisibility}}" />
+                                            <!-- D-12 Error dot (8px red Ellipse, DeskbridgeErrorBrush #F44747). -->
+                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Fill="{DynamicResource DeskbridgeErrorBrush}"
+                                                Visibility="{Binding IsError, Converter={StaticResource BoolToVisibility}}" />
+                                            <!-- Tab title. UI-SPEC §Tab Bar Internal Layout: MinWidth 96, MaxWidth 240, CharacterEllipsis. -->
+                                            <TextBlock Text="{Binding Title}" FontSize="14"
+                                                MinWidth="96" MaxWidth="240"
+                                                TextTrimming="CharacterEllipsis"
+                                                VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                        <Setter Property="FontWeight" Value="Regular" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding State}" Value="Connected">
-                                                                <Setter Property="Fill" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding State}" Value="Reconnecting">
-                                                                <Setter Property="Fill" Value="{DynamicResource DeskbridgeWarningBrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding State}" Value="Error">
-                                                                <Setter Property="Fill" Value="{DynamicResource DeskbridgeErrorBrush}" />
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                                <Setter Property="FontWeight" Value="SemiBold" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Rectangle.Style>
-                                            </Rectangle>
-
-                                            <!-- Existing content (StackPanel with indicators + title + close button) -->
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <!-- D-12 Connecting indicator (12px ProgressRing). Mutually exclusive with amber/red dots. -->
-                                                <ui:ProgressRing IsIndeterminate="True"
-                                                    Width="12" Height="12" Margin="0,0,8,0"
-                                                    VerticalAlignment="Center"
-                                                    Visibility="{Binding IsConnecting, Converter={StaticResource BoolToVisibility}}" />
-                                                <!-- D-12 Reconnecting dot (8px amber Ellipse, DeskbridgeWarningBrush #FFCC02). -->
-                                                <Ellipse Width="8" Height="8" Margin="0,0,8,0"
-                                                    VerticalAlignment="Center"
-                                                    Fill="{DynamicResource DeskbridgeWarningBrush}"
-                                                    Visibility="{Binding IsReconnecting, Converter={StaticResource BoolToVisibility}}" />
-                                                <!-- D-12 Error dot (8px red Ellipse, DeskbridgeErrorBrush #F44747). -->
-                                                <Ellipse Width="8" Height="8" Margin="0,0,8,0"
-                                                    VerticalAlignment="Center"
-                                                    Fill="{DynamicResource DeskbridgeErrorBrush}"
-                                                    Visibility="{Binding IsError, Converter={StaticResource BoolToVisibility}}" />
-                                                <!-- Tab title. UI-SPEC §Tab Bar Internal Layout: MinWidth 96, MaxWidth 240, CharacterEllipsis. -->
-                                                <TextBlock Text="{Binding Title}" FontSize="14"
-                                                    MinWidth="96" MaxWidth="240"
-                                                    TextTrimming="CharacterEllipsis"
-                                                    VerticalAlignment="Center">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                            <Setter Property="FontWeight" Value="Regular" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                                    <Setter Property="FontWeight" Value="SemiBold" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <!-- TAB-02v2: Close button hidden by default (Opacity=0), revealed on hover via DataTemplate.Triggers -->
-                                                <ui:Button x:Name="CloseBtn" Appearance="Transparent"
-                                                    Icon="{ui:SymbolIcon Dismiss16}"
-                                                    Width="16" Height="16" Margin="4,0,0,0"
-                                                    Padding="0" Opacity="0"
-                                                    Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                    CommandParameter="{Binding}" />
-                                            </StackPanel>
-                                        </Grid>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <ui:Button Appearance="Transparent"
+                                                Icon="{ui:SymbolIcon Dismiss16}"
+                                                Width="16" Height="16" Margin="4,0,0,0"
+                                                Padding="0"
+                                                Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}" />
+                                        </StackPanel>
                                     </Border>
-
-                                    <!-- TAB-01v2/02v2: DataTemplate-level triggers for cross-element Storyboard animation.
-                                         Hover trigger BEFORE active DataTrigger so active takes precedence (WPF: later trigger wins). -->
-                                    <DataTemplate.Triggers>
-                                        <!-- Hover: animate TabBrush background + fade in close button -->
-                                        <Trigger SourceName="TabBorder" Property="IsMouseOver" Value="True">
-                                            <Trigger.EnterActions>
-                                                <BeginStoryboard x:Name="HoverEnter">
-                                                    <Storyboard>
-                                                        <ColorAnimation Storyboard.TargetName="TabBrush"
-                                                            Storyboard.TargetProperty="Color"
-                                                            To="{StaticResource SubtleFillColorSecondary}"
-                                                            Duration="0:0:0.15" />
-                                                        <DoubleAnimation Storyboard.TargetName="CloseBtn"
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            To="1" Duration="0:0:0.15" />
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </Trigger.EnterActions>
-                                            <Trigger.ExitActions>
-                                                <BeginStoryboard x:Name="HoverExit">
-                                                    <Storyboard FillBehavior="Stop">
-                                                        <ColorAnimation Storyboard.TargetName="TabBrush"
-                                                            Storyboard.TargetProperty="Color"
-                                                            To="Transparent"
-                                                            Duration="0:0:0.15" />
-                                                        <DoubleAnimation Storyboard.TargetName="CloseBtn"
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            To="0" Duration="0:0:0.15" />
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </Trigger.ExitActions>
-                                        </Trigger>
-
-                                        <!-- Active tab: animate background + set accent border + keep close button visible -->
-                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard x:Name="ActiveEnter">
-                                                    <Storyboard>
-                                                        <ColorAnimation Storyboard.TargetName="TabBrush"
-                                                            Storyboard.TargetProperty="Color"
-                                                            To="{StaticResource SubtleFillColorSecondary}"
-                                                            Duration="0:0:0.12" />
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <BeginStoryboard x:Name="ActiveExit">
-                                                    <Storyboard>
-                                                        <ColorAnimation Storyboard.TargetName="TabBrush"
-                                                            Storyboard.TargetProperty="Color"
-                                                            To="Transparent"
-                                                            Duration="0:0:0.15" />
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.ExitActions>
-                                            <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                            <Setter TargetName="CloseBtn" Property="Opacity" Value="1" />
-                                        </DataTrigger>
-                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -423,24 +353,15 @@
                 <Border Grid.Row="1"
                     Background="{DynamicResource ApplicationBackgroundBrush}">
                     <Grid x:Name="ViewportGrid">
-                        <!-- Empty-state placeholder (POLISH-01 D-01: rich viewport layout) -->
+                        <!-- Empty-state placeholder (kept from Phase 2) -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                             Visibility="{Binding HasNoTabs, Converter={StaticResource BoolToVisibility}}">
-                            <ui:SymbolIcon Symbol="Desktop24" FontSize="48"
-                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                HorizontalAlignment="Center" Margin="0,0,0,16" />
-                            <TextBlock Text="Deskbridge"
-                                Style="{StaticResource SubtitleStyle}"
+                            <TextBlock Text="Deskbridge" FontSize="20" FontWeight="SemiBold"
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 HorizontalAlignment="Center" />
-                            <TextBlock Text="Open a connection to get started"
-                                Style="{StaticResource HintStyle}"
-                                HorizontalAlignment="Center" Margin="0,4,0,16" />
-                            <ui:Button Content="New Connection"
-                                Appearance="Secondary"
-                                Icon="{ui:SymbolIcon Add24}"
-                                Command="{Binding ConnectionTree.NewConnectionCommand}"
-                                HorizontalAlignment="Center" />
+                            <TextBlock Text="Ctrl+N to create a connection" FontSize="14"
+                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                HorizontalAlignment="Center" Margin="0,8,0,0" />
                         </StackPanel>
                         <!-- Snapshot Image for drag/resize (RDP-09, D-13). Collapsed by default;
                              AirspaceSwapper toggles on WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE. -->
@@ -461,7 +382,7 @@
         <!-- Status Bar (Root Grid Row 2) -->
         <Border Grid.Row="2"
             Background="{DynamicResource SystemAccentColorPrimaryBrush}">
-            <DockPanel Margin="{StaticResource StatusBarContentMargin}">
+            <DockPanel Margin="8,0">
                 <TextBlock DockPanel.Dock="Right"
                     Text="{Binding StatusSecondary}"
                     Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
