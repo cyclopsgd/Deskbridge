@@ -204,8 +204,12 @@ Plans:
   1. User sees a colored status dot (green = connected, gray = disconnected, red = error) next to each connection name in the tree that updates when connection state changes
   2. User sees smooth hover highlights (150ms fade-in) and selection backgrounds that clearly distinguish hovered, selected, and hovered+selected states
   3. User sees thin vertical lines at each indentation level showing parent-child relationships in the tree hierarchy
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 10-01-PLAN.md -- Per-item ConnectionState property, status dot in connection DataTemplate, animated hover/selection transitions in ControlTemplate
+- [ ] 10-02-PLAN.md -- DepthToGuideLinesConverter, vertical indent guide lines in ControlTemplate via ItemsControl
 
 ### Phase 11: Tab Bar Refinement
 **Goal**: The tab bar clearly communicates which tab is active, what state each connection is in, and provides smooth interaction feedback on close buttons
@@ -246,6 +250,6 @@ Phase 9, 10, 11 can run in parallel after Phase 8. Phase 12 depends on 9, 10, 11
 | 7. Update & Migration | v1.0 | 4/4 | Complete | - |
 | 8. Resource Foundation | v1.1 | 0/3 | Planning complete | - |
 | 9. Quick Properties Panel | v1.1 | 0/2 | Planning complete | - |
-| 10. Tree View Polish | v1.1 | 0/? | Not started | - |
+| 10. Tree View Polish | v1.1 | 0/2 | Planning complete | - |
 | 11. Tab Bar Refinement | v1.1 | 0/? | Not started | - |
 | 12. General Polish Sweep | v1.1 | 0/? | Not started | - |
