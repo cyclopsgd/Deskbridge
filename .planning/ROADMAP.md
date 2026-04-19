@@ -208,7 +208,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 10-01-PLAN.md -- Per-item ConnectionState property, status dot in connection DataTemplate, animated hover/selection transitions in ControlTemplate
+- [x] 10-01-PLAN.md -- Per-item ConnectionState property, status dot in connection DataTemplate, animated hover/selection transitions in ControlTemplate
 - [ ] 10-02-PLAN.md -- DepthToGuideLinesConverter, vertical indent guide lines in ControlTemplate via ItemsControl
 
 ### Phase 11: Tab Bar Refinement
@@ -250,6 +250,6 @@ Phase 9, 10, 11 can run in parallel after Phase 8. Phase 12 depends on 9, 10, 11
 | 7. Update & Migration | v1.0 | 4/4 | Complete | - |
 | 8. Resource Foundation | v1.1 | 0/3 | Planning complete | - |
 | 9. Quick Properties Panel | v1.1 | 0/2 | Planning complete | - |
-| 10. Tree View Polish | v1.1 | 0/2 | Planning complete | - |
+| 10. Tree View Polish | v1.1 | 1/2 | In Progress|  |
 | 11. Tab Bar Refinement | v1.1 | 0/? | Not started | - |
 | 12. General Polish Sweep | v1.1 | 0/? | Not started | - |

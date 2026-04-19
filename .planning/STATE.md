@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
-status: verifying
-stopped_at: "Checkpoint: 09-02 Task 3 visual verification pending"
-last_updated: "2026-04-19T13:57:06.290Z"
+status: executing
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-04-19T15:40:55.877Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 12
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_plans: 7
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 09 — quick-properties-panel
+**Current focus:** Phase 10 — tree-view-polish
 
 ## Current Position
 
-Phase: 09 (quick-properties-panel) — EXECUTING
+Phase: 10 (tree-view-polish) — EXECUTING
 Plan: 2 of 2
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-04-19
 
 Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
@@ -36,7 +36,7 @@ Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 
 **Velocity:**
 
-- Total plans completed: 23
+- Total plans completed: 25
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 | 06 | 4 | - | - |
 | 07 | 4 | - | - |
 | 08 | 3 | - | - |
+| 09 | 2 | - | - |
 
 **Recent Trend:**
 
@@ -80,6 +81,7 @@ Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 | Phase 08 P03 | 5min | 2 tasks | 9 files |
 | Phase 09 P01 | 9min | 2 tasks | 5 files |
 | Phase 09-quick-properties-panel P02 | 4min | 2 tasks | 3 files |
+| Phase 10-tree-view-polish P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -99,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 09]: Dictionary<Guid, TabState> state map in ViewModel for re-selection status dot without TabHostManager query
 - [Phase 09-quick-properties-panel]: ReadOnlyFieldStyle uses BasedOn in inline Style for MultiDataTrigger visibility (not attribute + element)
 - [Phase 09-quick-properties-panel]: Label column width 72px (from 80px) for better field space in 240px panel
+- [Phase 10-tree-view-polish]: StaticResource Color keys for Storyboard animation targets (WPF Freezable constraint, dark-theme-only safe)
+- [Phase 10-tree-view-polish]: Named SolidColorBrush (RowBrush) as Border.Background child element to enable ColorAnimation targeting
 
 ### Pending Todos
 
@@ -121,6 +125,6 @@ None for v1.1. All phases are UI-only work with no COM/ActiveX risk.
 
 ## Session Continuity
 
-Last session: 2026-04-19T13:57:06.286Z
-Stopped at: Checkpoint: 09-02 Task 3 visual verification pending
+Last session: 2026-04-19T15:40:55.873Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None
