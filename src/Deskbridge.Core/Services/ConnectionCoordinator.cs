@@ -443,6 +443,20 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
+        // Suppress auto-reconnect when another active connection targets the same host.
+        // Two sessions with the same user on the same VM steal each other's RDP session
+        // (discReason=3 ServerInitiated), creating an infinite reconnect loop.
+        if (category == DisconnectCategory.ServerInitiated &&
+            _coordinatorHosts.Values.Any(e => string.Equals(e.Model.Hostname, model.Hostname, StringComparison.OrdinalIgnoreCase)))
+        {
+            _logger.LogWarning(
+                "Suppressing auto-reconnect for {Hostname} — another active connection exists to the same host",
+                model.Hostname);
+            handle.SwitchToManual?.Invoke();
+            WireManualHandlers(handle, model);
+            return;
+        }
+
         _reconnectCts?.Cancel();
         _reconnectCts = new CancellationTokenSource();
         handle.CancelRequested += (_, _) =>
