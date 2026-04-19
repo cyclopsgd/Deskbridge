@@ -47,49 +47,108 @@
                 BorderThickness="0,0,1,0">
                 <DockPanel>
                     <!-- Settings button pinned to bottom (VS Code convention, D-05) -->
-                    <ui:Button DockPanel.Dock="Bottom"
-                        Appearance="Transparent"
-                        Icon="{ui:SymbolIcon Settings24}"
-                        Width="36" Height="36"
-                        Padding="0"
-                        Command="{Binding TogglePanelCommand}"
-                        CommandParameter="{x:Static models:PanelMode.Settings}"
-                        AutomationProperties.Name="Settings">
-                        <ui:Button.Style>
-                            <Style TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
-                                <Setter Property="BorderThickness" Value="2,0,0,0" />
-                                <Setter Property="BorderBrush" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ui:Button.Style>
-                    </ui:Button>
-
-                    <!-- Top icons: Connections and Search -->
-                    <StackPanel>
+                    <!-- POLISH-02 (D-07): wrapping Border with named brush for 150ms hover animation.
+                         Avoids fighting WPF-UI's internal ui:Button hover template. -->
+                    <Border DockPanel.Dock="Bottom" CornerRadius="4">
+                        <Border.Background>
+                            <SolidColorBrush x:Name="SettingsBtnBrush" Color="Transparent" />
+                        </Border.Background>
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard x:Name="SettingsHoverEnter">
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="SettingsBtnBrush"
+                                            Storyboard.TargetProperty="Color"
+                                            To="{StaticResource SubtleFillColorSecondary}"
+                                            Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard x:Name="SettingsHoverExit">
+                                    <Storyboard FillBehavior="Stop">
+                                        <ColorAnimation Storyboard.TargetName="SettingsBtnBrush"
+                                            Storyboard.TargetProperty="Color"
+                                            To="Transparent"
+                                            Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
                         <ui:Button
                             Appearance="Transparent"
-                            Icon="{ui:SymbolIcon PlugConnected24}"
+                            Icon="{ui:SymbolIcon Settings24}"
                             Width="36" Height="36"
                             Padding="0"
                             Command="{Binding TogglePanelCommand}"
-                            CommandParameter="{x:Static models:PanelMode.Connections}"
-                            AutomationProperties.Name="Connections">
+                            CommandParameter="{x:Static models:PanelMode.Settings}"
+                            AutomationProperties.Name="Settings">
                             <ui:Button.Style>
                                 <Style TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
                                     <Setter Property="BorderThickness" Value="2,0,0,0" />
                                     <Setter Property="BorderBrush" Value="Transparent" />
+                                    <Setter Property="Background" Value="Transparent" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsConnectionsActive}" Value="True">
+                                        <DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
                                             <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </ui:Button.Style>
                         </ui:Button>
+                    </Border>
+
+                    <!-- Top icons: Connections and Search -->
+                    <StackPanel>
+                        <!-- POLISH-02 (D-07): wrapping Border with named brush for 150ms hover animation. -->
+                        <Border CornerRadius="4">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="ConnBtnBrush" Color="Transparent" />
+                            </Border.Background>
+                            <Border.Triggers>
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard x:Name="ConnHoverEnter">
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="ConnBtnBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="{StaticResource SubtleFillColorSecondary}"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard x:Name="ConnHoverExit">
+                                        <Storyboard FillBehavior="Stop">
+                                            <ColorAnimation Storyboard.TargetName="ConnBtnBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="Transparent"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Border.Triggers>
+                            <ui:Button
+                                Appearance="Transparent"
+                                Icon="{ui:SymbolIcon PlugConnected24}"
+                                Width="36" Height="36"
+                                Padding="0"
+                                Command="{Binding TogglePanelCommand}"
+                                CommandParameter="{x:Static models:PanelMode.Connections}"
+                                AutomationProperties.Name="Connections">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
+                                        <Setter Property="BorderThickness" Value="2,0,0,0" />
+                                        <Setter Property="BorderBrush" Value="Transparent" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsConnectionsActive}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                        </Border>
 
                         <!-- Search icon hidden — feature not yet implemented -->
                     </StackPanel>
@@ -281,7 +340,7 @@
 
                                         <!-- D-07 context menu: Close / Close Others / Close All. No icons, no separators, no extra items. -->
                                         <Border.ContextMenu>
-                                            <ContextMenu>
+                                            <ContextMenu ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
                                                 <MenuItem Header="Close"
                                                     Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}" />

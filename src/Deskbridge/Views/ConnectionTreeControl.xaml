@@ -16,7 +16,8 @@
         -->
 
         <!-- Connection context menu -->
-        <ContextMenu x:Key="ConnectionContextMenu" x:Shared="False">
+        <ContextMenu x:Key="ConnectionContextMenu" x:Shared="False"
+                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
             <MenuItem Header="Connect"
                       Icon="{ui:SymbolIcon Play24}"
                       InputGestureText="Enter"
@@ -55,7 +56,8 @@
         </ContextMenu>
 
         <!-- Group context menu -->
-        <ContextMenu x:Key="GroupContextMenu" x:Shared="False">
+        <ContextMenu x:Key="GroupContextMenu" x:Shared="False"
+                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
             <MenuItem Header="Edit"
                       Icon="{ui:SymbolIcon Edit24}"
                       Command="{Binding EditItemCommand}"
@@ -80,7 +82,8 @@
         </ContextMenu>
 
         <!-- Multi-select context menu -->
-        <ContextMenu x:Key="MultiSelectContextMenu" x:Shared="False">
+        <ContextMenu x:Key="MultiSelectContextMenu" x:Shared="False"
+                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
             <MenuItem IsEnabled="False" FontWeight="SemiBold" x:Name="MultiSelectHeader" />
             <Separator />
             <MenuItem Header="Move to..."
@@ -93,7 +96,8 @@
         </ContextMenu>
 
         <!-- Empty area context menu -->
-        <ContextMenu x:Key="EmptyAreaContextMenu" x:Shared="False">
+        <ContextMenu x:Key="EmptyAreaContextMenu" x:Shared="False"
+                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
                       InputGestureText="Ctrl+N"
