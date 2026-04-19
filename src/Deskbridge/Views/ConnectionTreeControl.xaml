@@ -428,13 +428,16 @@
                 </TreeView.Resources>
             </TreeView>
 
-            <!-- Empty tree state overlay -->
+            <!-- Empty tree state overlay (POLISH-01 D-02: compact icon+text layout) -->
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                         x:Name="EmptyStateOverlay">
-                <TextBlock Text="No connections" FontSize="16"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                <ui:SymbolIcon Symbol="PlugConnected24" FontSize="24"
+                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                    HorizontalAlignment="Center" Margin="0,0,0,8" />
+                <TextBlock Text="No connections"
+                           Style="{StaticResource BodyMutedStyle}"
                            HorizontalAlignment="Center" />
-                <TextBlock Text="Right-click to create a connection or group"
+                <TextBlock Text="Right-click to add"
                            Style="{StaticResource HintStyle}"
                            HorizontalAlignment="Center" Margin="0,4,0,0" />
             </StackPanel>

@@ -423,16 +423,24 @@
                 <Border Grid.Row="1"
                     Background="{DynamicResource ApplicationBackgroundBrush}">
                     <Grid x:Name="ViewportGrid">
-                        <!-- Empty-state placeholder (kept from Phase 2) -->
+                        <!-- Empty-state placeholder (POLISH-01 D-01: rich viewport layout) -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                             Visibility="{Binding HasNoTabs, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Symbol="Desktop24" FontSize="48"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                HorizontalAlignment="Center" Margin="0,0,0,16" />
                             <TextBlock Text="Deskbridge"
                                 Style="{StaticResource SubtitleStyle}"
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 HorizontalAlignment="Center" />
-                            <TextBlock Text="Ctrl+N to create a connection" FontSize="14"
-                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                HorizontalAlignment="Center" Margin="0,8,0,0" />
+                            <TextBlock Text="Open a connection to get started"
+                                Style="{StaticResource HintStyle}"
+                                HorizontalAlignment="Center" Margin="0,4,0,16" />
+                            <ui:Button Content="New Connection"
+                                Appearance="Secondary"
+                                Icon="{ui:SymbolIcon Add24}"
+                                Command="{Binding ConnectionTree.NewConnectionCommand}"
+                                HorizontalAlignment="Center" />
                         </StackPanel>
                         <!-- Snapshot Image for drag/resize (RDP-09, D-13). Collapsed by default;
                              AirspaceSwapper toggles on WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE. -->
