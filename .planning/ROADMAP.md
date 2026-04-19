@@ -223,7 +223,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 11-01-PLAN.md -- Refactor tab DataTemplate: animated active tab background (Storyboard ColorAnimation), hover-reveal close button (Opacity DoubleAnimation), connection state tint overlay (Rectangle with DataTriggers)
+- [x] 11-01-PLAN.md -- Refactor tab DataTemplate: animated active tab background (Storyboard ColorAnimation), hover-reveal close button (Opacity DoubleAnimation), connection state tint overlay (Rectangle with DataTriggers)
 
 ### Phase 12: General Polish Sweep
 **Goal**: Every interaction feels intentional and every empty state communicates next steps -- the UI transitions from "functional" to "finished"
@@ -254,5 +254,5 @@ Phase 9, 10, 11 can run in parallel after Phase 8. Phase 12 depends on 9, 10, 11
 | 8. Resource Foundation | v1.1 | 0/3 | Planning complete | - |
 | 9. Quick Properties Panel | v1.1 | 0/2 | Planning complete | - |
 | 10. Tree View Polish | v1.1 | 2/2 | Complete    | 2026-04-19 |
-| 11. Tab Bar Refinement | v1.1 | 0/1 | Planning complete | - |
+| 11. Tab Bar Refinement | v1.1 | 1/1 | Complete    | 2026-04-19 |
 | 12. General Polish Sweep | v1.1 | 0/? | Not started | - |
