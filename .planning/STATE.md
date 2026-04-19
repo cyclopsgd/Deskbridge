@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
 status: executing
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-04-19T17:27:53.407Z"
-last_activity: 2026-04-19
+stopped_at: Phase 12 context gathered
+last_updated: "2026-04-19T19:37:29.459Z"
+last_activity: 2026-04-19 -- Phase 12 execution started
 progress:
   total_phases: 12
   completed_phases: 4
-  total_plans: 8
+  total_plans: 10
   completed_plans: 8
-  percent: 100
+  percent: 80
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 11 — Tab Bar Refinement
+**Current focus:** Phase 12 — general-polish-sweep
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Executing Phase 11
-Last activity: 2026-04-19
+Phase: 12 (general-polish-sweep) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 12
+Last activity: 2026-04-19 -- Phase 12 execution started
 
 Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 
@@ -130,6 +130,6 @@ None for v1.1. All phases are UI-only work with no COM/ActiveX risk.
 
 ## Session Continuity
 
-Last session: 2026-04-19T15:45:15.619Z
-Stopped at: Completed 10-02-PLAN.md
-Resume file: None
+Last session: 2026-04-19T18:47:54.294Z
+Stopped at: Phase 12 context gathered
+Resume file: .planning/phases/12-general-polish-sweep/12-CONTEXT.md

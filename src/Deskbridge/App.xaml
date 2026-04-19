@@ -6,8 +6,12 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- 1. WPF-UI theme dictionaries (MUST be first) -->
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <!-- 2. Deskbridge resource dictionaries (after WPF-UI, can override) -->
+                <ResourceDictionary Source="Resources/SpacingResources.xaml" />
+                <ResourceDictionary Source="Resources/TypographyStyles.xaml" />
                 <ResourceDictionary Source="Resources/CardAndPanelStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 

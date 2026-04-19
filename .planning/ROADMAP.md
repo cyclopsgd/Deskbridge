@@ -233,8 +233,12 @@ Plans:
   1. User sees a helpful empty state (illustration or icon + message + action button) when the connection tree is empty and when no tab is open in the viewport
   2. User sees consistent hover/press feedback (150ms fade transitions) on all interactive elements: buttons, tree rows, tabs, icon rail items, and context menu items
   3. User sees panel edges defined by WPF-UI gradient border brushes that create subtle elevation separation between the tree panel, viewport, and properties panel
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 12-01-PLAN.md -- Empty states: viewport (48px icon + title + subtitle + action button) and tree (compact icon + text), replacing text-only placeholders
+- [x] 12-02-PLAN.md -- Gradient border brushes on all panel edges (CardAndPanelStyles.xaml resources) + 150ms hover transitions on icon rail buttons and context menu items
 
 ## Progress
 
@@ -255,4 +259,4 @@ Phase 9, 10, 11 can run in parallel after Phase 8. Phase 12 depends on 9, 10, 11
 | 9. Quick Properties Panel | v1.1 | 0/2 | Planning complete | - |
 | 10. Tree View Polish | v1.1 | 2/2 | Complete    | 2026-04-19 |
 | 11. Tab Bar Refinement | v1.1 | 1/1 | Complete    | 2026-04-19 |
-| 12. General Polish Sweep | v1.1 | 0/? | Not started | - |
+| 12. General Polish Sweep | v1.1 | 1/2 | In Progress|  |
