@@ -219,8 +219,11 @@ Plans:
   1. User can immediately identify the active tab through a distinct visual treatment (bottom accent border or background shift) that differentiates it from inactive tabs
   2. User sees tab close buttons only when hovering over a tab, with a smooth fade-in transition (no layout shift when the button appears)
   3. User sees subtle color accents on tabs reflecting their connection state (accent for connected, muted for disconnected, red tint for error)
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+
+Plans:
+- [ ] 11-01-PLAN.md -- Refactor tab DataTemplate: animated active tab background (Storyboard ColorAnimation), hover-reveal close button (Opacity DoubleAnimation), connection state tint overlay (Rectangle with DataTriggers)
 
 ### Phase 12: General Polish Sweep
 **Goal**: Every interaction feels intentional and every empty state communicates next steps -- the UI transitions from "functional" to "finished"
@@ -250,6 +253,6 @@ Phase 9, 10, 11 can run in parallel after Phase 8. Phase 12 depends on 9, 10, 11
 | 7. Update & Migration | v1.0 | 4/4 | Complete | - |
 | 8. Resource Foundation | v1.1 | 0/3 | Planning complete | - |
 | 9. Quick Properties Panel | v1.1 | 0/2 | Planning complete | - |
-| 10. Tree View Polish | v1.1 | 2/2 | Complete   | 2026-04-19 |
-| 11. Tab Bar Refinement | v1.1 | 0/? | Not started | - |
+| 10. Tree View Polish | v1.1 | 2/2 | Complete    | 2026-04-19 |
+| 11. Tab Bar Refinement | v1.1 | 0/1 | Planning complete | - |
 | 12. General Polish Sweep | v1.1 | 0/? | Not started | - |
