@@ -19,6 +19,13 @@ public partial class ConnectionTreeItemViewModel : TreeItemViewModel
     [ObservableProperty]
     public partial CredentialMode CredentialMode { get; set; } = CredentialMode.Inherit;
 
+    /// <summary>
+    /// TREE-01: Per-item connection state for status dot binding.
+    /// Null when no active tab exists (gray dot / disconnected).
+    /// </summary>
+    [ObservableProperty]
+    public partial TabState? ConnectionState { get; set; }
+
     public Guid? GroupId { get; set; }
 
     public int SortOrder { get; set; }

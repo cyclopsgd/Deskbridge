@@ -269,6 +269,11 @@ public partial class ConnectionTreeViewModel : ObservableObject
         {
             _connectionStateMap[evt.ConnectionId] = evt.State;
 
+            // TREE-01: propagate state to tree item VM for status dot
+            var treeItem = FindItemById(RootItems, evt.ConnectionId) as ConnectionTreeItemViewModel;
+            if (treeItem is not null)
+                treeItem.ConnectionState = evt.State;
+
             if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
                 && conn.Id == evt.ConnectionId)
             {
@@ -283,6 +288,11 @@ public partial class ConnectionTreeViewModel : ObservableObject
         {
             _connectionStateMap.Remove(evt.ConnectionId);
 
+            // TREE-01: clear status dot
+            var treeItem = FindItemById(RootItems, evt.ConnectionId) as ConnectionTreeItemViewModel;
+            if (treeItem is not null)
+                treeItem.ConnectionState = null;
+
             if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
                 && conn.Id == evt.ConnectionId)
             {
@@ -296,6 +306,11 @@ public partial class ConnectionTreeViewModel : ObservableObject
         SetOnUiThread(() =>
         {
             _connectionStateMap.Remove(evt.Connection.Id);
+
+            // TREE-01: clear status dot
+            var treeItem = FindItemById(RootItems, evt.Connection.Id) as ConnectionTreeItemViewModel;
+            if (treeItem is not null)
+                treeItem.ConnectionState = null;
 
             if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
                 && conn.Id == evt.Connection.Id)
@@ -426,6 +441,14 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
         _fullTree = rootItems;
         RootItems = new ObservableCollection<TreeItemViewModel>(rootItems);
+
+        // TREE-01: restore status dots after tree rebuild (Pitfall 4 from RESEARCH.md)
+        foreach (var (connId, state) in _connectionStateMap)
+        {
+            var treeItem = FindItemById(RootItems, connId) as ConnectionTreeItemViewModel;
+            if (treeItem is not null)
+                treeItem.ConnectionState = state;
+        }
     }
 
     private static void SortSiblings(ObservableCollection<TreeItemViewModel> siblings)
