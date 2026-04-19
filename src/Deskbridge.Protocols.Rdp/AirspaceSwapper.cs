@@ -32,6 +32,7 @@ public sealed class AirspaceSwapper : IDisposable
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
     private const uint PW_CLIENTONLY = 0x00000001;
+    private const uint PW_RENDERFULLCONTENT = 0x00000002;
 
     private readonly Dictionary<WindowsFormsHost, Image> _hosts = new();
     private readonly List<HwndSource> _hookedSources = new();
@@ -266,7 +267,7 @@ public sealed class AirspaceSwapper : IDisposable
             if (hBmp == IntPtr.Zero) return null;
 
             var hOld = SelectObject(hdcMem, hBmp);
-            var ok = PrintWindow(hwnd, hdcMem, PW_CLIENTONLY);
+            var ok = PrintWindow(hwnd, hdcMem, PW_CLIENTONLY | PW_RENDERFULLCONTENT);
             SelectObject(hdcMem, hOld);
 
             if (!ok) return null;
