@@ -26,6 +26,7 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
             <converters:TreeViewItemIndentConverter x:Key="TreeViewItemIndent" IndentSize="19" />
+            <converters:DepthToGuideLinesConverter x:Key="DepthToGuideLines" IndentSize="19" />
             <converters:BoolToChevronConverter x:Key="BoolToChevron" />
             <converters:EnumToVisibilityConverter x:Key="EnumToVisibility" />
             <converters:NullToCollapsedConverter x:Key="NullToCollapsed" />
