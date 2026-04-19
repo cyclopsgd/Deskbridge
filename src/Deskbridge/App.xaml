@@ -31,22 +31,6 @@
             <converters:EnumToVisibilityConverter x:Key="EnumToVisibility" />
             <converters:NullToCollapsedConverter x:Key="NullToCollapsed" />
             <converters:NullToBoolConverter x:Key="NullToBool" />
-
-            <!-- POLISH-02 (D-08): MenuItem hover color consistency.
-                 WPF-UI's internal MenuItem template provides fade transitions.
-                 This style ensures the highlight color matches the established
-                 SubtleFillColorSecondary used by tree rows and tabs.
-                 Named style (not implicit) per Phase 8 convention. Applied via
-                 ContextMenu.ItemContainerStyle on each ContextMenu instance. -->
-            <Style x:Key="AnimatedMenuItemStyle" TargetType="MenuItem"
-                   BasedOn="{StaticResource {x:Type MenuItem}}">
-                <Style.Triggers>
-                    <Trigger Property="IsHighlighted" Value="True">
-                        <Setter Property="Background"
-                                Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-                    </Trigger>
-                </Style.Triggers>
-            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

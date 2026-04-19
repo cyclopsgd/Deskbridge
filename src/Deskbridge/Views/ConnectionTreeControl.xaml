@@ -16,7 +16,7 @@
         -->
 
         <!-- Connection context menu -->
-        <ContextMenu x:Key="ConnectionContextMenu" x:Shared="False" ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
+        <ContextMenu x:Key="ConnectionContextMenu" x:Shared="False">
             <MenuItem Header="Connect"
                       Icon="{ui:SymbolIcon Play24}"
                       InputGestureText="Enter"
@@ -55,7 +55,7 @@
         </ContextMenu>
 
         <!-- Group context menu -->
-        <ContextMenu x:Key="GroupContextMenu" x:Shared="False" ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
+        <ContextMenu x:Key="GroupContextMenu" x:Shared="False">
             <MenuItem Header="Edit"
                       Icon="{ui:SymbolIcon Edit24}"
                       Command="{Binding EditItemCommand}"

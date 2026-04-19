@@ -321,7 +321,7 @@
 
                                         <!-- D-07 context menu: Close / Close Others / Close All. No icons, no separators, no extra items. -->
                                         <Border.ContextMenu>
-                                            <ContextMenu ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
+                                            <ContextMenu>
                                                 <MenuItem Header="Close"
                                                     Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}" />
