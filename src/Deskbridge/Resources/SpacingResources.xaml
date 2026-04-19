@@ -1,0 +1,37 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- 4px grid primitives (Thickness) -->
+    <Thickness x:Key="Sp4">4</Thickness>
+    <Thickness x:Key="Sp8">8</Thickness>
+    <Thickness x:Key="Sp12">12</Thickness>
+    <Thickness x:Key="Sp16">16</Thickness>
+    <Thickness x:Key="Sp24">24</Thickness>
+    <Thickness x:Key="Sp32">32</Thickness>
+
+    <!-- Semantic spacing aliases -->
+    <Thickness x:Key="FormFieldLabelMargin">0,0,0,4</Thickness>
+    <Thickness x:Key="FormFieldSpacing">0,0,0,12</Thickness>
+    <Thickness x:Key="SectionSpacing">0,0,0,16</Thickness>
+    <Thickness x:Key="SectionLabelMargin">0,8,0,4</Thickness>
+    <Thickness x:Key="CardPadding">12</Thickness>
+    <Thickness x:Key="CardPaddingLarge">16</Thickness>
+    <Thickness x:Key="PanelContentMargin">12,8,12,12</Thickness>
+    <Thickness x:Key="DialogContentMargin">16,12</Thickness>
+    <Thickness x:Key="StatusBarContentMargin">8,0</Thickness>
+
+    <!-- Numeric values for non-Thickness usage (Height, Width, FontSize) -->
+    <sys:Double x:Key="SpacingUnit">4</sys:Double>
+    <sys:Double x:Key="RowHeight">28</sys:Double>
+    <sys:Double x:Key="TabBarHeight">30</sys:Double>
+    <sys:Double x:Key="TitleBarHeight">32</sys:Double>
+    <sys:Double x:Key="IconRailWidth">36</sys:Double>
+    <sys:Double x:Key="PanelWidth">240</sys:Double>
+    <sys:Double x:Key="StatusBarHeight">22</sys:Double>
+
+    <!-- Corner radii (from design system) -->
+    <CornerRadius x:Key="ControlCornerRadiusValue">4</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadiusValue">8</CornerRadius>
+
+</ResourceDictionary>
