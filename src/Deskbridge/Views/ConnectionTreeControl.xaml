@@ -193,7 +193,7 @@
                                             <DataTemplate>
                                                 <Rectangle Width="1"
                                                            Fill="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                           Opacity="0.3"
+                                                           Opacity="0.6"
                                                            Height="{Binding ActualHeight,
                                                                RelativeSource={RelativeSource AncestorType=Border}}" />
                                             </DataTemplate>

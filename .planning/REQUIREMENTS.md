@@ -134,7 +134,7 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 
 - [x] **TREE-01**: User sees connection status dots (green/gray/red) next to each connection in the tree
 - [x] **TREE-02**: User sees smooth hover transitions and refined selection highlights on tree rows
-- [ ] **TREE-03**: User sees vertical indentation guides showing tree depth hierarchy
+- [x] **TREE-03**: User sees vertical indentation guides showing tree depth hierarchy
 
 ### Tab Bar
 
@@ -280,7 +280,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROP-03 | Phase 9 | Complete |
 | TREE-01 | Phase 10 | Complete |
 | TREE-02 | Phase 10 | Complete |
-| TREE-03 | Phase 10 | Pending |
+| TREE-03 | Phase 10 | Complete |
 | TAB-01v2 | Phase 11 | Pending |
 | TAB-02v2 | Phase 11 | Pending |
 | TAB-03v2 | Phase 11 | Pending |

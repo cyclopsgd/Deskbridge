@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
-status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-04-19T15:40:55.877Z"
+status: verifying
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-04-19T15:45:15.623Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 12
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-18)
 
 Phase: 10 (tree-view-polish) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-19
 
 Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
@@ -82,6 +82,7 @@ Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 | Phase 09 P01 | 9min | 2 tasks | 5 files |
 | Phase 09-quick-properties-panel P02 | 4min | 2 tasks | 3 files |
 | Phase 10-tree-view-polish P01 | 2min | 2 tasks | 3 files |
+| Phase 10-tree-view-polish P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,8 @@ Recent decisions affecting current work:
 - [Phase 09-quick-properties-panel]: Label column width 72px (from 80px) for better field space in 240px panel
 - [Phase 10-tree-view-polish]: StaticResource Color keys for Storyboard animation targets (WPF Freezable constraint, dark-theme-only safe)
 - [Phase 10-tree-view-polish]: Named SolidColorBrush (RowBrush) as Border.Background child element to enable ColorAnimation targeting
+- [Phase 10-tree-view-polish]: Canvas+ItemsControl pattern for indent guides (flexible depth support, no hardcoded max)
+- [Phase 10-tree-view-polish]: 30% opacity on ControlStrokeColorDefaultBrush for subtle non-competing guide lines
 
 ### Pending Todos
 
@@ -125,6 +128,6 @@ None for v1.1. All phases are UI-only work with no COM/ActiveX risk.
 
 ## Session Continuity
 
-Last session: 2026-04-19T15:40:55.873Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-04-19T15:45:15.619Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
