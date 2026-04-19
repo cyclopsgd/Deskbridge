@@ -262,7 +262,6 @@ public partial class ConnectionTreeViewModel : ObservableObject
         }
     }
 
-    /// <summary>Phase 9 (PROP-02): update local state map and refresh status dot if the changed connection is selected.</summary>
     private void OnTabStateChanged(TabStateChangedEvent evt)
     {
         _connectionStateMap[evt.ConnectionId] = evt.State;
@@ -270,11 +269,10 @@ public partial class ConnectionTreeViewModel : ObservableObject
         if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
             && conn.Id == evt.ConnectionId)
         {
-            SelectedConnectionState = evt.State;
+            SetOnUiThread(() => SelectedConnectionState = evt.State);
         }
     }
 
-    /// <summary>Phase 9 (PROP-02): clear state map entry when connection closes.</summary>
     private void OnConnectionClosed(ConnectionClosedEvent evt)
     {
         _connectionStateMap.Remove(evt.Connection.Id);
@@ -282,8 +280,17 @@ public partial class ConnectionTreeViewModel : ObservableObject
         if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
             && conn.Id == evt.Connection.Id)
         {
-            SelectedConnectionState = null;
+            SetOnUiThread(() => SelectedConnectionState = null);
         }
+    }
+
+    private static void SetOnUiThread(Action action)
+    {
+        var app = System.Windows.Application.Current;
+        if (app is null || app.Dispatcher.CheckAccess())
+            action();
+        else
+            app.Dispatcher.InvokeAsync(action);
     }
 
     // --- Tree building ---
