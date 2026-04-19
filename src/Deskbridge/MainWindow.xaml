@@ -374,7 +374,7 @@
                                             </Trigger.EnterActions>
                                             <Trigger.ExitActions>
                                                 <BeginStoryboard x:Name="HoverExit">
-                                                    <Storyboard>
+                                                    <Storyboard FillBehavior="Stop">
                                                         <ColorAnimation Storyboard.TargetName="TabBrush"
                                                             Storyboard.TargetProperty="Color"
                                                             To="Transparent"

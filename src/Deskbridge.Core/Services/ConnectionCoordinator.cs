@@ -457,7 +457,9 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        _reconnectCts?.Cancel();
+        var oldCts = _reconnectCts;
+        oldCts?.Cancel();
+        oldCts?.Dispose();
         _reconnectCts = new CancellationTokenSource();
         handle.CancelRequested += (_, _) =>
         {
@@ -533,6 +535,7 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         handle.ManualReconnectRequested += async (_, _) =>
         {
             handle.Close?.Invoke();
+            _suppressedHost = null;
             try
             {
                 await _connect.ConnectAsync(model);
