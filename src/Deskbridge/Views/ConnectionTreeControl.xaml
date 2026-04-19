@@ -164,12 +164,14 @@
                         <StackPanel>
                             <!-- OUTER Border: no Grid.Column so it stretches to full row width -->
                             <Border x:Name="RowBorder"
-                                    Background="Transparent"
                                     BorderThickness="0"
                                     MinHeight="28"
                                     CornerRadius="{DynamicResource ControlCornerRadius}"
                                     Margin="0,0,0,1"
                                     SnapsToDevicePixels="True">
+                                <Border.Background>
+                                    <SolidColorBrush x:Name="RowBrush" Color="Transparent" />
+                                </Border.Background>
                                 <Grid>
                                     <!-- 2px left accent stripe (visible when selected) -->
                                     <Rectangle x:Name="AccentStripe"
@@ -218,18 +220,63 @@
                             <Trigger Property="HasItems" Value="False">
                                 <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
                             </Trigger>
+                            <!-- TREE-02: Animated hover (150ms fade-in/out) -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="RowBorder" Property="Background"
-                                        Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard x:Name="HoverEnter">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="{StaticResource SubtleFillColorSecondary}"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard x:Name="HoverExit">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="Transparent"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
+
                             <!--
                               Selection visual bound to the VM's IsSelected (not the
                               native TreeViewItem.IsSelected). This is what makes
                               multi-select highlight correctly — see behavior class.
+                              Uses EnterActions/ExitActions so the animation overrides any
+                              running hover animation (WPF: later Storyboard wins).
+                              AccentStripe visibility is still via Setter (instant, correct).
                             -->
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="RowBorder" Property="Background"
-                                        Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard x:Name="SelectEnter">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="{StaticResource SystemAccentColorSecondary}"
+                                                Duration="0:0:0.08" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard x:Name="SelectExit">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="Transparent"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
                                 <Setter TargetName="AccentStripe" Property="Visibility" Value="Visible" />
                             </DataTrigger>
                         </ControlTemplate.Triggers>
@@ -310,6 +357,39 @@
                     <DataTemplate DataType="{x:Type vm:ConnectionTreeItemViewModel}">
                         <StackPanel Orientation="Horizontal" Height="28" VerticalAlignment="Center"
                                     ToolTip="{Binding Hostname}">
+                            <!-- TREE-01: Status dot (8x8, colored by per-item ConnectionState) -->
+                            <Ellipse x:Name="StatusDot" Width="8" Height="8"
+                                     Margin="0,0,4,0" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <!-- Default: gray (disconnected / no active tab) -->
+                                        <Setter Property="Fill"
+                                                Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Connected">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource DeskbridgeSuccessBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Connecting">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Reconnecting">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource DeskbridgeWarningBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Error">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource DeskbridgeErrorBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
                             <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Margin="0,0,4,0"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            VerticalAlignment="Center" />
