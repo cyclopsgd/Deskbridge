@@ -67,4 +67,15 @@
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
+    <!-- Phase 9 (PROP-03): Read-only field values (inherited credentials, computed counts).
+         Uses Tertiary foreground to distinguish from FieldLabelCompactStyle (Secondary).
+         No border, no input chrome — communicates non-editable status visually.
+         D-06: applies to inherited credential fields AND computed display-only values. -->
+    <Style x:Key="ReadOnlyFieldStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
 </ResourceDictionary>

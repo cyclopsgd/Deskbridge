@@ -193,7 +193,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 09-01-PLAN.md -- ViewModel + Settings: PropertiesPanelRecord in AppSettings, card expand properties, connection state tracking via TabStateChangedEvent, save/load in MainWindow, unit tests
+- [x] 09-01-PLAN.md -- ViewModel + Settings: PropertiesPanelRecord in AppSettings, card expand properties, connection state tracking via TabStateChangedEvent, save/load in MainWindow, unit tests
 - [ ] 09-02-PLAN.md -- XAML rewrite: CardHeaderToggleStyle, ReadOnlyFieldStyle, collapsible card sections, status dot in header, read-only field distinction, scrollbar fix, visual checkpoint
 
 ### Phase 10: Tree View Polish

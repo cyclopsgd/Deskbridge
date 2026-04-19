@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
-status: verifying
-stopped_at: Completed 08-03-PLAN.md (dialog XAML migration)
-last_updated: "2026-04-19T11:16:39.774Z"
+status: executing
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-04-19T13:49:39.906Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 12
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 5
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 08 — resource-foundation
+**Current focus:** Phase 09 — quick-properties-panel
 
 ## Current Position
 
-Phase: 08 (resource-foundation) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 09 (quick-properties-panel) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-19
 
 Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
@@ -36,7 +36,7 @@ Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 
 **Velocity:**
 
-- Total plans completed: 20
+- Total plans completed: 23
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -50,6 +50,7 @@ Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 | 04 | 3 | - | - |
 | 06 | 4 | - | - |
 | 07 | 4 | - | - |
+| 08 | 3 | - | - |
 
 **Recent Trend:**
 
@@ -77,6 +78,7 @@ Progress: [#####.....] 58% (v1.0 complete, v1.1 starting)
 | Phase 08 P01 | 3min | 2 tasks | 4 files |
 | Phase 08 P02 | 6min | 2 tasks | 4 files |
 | Phase 08 P03 | 5min | 2 tasks | 9 files |
+| Phase 09 P01 | 9min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -92,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase 08]: All TextBlock styles are named (x:Key) to prevent implicit style leaking into WPF-UI control templates
 - [Phase 08]: ReconnectOverlay uses ui:Card (WPF-UI control) not Border -- CardContainerStyle cannot be applied; ui:Card provides equivalent styling natively
 - [Phase 08]: ImportWizardDialog step headers kept inline -- no named style matches default FontSize with SemiBold; CardTitleStyle would change visual size
+- [Phase 09]: Nullable PropertiesPanel field for backward compatibility with pre-Phase-9 settings.json
+- [Phase 09]: Dictionary<Guid, TabState> state map in ViewModel for re-selection status dot without TabHostManager query
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ None for v1.1. All phases are UI-only work with no COM/ActiveX risk.
 
 ## Session Continuity
 
-Last session: 2026-04-19T11:16:39.770Z
-Stopped at: Completed 08-03-PLAN.md (dialog XAML migration)
+Last session: 2026-04-19T13:49:39.902Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
