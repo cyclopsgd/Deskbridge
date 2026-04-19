@@ -402,11 +402,13 @@ public partial class ConnectionTreeViewModel : ObservableObject
         if (model is null)
             return;
 
+        var domain = connVm.Domain?.TrimEnd('\\');
         model.Name = connVm.Name;
         model.Hostname = hostname;
         model.Port = connVm.Port;
         model.Username = connVm.Username;
-        model.Domain = connVm.Domain;
+        model.Domain = domain;
+        connVm.Domain = domain;
         model.CredentialMode = connVm.CredentialMode;
         model.UpdatedAt = DateTime.UtcNow;
         _connectionStore.Save(model);

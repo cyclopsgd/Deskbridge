@@ -165,25 +165,16 @@ public partial class ConnectionEditorViewModel : ObservableValidator
                 SmartSizing = existing.DisplaySettings.SmartSizing;
             }
 
-            // Load credential username/domain for Own mode (never load password).
-            // CredentialManager normalizes domain\username on read, so these
-            // fields are properly split even if CredMan merged them internally.
+            // Username/domain always come from the model — it's the single source
+            // of truth, updated by both the editor and quick properties panel.
+            // CredentialManager is only queried for HasStoredPassword (the password
+            // itself is never loaded into the ViewModel).
             if (existing.CredentialMode == CredentialMode.Own)
             {
+                Username = existing.Username;
+                Domain = existing.Domain;
                 var cred = _credentialService.GetForConnection(existing);
-                if (cred is not null)
-                {
-                    Username = cred.UserName;
-                    Domain = cred.Domain;
-                    HasStoredPassword = !string.IsNullOrEmpty(cred.Password);
-                }
-                else
-                {
-                    // No stored credential yet -- use model values (quick panel may
-                    // have set username/domain before a password was saved)
-                    Username = existing.Username;
-                    Domain = existing.Domain;
-                }
+                HasStoredPassword = cred is not null && !string.IsNullOrEmpty(cred.Password);
             }
 
             // Compute inherited message for Inherit mode
@@ -214,7 +205,7 @@ public partial class ConnectionEditorViewModel : ObservableValidator
         connection.GroupId = GroupId;
         connection.CredentialMode = CredentialMode;
         connection.Username = Username;
-        connection.Domain = Domain;
+        connection.Domain = Domain?.TrimEnd('\\');
         connection.Notes = Notes;
         connection.UpdatedAt = DateTime.UtcNow;
 

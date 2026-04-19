@@ -40,8 +40,7 @@ public sealed class WindowsCredentialService : ICredentialService
         var target = BuildConnectionTarget(connection.Id);
         try
         {
-            // Guard: strip domain prefix from username if it was baked in by a
-            // previous corrupted read (e.g., username="CORP\admin", domain="CORP").
+            domain = NormalizeDomain(domain);
             username = StripDomainPrefix(username, domain);
             var cred = new NetworkCredential(username, password, domain ?? string.Empty);
             CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
@@ -85,8 +84,7 @@ public sealed class WindowsCredentialService : ICredentialService
         var target = $"DESKBRIDGE/GROUP/{groupId}";
         try
         {
-            // Guard: strip domain prefix from username if it was baked in by a
-            // previous corrupted read (e.g., username="CORP\admin", domain="CORP").
+            domain = NormalizeDomain(domain);
             username = StripDomainPrefix(username, domain);
             var cred = new NetworkCredential(username, password, domain ?? string.Empty);
             CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
@@ -207,6 +205,20 @@ public sealed class WindowsCredentialService : ICredentialService
         cred.Domain = username[..backslashIndex];
         cred.UserName = username[(backslashIndex + 1)..];
         return cred;
+    }
+
+    /// <summary>
+    /// Strips trailing backslash from domain values. Users commonly type ".\\" meaning
+    /// local machine, but the backslash is a separator convention, not part of the domain.
+    /// Storing ".\\" as the domain causes CredentialManager to produce ".\\\\username"
+    /// which NormalizeCredential then mis-splits.
+    /// </summary>
+    internal static string? NormalizeDomain(string? domain)
+    {
+        if (string.IsNullOrEmpty(domain))
+            return domain;
+
+        return domain.TrimEnd('\\');
     }
 
     /// <summary>
