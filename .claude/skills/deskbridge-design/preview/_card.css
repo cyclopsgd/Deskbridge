@@ -1,0 +1,48 @@
+/* Shared preview-card styles */
+@import url("../colors_and_type.css");
+
+html, body {
+  min-height: 100%;
+  padding: 16px 20px;
+  box-sizing: border-box;
+  /* Faux Mica: subtle gradient to imply the desktop-bleed blur */
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 10%, rgba(0,120,212,0.08), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 80% 90%, rgba(96,205,255,0.05), transparent 60%),
+    #202020;
+}
+.card-root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.row { display: flex; gap: 12px; align-items: stretch; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.swatch {
+  flex: 1;
+  min-height: 56px;
+  border-radius: 4px;
+  border: 1px solid var(--stroke-default);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+.swatch .name {
+  font-size: 11px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.swatch .hex {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.mini-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}

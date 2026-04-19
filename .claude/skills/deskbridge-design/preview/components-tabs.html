@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tabs</title><link rel="stylesheet" href="_card.css"></head>
+<body>
+<div class="card-root">
+  <div class="mini-label">Tab bar (30px) — active, hover, connecting, reconnecting, error</div>
+  <div style="height:30px; background:rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.08); display:flex;">
+    <!-- active -->
+    <div style="height:30px; padding:0 8px; display:flex; align-items:center; gap:8px; border-top:2px solid #60CDFF; box-sizing:border-box; background:transparent;">
+      <span style="font-size:14px; font-weight:600; color:#fff;">srv-prod-01</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.54)" stroke-width="2" fill="none"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </div>
+    <!-- hover -->
+    <div style="height:30px; padding:0 8px; display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.04);">
+      <span style="font-size:14px; color:rgba(255,255,255,0.78);">db-staging-02</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.54)" stroke-width="2" fill="none"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </div>
+    <!-- connecting -->
+    <div style="height:30px; padding:0 8px; display:flex; align-items:center; gap:8px;">
+      <div style="width:12px; height:12px; border:2px solid #60CDFF; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite;"></div>
+      <span style="font-size:14px; color:rgba(255,255,255,0.78);">bastion-01</span>
+    </div>
+    <!-- reconnecting -->
+    <div style="height:30px; padding:0 8px; display:flex; align-items:center; gap:8px;">
+      <span style="width:8px; height:8px; border-radius:50%; background:#FFCC02;"></span>
+      <span style="font-size:14px; color:rgba(255,255,255,0.78);">jump-eu-west</span>
+    </div>
+    <!-- error -->
+    <div style="height:30px; padding:0 8px; display:flex; align-items:center; gap:8px;">
+      <span style="width:8px; height:8px; border-radius:50%; background:#F44747;"></span>
+      <span style="font-size:14px; color:rgba(255,255,255,0.78);">failed-host</span>
+    </div>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
+</body></html>

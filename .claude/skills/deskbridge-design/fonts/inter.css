@@ -1,0 +1,13 @@
+/* Inter Variable — stand-in for Segoe UI Variable (Windows 11 system font).
+ * FLAGGED: Not a pixel-perfect match; please replace with Segoe UI Variable
+ * or an equivalent licensed web font for production mockups.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: local("Inter"), local("Inter-Regular");
+}
