@@ -16,8 +16,7 @@
         -->
 
         <!-- Connection context menu -->
-        <ContextMenu x:Key="ConnectionContextMenu" x:Shared="False"
-                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
+        <ContextMenu x:Key="ConnectionContextMenu" x:Shared="False" ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
             <MenuItem Header="Connect"
                       Icon="{ui:SymbolIcon Play24}"
                       InputGestureText="Enter"
@@ -56,8 +55,7 @@
         </ContextMenu>
 
         <!-- Group context menu -->
-        <ContextMenu x:Key="GroupContextMenu" x:Shared="False"
-                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
+        <ContextMenu x:Key="GroupContextMenu" x:Shared="False" ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
             <MenuItem Header="Edit"
                       Icon="{ui:SymbolIcon Edit24}"
                       Command="{Binding EditItemCommand}"
@@ -82,8 +80,7 @@
         </ContextMenu>
 
         <!-- Multi-select context menu -->
-        <ContextMenu x:Key="MultiSelectContextMenu" x:Shared="False"
-                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
+        <ContextMenu x:Key="MultiSelectContextMenu" x:Shared="False">
             <MenuItem IsEnabled="False" FontWeight="SemiBold" x:Name="MultiSelectHeader" />
             <Separator />
             <MenuItem Header="Move to..."
@@ -96,8 +93,7 @@
         </ContextMenu>
 
         <!-- Empty area context menu -->
-        <ContextMenu x:Key="EmptyAreaContextMenu" x:Shared="False"
-                     ItemContainerStyle="{StaticResource AnimatedMenuItemStyle}">
+        <ContextMenu x:Key="EmptyAreaContextMenu" x:Shared="False">
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
                       InputGestureText="Ctrl+N"
@@ -168,13 +164,42 @@
                         <StackPanel>
                             <!-- OUTER Border: no Grid.Column so it stretches to full row width -->
                             <Border x:Name="RowBorder"
-                                    Background="Transparent"
                                     BorderThickness="0"
                                     MinHeight="28"
                                     CornerRadius="{DynamicResource ControlCornerRadius}"
                                     Margin="0,0,0,1"
                                     SnapsToDevicePixels="True">
+                                <Border.Background>
+                                    <SolidColorBrush x:Name="RowBrush" Color="Transparent" />
+                                </Border.Background>
                                 <Grid>
+                                    <!-- TREE-03: Vertical indent guide lines -->
+                                    <ItemsControl x:Name="IndentGuides"
+                                                  ItemsSource="{Binding
+                                                      Converter={StaticResource DepthToGuideLines},
+                                                      RelativeSource={RelativeSource TemplatedParent}}"
+                                                  IsHitTestVisible="False">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <Canvas />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemContainerStyle>
+                                            <Style TargetType="ContentPresenter">
+                                                <Setter Property="Canvas.Left" Value="{Binding}" />
+                                            </Style>
+                                        </ItemsControl.ItemContainerStyle>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Rectangle Width="1"
+                                                           Fill="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                           Opacity="0.6"
+                                                           Height="{Binding ActualHeight,
+                                                               RelativeSource={RelativeSource AncestorType=Border}}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
                                     <!-- 2px left accent stripe (visible when selected) -->
                                     <Rectangle x:Name="AccentStripe"
                                                Width="2" Height="16"
@@ -222,18 +247,63 @@
                             <Trigger Property="HasItems" Value="False">
                                 <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
                             </Trigger>
+                            <!-- TREE-02: Animated hover (150ms fade-in/out) -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="RowBorder" Property="Background"
-                                        Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard x:Name="HoverEnter">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="{StaticResource SubtleFillColorSecondary}"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard x:Name="HoverExit">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="Transparent"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
+
                             <!--
                               Selection visual bound to the VM's IsSelected (not the
                               native TreeViewItem.IsSelected). This is what makes
                               multi-select highlight correctly — see behavior class.
+                              Uses EnterActions/ExitActions so the animation overrides any
+                              running hover animation (WPF: later Storyboard wins).
+                              AccentStripe visibility is still via Setter (instant, correct).
                             -->
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="RowBorder" Property="Background"
-                                        Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard x:Name="SelectEnter">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="{StaticResource SystemAccentColorSecondary}"
+                                                Duration="0:0:0.08" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard x:Name="SelectExit">
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="RowBrush"
+                                                Storyboard.TargetProperty="Color"
+                                                To="Transparent"
+                                                Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
                                 <Setter TargetName="AccentStripe" Property="Visibility" Value="Visible" />
                             </DataTrigger>
                         </ControlTemplate.Triggers>
@@ -314,12 +384,44 @@
                     <DataTemplate DataType="{x:Type vm:ConnectionTreeItemViewModel}">
                         <StackPanel Orientation="Horizontal" Height="28" VerticalAlignment="Center"
                                     ToolTip="{Binding Hostname}">
+                            <!-- TREE-01: Status dot (8x8, colored by per-item ConnectionState) -->
+                            <Ellipse x:Name="StatusDot" Width="8" Height="8"
+                                     Margin="0,0,4,0" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <!-- Default: gray (disconnected / no active tab) -->
+                                        <Setter Property="Fill"
+                                                Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Connected">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource DeskbridgeSuccessBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Connecting">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Reconnecting">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource DeskbridgeWarningBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ConnectionState}"
+                                                         Value="Error">
+                                                <Setter Property="Fill"
+                                                        Value="{DynamicResource DeskbridgeErrorBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
                             <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Margin="0,0,4,0"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            VerticalAlignment="Center" />
                             <TextBlock Text="{Binding Name}"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                       Style="{StaticResource BodyStyle}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </DataTemplate>
@@ -352,6 +454,8 @@
 
         <!--
              COMBINED QUICK PROPERTIES PANEL (Row 3)
+             Phase 9: Redesigned with collapsible card sections (CONNECTION, CREDENTIALS),
+             status dot in header, and read-only field styling for inherited credentials.
              See WPF-TREEVIEW-PATTERNS.md Section 3. Header + body share a single
              Grid row so that the GridSplitter on Row 2 correctly resizes the whole
              panel (splitter's default ResizeBehavior=PreviousAndNext touches Row 1
@@ -366,20 +470,46 @@
                 BorderThickness="0,1,0,0">
             <DockPanel LastChildFill="True">
                 <!-- Header strip — always visible -->
-                <Border DockPanel.Dock="Top" Height="28"
-                        Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                <Border DockPanel.Dock="Top"
+                        Style="{StaticResource PanelHeaderStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0" Text="PROPERTIES"
-                                   FontSize="11" FontWeight="SemiBold"
-                                   VerticalAlignment="Center" Margin="12,0,0,0"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                   Style="{StaticResource SectionLabelStyle}"
+                                   VerticalAlignment="Center" Margin="12,0,0,0" />
 
-                        <ui:Button Grid.Column="1"
+                        <!-- Phase 9 (D-03): Status dot — 8px colored circle showing connection state.
+                             Visible only when a connection (not a group) is selected.
+                             Gray = disconnected/no session, Green = connected, Amber = reconnecting, Red = error. -->
+                        <Ellipse Grid.Column="1" Width="8" Height="8"
+                                 VerticalAlignment="Center" Margin="6,0,0,0"
+                                 Visibility="{Binding IsConnectionSelected, Converter={StaticResource BoolToVisibility}}">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <!-- Default: gray (disconnected / no active tab / connecting) -->
+                                    <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedConnectionState}" Value="Connected">
+                                            <Setter Property="Fill" Value="{DynamicResource DeskbridgeSuccessBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedConnectionState}" Value="Reconnecting">
+                                            <Setter Property="Fill" Value="{DynamicResource DeskbridgeWarningBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedConnectionState}" Value="Error">
+                                            <Setter Property="Fill" Value="{DynamicResource DeskbridgeErrorBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+
+                        <ui:Button Grid.Column="3"
                                    Appearance="Transparent"
                                    Width="24" Height="24"
                                    Padding="0" Margin="0,0,4,0"
@@ -392,157 +522,304 @@
                     </Grid>
                 </Border>
 
-                <!-- Body — hidden when collapsed -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                              Visibility="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToVisibility}}">
-                <Grid Margin="8,4">
-                    <!-- Connection properties -->
-                    <Grid Visibility="{Binding IsConnectionSelected, Converter={StaticResource BoolToVisibility}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <!--
-                             Rows (in order): Name, Hostname, Port, Credentials, Username, Domain.
-                             Credentials is placed before Username/Domain so the mode selector
-                             sits above the fields whose visibility/enablement it controls.
-                             The Username and Domain rows use Auto height so they collapse
-                             cleanly to zero height when hidden in Prompt mode.
-                        -->
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                <!-- Body — hidden when collapsed. Padding="0,0,4,0" prevents scrollbar overlapping fields. -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Visibility="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToVisibility}}"
+                              Padding="0,0,4,0">
+                    <Grid>
+                        <!-- Connection properties — shown when a connection is selected -->
+                        <StackPanel Visibility="{Binding IsConnectionSelected, Converter={StaticResource BoolToVisibility}}"
+                                    Margin="8,4,8,8">
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Margin="0,3" />
-                        <ui:TextBox Grid.Row="0" Grid.Column="1"
-                                    Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
-                                    FontSize="14" Margin="0,3"
-                                    x:Name="ConnectionNameTextBox" LostFocus="QuickProperty_LostFocus" />
+                            <!-- === CONNECTION CARD (D-01) === -->
+                            <Border Style="{StaticResource CardContainerStyle}" Margin="0,0,0,8">
+                                <DockPanel>
+                                    <ToggleButton DockPanel.Dock="Top"
+                                                  IsChecked="{Binding IsConnectionCardExpanded}"
+                                                  Style="{StaticResource CardHeaderToggleStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="CONNECTION"
+                                                       Style="{StaticResource SectionLabelStyle}"
+                                                       VerticalAlignment="Center" />
+                                            <ui:SymbolIcon Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Symbol="{Binding IsConnectionCardExpanded,
+                                                    Converter={StaticResource BoolToChevron}}"
+                                                FontSize="12"
+                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </Grid>
+                                    </ToggleButton>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Hostname"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Margin="0,3" />
-                        <ui:TextBox Grid.Row="1" Grid.Column="1"
-                                    Text="{Binding PrimarySelectedItem.Hostname, UpdateSourceTrigger=LostFocus}"
-                                    FontSize="14" Margin="0,3"
-                                    x:Name="HostnameTextBox" LostFocus="QuickProperty_LostFocus" />
+                                    <Grid Visibility="{Binding IsConnectionCardExpanded,
+                                              Converter={StaticResource BoolToVisibility}}"
+                                          Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="72" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Port"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Margin="0,3" />
-                        <ui:TextBox Grid.Row="2" Grid.Column="1"
-                                    Text="{Binding PrimarySelectedItem.Port, UpdateSourceTrigger=LostFocus}"
-                                    FontSize="14" Margin="0,3"
-                                    x:Name="PortTextBox" LostFocus="QuickProperty_LostFocus" />
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
+                                                   Style="{StaticResource FieldLabelCompactStyle}"
+                                                   Margin="0,4" />
+                                        <ui:TextBox Grid.Row="0" Grid.Column="1"
+                                                    Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
+                                                    FontSize="14" Margin="0,4"
+                                                    x:Name="ConnectionNameTextBox"
+                                                    LostFocus="QuickProperty_LostFocus" />
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Credentials"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Margin="0,3" />
-                        <ComboBox Grid.Row="3" Grid.Column="1"
-                                  ItemsSource="{Binding CredentialModes}"
-                                  SelectedValue="{Binding SelectedItemCredentialMode}"
-                                  SelectedValuePath="Value"
-                                  FontSize="14" Margin="0,3"
-                                  x:Name="CredentialModeCombo"
-                                  PreviewMouseWheel="ComboBox_PreviewMouseWheel">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding DisplayName}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Hostname"
+                                                   Style="{StaticResource FieldLabelCompactStyle}"
+                                                   Margin="0,4" />
+                                        <ui:TextBox Grid.Row="1" Grid.Column="1"
+                                                    Text="{Binding PrimarySelectedItem.Hostname, UpdateSourceTrigger=LostFocus}"
+                                                    FontSize="14" Margin="0,4"
+                                                    x:Name="HostnameTextBox"
+                                                    LostFocus="QuickProperty_LostFocus" />
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Username"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Margin="0,3"
-                                   Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <ui:TextBox Grid.Row="4" Grid.Column="1"
-                                    Text="{Binding PrimarySelectedItem.Username, UpdateSourceTrigger=LostFocus}"
-                                    FontSize="14" Margin="0,3"
-                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}"
-                                    IsEnabled="{Binding IsQuickCredentialFieldsEnabled}"
-                                    x:Name="UsernameTextBox" LostFocus="QuickProperty_LostFocus" />
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Port"
+                                                   Style="{StaticResource FieldLabelCompactStyle}"
+                                                   Margin="0,4" />
+                                        <ui:TextBox Grid.Row="2" Grid.Column="1"
+                                                    Text="{Binding PrimarySelectedItem.Port, UpdateSourceTrigger=LostFocus}"
+                                                    FontSize="14" Margin="0,4"
+                                                    x:Name="PortTextBox"
+                                                    LostFocus="QuickProperty_LostFocus" />
+                                    </Grid>
+                                </DockPanel>
+                            </Border>
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Password"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Margin="0,3"
-                                   Visibility="{Binding IsQuickPasswordVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <ui:PasswordBox Grid.Row="5" Grid.Column="1"
-                                        FontSize="14" Margin="0,3"
-                                        Visibility="{Binding IsQuickPasswordVisible, Converter={StaticResource BoolToVisibility}}"
-                                        x:Name="QuickPasswordBox"
-                                        GotFocus="QuickPassword_GotFocus"
-                                        LostFocus="QuickPassword_LostFocus"
-                                        PasswordChanged="QuickPassword_PasswordChanged" />
+                            <!-- === CREDENTIALS CARD (D-01) === -->
+                            <Border Style="{StaticResource CardContainerStyle}" Margin="0,0,0,0">
+                                <DockPanel>
+                                    <ToggleButton DockPanel.Dock="Top"
+                                                  IsChecked="{Binding IsCredentialsCardExpanded}"
+                                                  Style="{StaticResource CardHeaderToggleStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="CREDENTIALS"
+                                                       Style="{StaticResource SectionLabelStyle}"
+                                                       VerticalAlignment="Center" />
+                                            <ui:SymbolIcon Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Symbol="{Binding IsCredentialsCardExpanded,
+                                                    Converter={StaticResource BoolToChevron}}"
+                                                FontSize="12"
+                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </Grid>
+                                    </ToggleButton>
 
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Domain"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" Margin="0,3"
-                                   Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}" />
-                        <ui:TextBox Grid.Row="6" Grid.Column="1"
-                                    Text="{Binding PrimarySelectedItem.Domain, UpdateSourceTrigger=LostFocus}"
-                                    FontSize="14" Margin="0,3"
-                                    Visibility="{Binding IsQuickCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}"
-                                    IsEnabled="{Binding IsQuickCredentialFieldsEnabled}"
-                                    x:Name="DomainTextBox" LostFocus="QuickProperty_LostFocus" />
+                                    <Grid Visibility="{Binding IsCredentialsCardExpanded,
+                                              Converter={StaticResource BoolToVisibility}}"
+                                          Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="72" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Credential Mode — always editable (D-05) -->
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Mode"
+                                                   Style="{StaticResource FieldLabelCompactStyle}"
+                                                   Margin="0,4" />
+                                        <ComboBox Grid.Row="0" Grid.Column="1"
+                                                  ItemsSource="{Binding CredentialModes}"
+                                                  SelectedValue="{Binding SelectedItemCredentialMode}"
+                                                  SelectedValuePath="Value"
+                                                  FontSize="14" Margin="0,4"
+                                                  x:Name="CredentialModeCombo"
+                                                  PreviewMouseWheel="ComboBox_PreviewMouseWheel">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <!-- Username — editable when Own, read-only when Inherit (D-05, D-06) -->
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Username"
+                                                   Style="{StaticResource FieldLabelCompactStyle}"
+                                                   Margin="0,4"
+                                                   Visibility="{Binding IsQuickCredentialFieldsVisible,
+                                                       Converter={StaticResource BoolToVisibility}}" />
+                                        <!-- Editable: shown when CredentialMode == Own -->
+                                        <ui:TextBox Grid.Row="1" Grid.Column="1"
+                                                    Text="{Binding PrimarySelectedItem.Username, UpdateSourceTrigger=LostFocus}"
+                                                    FontSize="14" Margin="0,4"
+                                                    x:Name="UsernameTextBox"
+                                                    LostFocus="QuickProperty_LostFocus">
+                                            <ui:TextBox.Style>
+                                                <Style TargetType="ui:TextBox" BasedOn="{StaticResource {x:Type ui:TextBox}}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsVisible}" Value="True" />
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsEnabled}" Value="True" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:TextBox.Style>
+                                        </ui:TextBox>
+                                        <!-- Read-only: shown when CredentialMode == Inherit (D-06) -->
+                                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                                   Text="{Binding PrimarySelectedItem.Username}"
+                                                   Margin="0,4">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyFieldStyle}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsVisible}" Value="True" />
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsEnabled}" Value="False" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <!-- Password — only shown in Own mode (D-05) -->
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Password"
+                                                   Style="{StaticResource FieldLabelCompactStyle}"
+                                                   Margin="0,4"
+                                                   Visibility="{Binding IsQuickPasswordVisible,
+                                                       Converter={StaticResource BoolToVisibility}}" />
+                                        <ui:PasswordBox Grid.Row="2" Grid.Column="1"
+                                                        FontSize="14" Margin="0,4"
+                                                        Visibility="{Binding IsQuickPasswordVisible,
+                                                            Converter={StaticResource BoolToVisibility}}"
+                                                        x:Name="QuickPasswordBox"
+                                                        GotFocus="QuickPassword_GotFocus"
+                                                        LostFocus="QuickPassword_LostFocus"
+                                                        PasswordChanged="QuickPassword_PasswordChanged" />
+
+                                        <!-- Domain — editable when Own, read-only when Inherit (D-05, D-06) -->
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Domain"
+                                                   Style="{StaticResource FieldLabelCompactStyle}"
+                                                   Margin="0,4"
+                                                   Visibility="{Binding IsQuickCredentialFieldsVisible,
+                                                       Converter={StaticResource BoolToVisibility}}" />
+                                        <!-- Editable: shown when CredentialMode == Own -->
+                                        <ui:TextBox Grid.Row="3" Grid.Column="1"
+                                                    Text="{Binding PrimarySelectedItem.Domain, UpdateSourceTrigger=LostFocus}"
+                                                    FontSize="14" Margin="0,4"
+                                                    x:Name="DomainTextBox"
+                                                    LostFocus="QuickProperty_LostFocus">
+                                            <ui:TextBox.Style>
+                                                <Style TargetType="ui:TextBox" BasedOn="{StaticResource {x:Type ui:TextBox}}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsVisible}" Value="True" />
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsEnabled}" Value="True" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:TextBox.Style>
+                                        </ui:TextBox>
+                                        <!-- Read-only: shown when CredentialMode == Inherit (D-06) -->
+                                        <TextBlock Grid.Row="3" Grid.Column="1"
+                                                   Text="{Binding PrimarySelectedItem.Domain}"
+                                                   Margin="0,4">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyFieldStyle}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsVisible}" Value="True" />
+                                                                <Condition Binding="{Binding IsQuickCredentialFieldsEnabled}" Value="False" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Group properties — shown when a group is selected -->
+                        <Grid Visibility="{Binding IsGroupSelected, Converter={StaticResource BoolToVisibility}}"
+                              Margin="8,4,8,8">
+                            <Border Style="{StaticResource CardContainerStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" MinHeight="28" />
+                                        <RowDefinition Height="Auto" MinHeight="28" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
+                                               Style="{StaticResource FieldLabelCompactStyle}" />
+                                    <TextBox Grid.Row="0" Grid.Column="1"
+                                             Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
+                                             Height="24" Padding="4,4" FontSize="14"
+                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                             x:Name="GroupNameTextBox"
+                                             LostFocus="GroupQuickProperty_LostFocus" />
+
+                                    <!-- Connections count — read-only computed value (D-06) -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Connections"
+                                               Style="{StaticResource FieldLabelCompactStyle}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1"
+                                               Text="{Binding PrimarySelectedItem.ConnectionCount}"
+                                               Style="{StaticResource ReadOnlyFieldStyle}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Empty state -->
+                        <TextBlock Text="Select a connection" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,16,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnectionSelected}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsGroupSelected}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
-
-                    <!-- Group properties -->
-                    <Grid Visibility="{Binding IsGroupSelected, Converter={StaticResource BoolToVisibility}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" MinHeight="28" />
-                            <RowDefinition Height="Auto" MinHeight="28" />
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" />
-                        <TextBox Grid.Row="0" Grid.Column="1"
-                                 Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
-                                 Height="24" Padding="4,2" FontSize="14"
-                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                 x:Name="GroupNameTextBox" LostFocus="GroupQuickProperty_LostFocus" />
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Connections"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Grid.Row="1" Grid.Column="1"
-                                   Text="{Binding PrimarySelectedItem.ConnectionCount}"
-                                   FontSize="14" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                   VerticalAlignment="Center" />
-                    </Grid>
-
-                    <!-- Empty state -->
-                    <TextBlock Text="Select a connection" FontSize="12"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Visible" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsConnectionSelected}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsGroupSelected}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </Grid>
                 </ScrollViewer>
             </DockPanel>
         </Border>
