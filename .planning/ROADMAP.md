@@ -179,7 +179,7 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md -- Create 3 ResourceDictionary files (SpacingResources, TypographyStyles, CardAndPanelStyles) and merge into App.xaml
 - [x] 08-02-PLAN.md -- Migrate MainWindow, ConnectionTreeControl, ToastStackControl, ReconnectOverlay to shared resource references
-- [ ] 08-03-PLAN.md -- Migrate all 9 dialog XAML files to shared resource references
+- [x] 08-03-PLAN.md -- Migrate all 9 dialog XAML files to shared resource references
 
 ### Phase 9: Quick Properties Panel
 **Goal**: The quick properties panel feels like a professionally designed inspector -- organized into collapsible cards with clear visual hierarchy, live connection status, and obvious read-only vs editable field distinction
