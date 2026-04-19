@@ -173,6 +173,33 @@
                                     <SolidColorBrush x:Name="RowBrush" Color="Transparent" />
                                 </Border.Background>
                                 <Grid>
+                                    <!-- TREE-03: Vertical indent guide lines -->
+                                    <ItemsControl x:Name="IndentGuides"
+                                                  ItemsSource="{Binding
+                                                      Converter={StaticResource DepthToGuideLines},
+                                                      RelativeSource={RelativeSource TemplatedParent}}"
+                                                  IsHitTestVisible="False">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <Canvas />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemContainerStyle>
+                                            <Style TargetType="ContentPresenter">
+                                                <Setter Property="Canvas.Left" Value="{Binding}" />
+                                            </Style>
+                                        </ItemsControl.ItemContainerStyle>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Rectangle Width="1"
+                                                           Fill="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                           Opacity="0.3"
+                                                           Height="{Binding ActualHeight,
+                                                               RelativeSource={RelativeSource AncestorType=Border}}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
                                     <!-- 2px left accent stripe (visible when selected) -->
                                     <Rectangle x:Name="AccentStripe"
                                                Width="2" Height="16"
