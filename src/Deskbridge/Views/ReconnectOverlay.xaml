@@ -17,12 +17,12 @@
     <ui:Card HorizontalAlignment="Center" VerticalAlignment="Center"
              Padding="24" MaxWidth="420">
         <StackPanel>
-            <TextBlock Text="{Binding ConnectionName}" FontSize="12"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Margin="0,0,0,4" />
-            <TextBlock Text="{Binding AttemptText}" FontSize="16" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                       Margin="0,0,0,12" />
+            <TextBlock Text="{Binding ConnectionName}"
+                       Style="{StaticResource CaptionStyle}"
+                       Margin="{StaticResource FormFieldLabelMargin}" />
+            <TextBlock Text="{Binding AttemptText}"
+                       Style="{StaticResource CardTitleStyle}"
+                       Margin="{StaticResource FormFieldSpacing}" />
 
             <!-- Auto mode: spinner + countdown -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12"
