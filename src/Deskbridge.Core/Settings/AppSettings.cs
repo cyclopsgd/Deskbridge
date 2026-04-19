@@ -12,6 +12,7 @@ public sealed record AppSettings(
     WindowStateRecord Window,
     SecuritySettingsRecord Security,
     UpdateSettingsRecord Update,
+    PropertiesPanelRecord? PropertiesPanel = null,
     int SchemaVersion = 1)
 {
     /// <summary>Default-constructed settings — used as the fallback when <c>settings.json</c> is missing or invalid.</summary>
@@ -65,4 +66,17 @@ public sealed record UpdateSettingsRecord(
 {
     /// <summary>Defaults: stable channel (no beta).</summary>
     public static UpdateSettingsRecord Default { get; } = new();
+}
+
+/// <summary>
+/// Phase 9 (PROP-01): quick properties panel card expand/collapse state.
+/// Persisted in settings.json so card sections remember their state across
+/// app restarts. Null-coalesced to Default on load for backward compatibility
+/// with pre-Phase-9 settings.json files.
+/// </summary>
+public sealed record PropertiesPanelRecord(
+    bool IsConnectionCardExpanded = true,
+    bool IsCredentialsCardExpanded = true)
+{
+    public static PropertiesPanelRecord Default { get; } = new();
 }

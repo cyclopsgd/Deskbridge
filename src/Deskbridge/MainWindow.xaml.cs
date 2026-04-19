@@ -72,6 +72,9 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     /// </summary>
     private AppSettings _loadedSettings = new();
 
+    /// <summary>Phase 9 (D-02): stored for card state save/load in OnSourceInitialized and TrySaveWindowState.</summary>
+    private readonly Views.ConnectionTreeControl _connectionTreeControl;
+
 
     // Phase 5 D-04: per-tab overlay dict keyed by ConnectionId. Replaces the Phase 4
     // single-slot (_overlayControl, _overlayVm, _overlayAirspaceToken) fields. Each
@@ -103,6 +106,7 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
 
         // Place the connection tree control into the Connections panel
         ConnectionsContent.Content = connectionTreeControl;
+        _connectionTreeControl = connectionTreeControl;
 
         _coordinator = coordinator;
         _airspace = airspace;
@@ -186,6 +190,11 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             {
                 vm.ApplySecuritySettings(_loadedSettings.Security);
             }
+
+            // Phase 9 (D-02): apply persisted card expand/collapse state
+            var treeVm = _connectionTreeControl?.DataContext as ViewModels.ConnectionTreeViewModel;
+            treeVm?.ApplyPropertiesPanelSettings(
+                _loadedSettings.PropertiesPanel ?? PropertiesPanelRecord.Default);
         }
         catch (Exception ex)
         {
@@ -306,10 +315,17 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             // the loaded record when the VM is missing or mid-teardown.
             var security = vm?.CurrentSecuritySettings ?? _loadedSettings.Security;
 
+            // Phase 9 (D-02): capture card expand/collapse state from tree ViewModel
+            var treeVm = _connectionTreeControl?.DataContext as ViewModels.ConnectionTreeViewModel;
+            var propertiesPanel = treeVm?.GetPropertiesPanelSettings()
+                ?? _loadedSettings.PropertiesPanel
+                ?? PropertiesPanelRecord.Default;
+
             var updated = _loadedSettings with
             {
                 Window = new WindowStateRecord(x, y, w, h, isMaximized, sidebarOpen, sidebarWidth),
                 Security = security,
+                PropertiesPanel = propertiesPanel,
             };
 
             _windowState.SaveAsync(updated).GetAwaiter().GetResult();

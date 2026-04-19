@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
+using Deskbridge.Core.Settings;
 using Deskbridge.Dialogs;
 using Deskbridge.Protocols.Rdp;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,10 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _eventBus = eventBus;
         _tabHostManager = tabHostManager;
         _airspace = airspace;
+
+        // Phase 9 (PROP-02): subscribe to connection state events for status dot
+        _eventBus.Subscribe<TabStateChangedEvent>(this, OnTabStateChanged);
+        _eventBus.Subscribe<ConnectionClosedEvent>(this, OnConnectionClosed);
     }
 
     // Data
@@ -197,6 +202,26 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsQuickPropertiesExpanded { get; set; } = true;
 
+    /// <summary>Phase 9 (D-01): Connection card expand/collapse state.</summary>
+    [ObservableProperty]
+    public partial bool IsConnectionCardExpanded { get; set; } = true;
+
+    /// <summary>Phase 9 (D-01): Credentials card expand/collapse state.</summary>
+    [ObservableProperty]
+    public partial bool IsCredentialsCardExpanded { get; set; } = true;
+
+    /// <summary>
+    /// Phase 9 (PROP-02): live connection state for the currently selected connection.
+    /// Null when a group is selected, nothing is selected, or the connection has no
+    /// active tab. Drives the status dot color in the panel header (D-03).
+    /// </summary>
+    [ObservableProperty]
+    public partial TabState? SelectedConnectionState { get; set; }
+
+    // Local cache of connection states so re-selecting a connection shows the
+    // correct state without querying TabHostManager internals.
+    private readonly Dictionary<Guid, TabState> _connectionStateMap = new();
+
     // Display-friendly options for the CredentialMode ComboBox in the quick properties
     // panel. Raw Enum.GetValues() binding rendered as placeholder glyphs ("- - -") under
     // the WPF-UI ComboBox template, so we expose typed display wrappers. See
@@ -211,6 +236,55 @@ public partial class ConnectionTreeViewModel : ObservableObject
     // Quick properties (computed from PrimarySelectedItem)
     public bool IsConnectionSelected => PrimarySelectedItem is ConnectionTreeItemViewModel;
     public bool IsGroupSelected => PrimarySelectedItem is GroupTreeItemViewModel;
+
+    /// <summary>Phase 9 (D-02): apply persisted card expand/collapse state from AppSettings.</summary>
+    public void ApplyPropertiesPanelSettings(PropertiesPanelRecord settings)
+    {
+        IsConnectionCardExpanded = settings.IsConnectionCardExpanded;
+        IsCredentialsCardExpanded = settings.IsCredentialsCardExpanded;
+    }
+
+    /// <summary>Phase 9 (D-02): capture current card state for persistence.</summary>
+    public PropertiesPanelRecord GetPropertiesPanelSettings() =>
+        new(IsConnectionCardExpanded, IsCredentialsCardExpanded);
+
+    /// <summary>Phase 9 (PROP-02): refresh status dot when selection changes.</summary>
+    partial void OnPrimarySelectedItemChanged(TreeItemViewModel? value)
+    {
+        if (value is ConnectionTreeItemViewModel conn)
+        {
+            SelectedConnectionState = _connectionStateMap.TryGetValue(conn.Id, out var state)
+                ? state : null;
+        }
+        else
+        {
+            SelectedConnectionState = null;
+        }
+    }
+
+    /// <summary>Phase 9 (PROP-02): update local state map and refresh status dot if the changed connection is selected.</summary>
+    private void OnTabStateChanged(TabStateChangedEvent evt)
+    {
+        _connectionStateMap[evt.ConnectionId] = evt.State;
+
+        if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
+            && conn.Id == evt.ConnectionId)
+        {
+            SelectedConnectionState = evt.State;
+        }
+    }
+
+    /// <summary>Phase 9 (PROP-02): clear state map entry when connection closes.</summary>
+    private void OnConnectionClosed(ConnectionClosedEvent evt)
+    {
+        _connectionStateMap.Remove(evt.Connection.Id);
+
+        if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
+            && conn.Id == evt.Connection.Id)
+        {
+            SelectedConnectionState = null;
+        }
+    }
 
     // --- Tree building ---
 

@@ -186,11 +186,15 @@ Plans:
 **Depends on**: Phase 8
 **Requirements**: PROP-01, PROP-02, PROP-03
 **Success Criteria** (what must be TRUE):
-  1. User sees the properties panel divided into collapsible card sections (Connection, Credentials, Display) that remember their expanded/collapsed state
+  1. User sees the properties panel divided into collapsible card sections (Connection, Credentials) that remember their expanded/collapsed state
   2. User sees a connection state indicator (green dot for connected, gray for disconnected, red for error) at the top of the properties panel that updates in real-time
   3. User can visually distinguish read-only fields (muted text, no border) from editable fields (standard input styling with border) without clicking
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 09-01-PLAN.md -- ViewModel + Settings: PropertiesPanelRecord in AppSettings, card expand properties, connection state tracking via TabStateChangedEvent, save/load in MainWindow, unit tests
+- [ ] 09-02-PLAN.md -- XAML rewrite: CardHeaderToggleStyle, ReadOnlyFieldStyle, collapsible card sections, status dot in header, read-only field distinction, scrollbar fix, visual checkpoint
 
 ### Phase 10: Tree View Polish
 **Goal**: The connection tree communicates connection state at a glance, feels responsive to interaction, and shows structural hierarchy through visual guides
@@ -241,7 +245,7 @@ Phase 9, 10, 11 can run in parallel after Phase 8. Phase 12 depends on 9, 10, 11
 | 6. Cross-Cutting Features | v1.0 | 4/4 | Complete | - |
 | 7. Update & Migration | v1.0 | 4/4 | Complete | - |
 | 8. Resource Foundation | v1.1 | 0/3 | Planning complete | - |
-| 9. Quick Properties Panel | v1.1 | 0/? | Not started | - |
+| 9. Quick Properties Panel | v1.1 | 0/2 | Planning complete | - |
 | 10. Tree View Polish | v1.1 | 0/? | Not started | - |
 | 11. Tab Bar Refinement | v1.1 | 0/? | Not started | - |
 | 12. General Polish Sweep | v1.1 | 0/? | Not started | - |
