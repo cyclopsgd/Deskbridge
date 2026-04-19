@@ -60,6 +60,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
         // Phase 9 (PROP-02): subscribe to connection state events for status dot
         _eventBus.Subscribe<TabStateChangedEvent>(this, OnTabStateChanged);
+        _eventBus.Subscribe<TabClosedEvent>(this, OnTabClosed);
         _eventBus.Subscribe<ConnectionClosedEvent>(this, OnConnectionClosed);
     }
 
@@ -270,6 +271,17 @@ public partial class ConnectionTreeViewModel : ObservableObject
             && conn.Id == evt.ConnectionId)
         {
             SetOnUiThread(() => SelectedConnectionState = evt.State);
+        }
+    }
+
+    private void OnTabClosed(TabClosedEvent evt)
+    {
+        _connectionStateMap.Remove(evt.ConnectionId);
+
+        if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
+            && conn.Id == evt.ConnectionId)
+        {
+            SetOnUiThread(() => SelectedConnectionState = null);
         }
     }
 
