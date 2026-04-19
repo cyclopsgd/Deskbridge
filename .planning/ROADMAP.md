@@ -177,7 +177,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 08-01-PLAN.md -- Create 3 ResourceDictionary files (SpacingResources, TypographyStyles, CardAndPanelStyles) and merge into App.xaml
+- [x] 08-01-PLAN.md -- Create 3 ResourceDictionary files (SpacingResources, TypographyStyles, CardAndPanelStyles) and merge into App.xaml
 - [ ] 08-02-PLAN.md -- Migrate MainWindow, ConnectionTreeControl, ToastStackControl, ReconnectOverlay to shared resource references
 - [ ] 08-03-PLAN.md -- Migrate all 9 dialog XAML files to shared resource references
 
