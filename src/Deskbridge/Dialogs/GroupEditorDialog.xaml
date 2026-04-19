@@ -17,17 +17,15 @@
     </ui:ContentDialog.Resources>
 
     <!-- Single panel layout (no tabs per D-12) -->
-    <StackPanel Margin="16,12">
+    <StackPanel Margin="{StaticResource DialogContentMargin}">
 
         <!-- Group Name -->
-        <TextBlock Text="Group name" FontSize="14"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+        <TextBlock Text="Group name" Style="{StaticResource FieldLabelStyle}" />
         <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-            PlaceholderText="Group name" Margin="0,0,0,12" />
+            PlaceholderText="Group name" Margin="{StaticResource FormFieldSpacing}" />
 
         <!-- Parent Group -->
-        <TextBlock Text="Parent group" FontSize="14"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+        <TextBlock Text="Parent group" Style="{StaticResource FieldLabelStyle}" />
         <!--
              Explicit ItemTemplate forces SelectionBoxItem to use the same
              rendering as dropdown items; otherwise SelectedValuePath="Id" leaves
@@ -36,7 +34,7 @@
         -->
         <ComboBox ItemsSource="{Binding AvailableParentGroups}"
             SelectedValue="{Binding ParentGroupId}"
-            SelectedValuePath="Id" Margin="0,0,0,12">
+            SelectedValuePath="Id" Margin="{StaticResource FormFieldSpacing}">
             <ComboBox.ItemTemplate>
                 <DataTemplate>
                     <TextBlock Text="{Binding DisplayName}" />
@@ -45,39 +43,34 @@
         </ComboBox>
 
         <!-- Separator -->
-        <Border Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,12" />
+        <Border Style="{StaticResource SeparatorStyle}" />
 
         <!-- Section header -->
-        <TextBlock Text="Group Credentials" FontSize="16" FontWeight="SemiBold" />
+        <TextBlock Text="Group Credentials" Style="{StaticResource CardTitleStyle}" />
 
         <!-- Helper text -->
         <TextBlock Text="Credentials set here will be inherited by all connections in this group unless overridden."
-            FontSize="12"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+            Style="{StaticResource CaptionStyle}"
             TextWrapping="Wrap"
             Margin="0,4,0,12" />
 
         <!-- Username -->
-        <TextBlock Text="Username" FontSize="14"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+        <TextBlock Text="Username" Style="{StaticResource FieldLabelStyle}" />
         <ui:TextBox Text="{Binding CredentialUsername}"
-            PlaceholderText="username" Margin="0,0,0,12" />
+            PlaceholderText="username" Margin="{StaticResource FormFieldSpacing}" />
 
         <!-- Domain -->
-        <TextBlock Text="Domain" FontSize="14"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+        <TextBlock Text="Domain" Style="{StaticResource FieldLabelStyle}" />
         <ui:TextBox Text="{Binding CredentialDomain}"
-            PlaceholderText="domain (optional)" Margin="0,0,0,12" />
+            PlaceholderText="domain (optional)" Margin="{StaticResource FormFieldSpacing}" />
 
         <!-- Password -->
-        <TextBlock Text="Password" FontSize="14"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-        <PasswordBox x:Name="GroupPasswordBox" Margin="0,0,0,12" />
+        <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" />
+        <PasswordBox x:Name="GroupPasswordBox" Margin="{StaticResource FormFieldSpacing}" />
 
         <!-- Inheritance count (shown only when credentials are set) -->
         <TextBlock Text="{Binding InheritanceCount, StringFormat='{}{0} connections will inherit these credentials'}"
-            FontSize="12"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+            Style="{StaticResource CaptionStyle}"
             Visibility="{Binding ShowInheritanceCount, Converter={StaticResource BoolToVisibility}}" />
 
     </StackPanel>

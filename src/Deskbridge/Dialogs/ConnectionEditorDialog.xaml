@@ -22,24 +22,20 @@
 
         <!-- Tab 1: General -->
         <TabItem Header="General">
-            <StackPanel Margin="16,12" MinHeight="320">
-                <TextBlock Text="Name" FontSize="14"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+            <StackPanel Margin="{StaticResource DialogContentMargin}" MinHeight="320">
+                <TextBlock Text="Name" Style="{StaticResource FieldLabelStyle}" />
                 <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                    PlaceholderText="Connection name" Margin="0,0,0,12" />
+                    PlaceholderText="Connection name" Margin="{StaticResource FormFieldSpacing}" />
 
-                <TextBlock Text="Hostname" FontSize="14"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                <TextBlock Text="Hostname" Style="{StaticResource FieldLabelStyle}" />
                 <ui:TextBox Text="{Binding Hostname, UpdateSourceTrigger=PropertyChanged}"
-                    PlaceholderText="hostname or IP" Margin="0,0,0,12" />
+                    PlaceholderText="hostname or IP" Margin="{StaticResource FormFieldSpacing}" />
 
-                <TextBlock Text="Port" FontSize="14"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                <TextBlock Text="Port" Style="{StaticResource FieldLabelStyle}" />
                 <ui:TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                    PlaceholderText="3389" Margin="0,0,0,12" />
+                    PlaceholderText="3389" Margin="{StaticResource FormFieldSpacing}" />
 
-                <TextBlock Text="Group" FontSize="14"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                <TextBlock Text="Group" Style="{StaticResource FieldLabelStyle}" />
                 <!--
                      Explicit ItemTemplate is required so that SelectionBoxItem (the
                      collapsed selection visual) uses the same template as the open
@@ -61,9 +57,8 @@
 
         <!-- Tab 2: Credentials (D-11, D-13, CONN-09) -->
         <TabItem Header="Credentials">
-            <StackPanel Margin="16,12" MinHeight="320">
-                <TextBlock Text="Credential mode" FontSize="14"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+            <StackPanel Margin="{StaticResource DialogContentMargin}" MinHeight="320">
+                <TextBlock Text="Credential mode" Style="{StaticResource FieldLabelStyle}" />
                 <!--
                      Explicit ItemTemplate forces SelectionBoxItem (collapsed visual)
                      to use the same template as the dropdown items. Without this,
@@ -74,7 +69,7 @@
                 <ComboBox ItemsSource="{Binding CredentialModes}"
                     SelectedValue="{Binding CredentialMode}"
                     SelectedValuePath="Value"
-                    Margin="0,0,0,12">
+                    Margin="{StaticResource FormFieldSpacing}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding DisplayName}" />
@@ -88,7 +83,7 @@
                     Severity="Informational"
                     IsOpen="{Binding IsInheritInfoBarVisible, Mode=OneWay}"
                     IsClosable="False"
-                    Margin="0,0,0,12" />
+                    Margin="{StaticResource FormFieldSpacing}" />
 
                 <!-- InfoBar for Prompt mode -->
                 <ui:InfoBar Title="Prompt mode"
@@ -96,23 +91,20 @@
                     Severity="Warning"
                     IsOpen="{Binding IsPromptInfoBarVisible, Mode=OneWay}"
                     IsClosable="False"
-                    Margin="0,0,0,12" />
+                    Margin="{StaticResource FormFieldSpacing}" />
 
                 <!-- Credential fields (visible when not Prompt, enabled when Own) -->
                 <StackPanel Visibility="{Binding IsCredentialFieldsVisible, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="Username" FontSize="14"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                    <TextBlock Text="Username" Style="{StaticResource FieldLabelStyle}" />
                     <ui:TextBox Text="{Binding Username}"
                         PlaceholderText="username"
-                        IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="0,0,0,12" />
+                        IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="{StaticResource FormFieldSpacing}" />
 
-                    <TextBlock Text="Password" FontSize="14"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                    <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" />
                     <ui:PasswordBox x:Name="PasswordBox"
-                        IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="0,0,0,12" />
+                        IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="{StaticResource FormFieldSpacing}" />
 
-                    <TextBlock Text="Domain" FontSize="14"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                    <TextBlock Text="Domain" Style="{StaticResource FieldLabelStyle}" />
                     <ui:TextBox Text="{Binding Domain}"
                         PlaceholderText="domain (optional)"
                         IsEnabled="{Binding IsCredentialFieldsEnabled}" />
@@ -122,9 +114,8 @@
 
         <!-- Tab 3: Display -->
         <TabItem Header="Display">
-            <StackPanel Margin="16,12" MinHeight="320">
-                <TextBlock Text="Resolution" FontSize="14"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+            <StackPanel Margin="{StaticResource DialogContentMargin}" MinHeight="320">
+                <TextBlock Text="Resolution" Style="{StaticResource FieldLabelStyle}" />
                 <Grid Margin="0,0,0,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -136,8 +127,8 @@
                     <ui:TextBox Grid.Column="2" Text="{Binding DisplayHeight}"
                         PlaceholderText="Auto" />
                 </Grid>
-                <TextBlock Text="Leave blank to match viewport size" FontSize="12"
-                    Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,12" />
+                <TextBlock Text="Leave blank to match viewport size" Style="{StaticResource HintStyle}"
+                    Margin="{StaticResource FormFieldSpacing}" />
 
                 <ui:ToggleSwitch IsChecked="{Binding SmartSizing}" Content="Smart sizing" />
             </StackPanel>
@@ -146,7 +137,7 @@
         <!-- Tab 4: Notes -->
         <TabItem Header="Notes">
             <ui:TextBox Text="{Binding Notes}" AcceptsReturn="True"
-                TextWrapping="Wrap" MinHeight="320" Margin="16,12"
+                TextWrapping="Wrap" MinHeight="320" Margin="{StaticResource DialogContentMargin}"
                 VerticalScrollBarVisibility="Auto"
                 PlaceholderText="Add notes about this connection..." />
         </TabItem>
