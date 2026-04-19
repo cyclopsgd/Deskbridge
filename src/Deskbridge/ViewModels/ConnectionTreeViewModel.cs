@@ -265,35 +265,44 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
     private void OnTabStateChanged(TabStateChangedEvent evt)
     {
-        _connectionStateMap[evt.ConnectionId] = evt.State;
-
-        if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
-            && conn.Id == evt.ConnectionId)
+        SetOnUiThread(() =>
         {
-            SetOnUiThread(() => SelectedConnectionState = evt.State);
-        }
+            _connectionStateMap[evt.ConnectionId] = evt.State;
+
+            if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
+                && conn.Id == evt.ConnectionId)
+            {
+                SelectedConnectionState = evt.State;
+            }
+        });
     }
 
     private void OnTabClosed(TabClosedEvent evt)
     {
-        _connectionStateMap.Remove(evt.ConnectionId);
-
-        if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
-            && conn.Id == evt.ConnectionId)
+        SetOnUiThread(() =>
         {
-            SetOnUiThread(() => SelectedConnectionState = null);
-        }
+            _connectionStateMap.Remove(evt.ConnectionId);
+
+            if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
+                && conn.Id == evt.ConnectionId)
+            {
+                SelectedConnectionState = null;
+            }
+        });
     }
 
     private void OnConnectionClosed(ConnectionClosedEvent evt)
     {
-        _connectionStateMap.Remove(evt.Connection.Id);
-
-        if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
-            && conn.Id == evt.Connection.Id)
+        SetOnUiThread(() =>
         {
-            SetOnUiThread(() => SelectedConnectionState = null);
-        }
+            _connectionStateMap.Remove(evt.Connection.Id);
+
+            if (PrimarySelectedItem is ConnectionTreeItemViewModel conn
+                && conn.Id == evt.Connection.Id)
+            {
+                SelectedConnectionState = null;
+            }
+        });
     }
 
     private static void SetOnUiThread(Action action)
