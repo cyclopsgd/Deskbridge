@@ -221,16 +221,34 @@ public partial class ConnectionEditorViewModel : ObservableValidator
             SmartSizing = SmartSizing
         };
 
-        // Store credentials when mode is Own and password is non-empty (T-03-09)
-        if (CredentialMode == CredentialMode.Own && !string.IsNullOrEmpty(_password))
+        // Store credentials when mode is Own.
+        // Two cases: (a) user entered a new password, (b) user changed username/domain
+        // without re-entering password -- read existing password from CredentialManager
+        // and re-store with updated fields. Without (b), domain/username edits silently
+        // fail to propagate to CredentialManager (the stale credential persists and
+        // ResolveCredentialsStage overwrites the model at connect time).
+        if (CredentialMode == CredentialMode.Own)
         {
-            try
+            var passwordToStore = _password;
+
+            if (string.IsNullOrEmpty(passwordToStore) && HasStoredPassword)
             {
-                _credentialService.StoreForConnection(connection, Username ?? string.Empty, Domain, _password);
+                // Read existing password from CredentialManager so we can re-store
+                // with updated username/domain.
+                var existing = _credentialService.GetForConnection(connection);
+                passwordToStore = existing?.Password ?? string.Empty;
             }
-            catch (Exception ex)
+
+            if (!string.IsNullOrEmpty(passwordToStore))
             {
-                Serilog.Log.Error(ex, "Failed to store credentials for connection {ConnectionId}", connection.Id);
+                try
+                {
+                    _credentialService.StoreForConnection(connection, Username ?? string.Empty, Domain, passwordToStore);
+                }
+                catch (Exception ex)
+                {
+                    Serilog.Log.Error(ex, "Failed to store credentials for connection {ConnectionId}", connection.Id);
+                }
             }
         }
 
