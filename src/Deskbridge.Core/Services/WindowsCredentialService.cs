@@ -26,7 +26,7 @@ public sealed class WindowsCredentialService : ICredentialService
         var target = BuildConnectionTarget(connection.Id);
         try
         {
-            return CredentialManager.GetCredentials(target, CredentialType.Generic);
+            return NormalizeCredential(CredentialManager.GetCredentials(target, CredentialType.Generic));
         }
         catch (Exception ex)
         {
@@ -40,6 +40,9 @@ public sealed class WindowsCredentialService : ICredentialService
         var target = BuildConnectionTarget(connection.Id);
         try
         {
+            // Guard: strip domain prefix from username if it was baked in by a
+            // previous corrupted read (e.g., username="CORP\admin", domain="CORP").
+            username = StripDomainPrefix(username, domain);
             var cred = new NetworkCredential(username, password, domain ?? string.Empty);
             CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
         }
@@ -68,7 +71,7 @@ public sealed class WindowsCredentialService : ICredentialService
         var target = $"DESKBRIDGE/GROUP/{groupId}";
         try
         {
-            return CredentialManager.GetCredentials(target, CredentialType.Generic);
+            return NormalizeCredential(CredentialManager.GetCredentials(target, CredentialType.Generic));
         }
         catch (Exception ex)
         {
@@ -82,6 +85,9 @@ public sealed class WindowsCredentialService : ICredentialService
         var target = $"DESKBRIDGE/GROUP/{groupId}";
         try
         {
+            // Guard: strip domain prefix from username if it was baked in by a
+            // previous corrupted read (e.g., username="CORP\admin", domain="CORP").
+            username = StripDomainPrefix(username, domain);
             var cred = new NetworkCredential(username, password, domain ?? string.Empty);
             CredentialManager.SaveCredentials(target, cred, CredentialType.Generic);
         }
@@ -172,6 +178,52 @@ public sealed class WindowsCredentialService : ICredentialService
                 // Continue with next connection -- partial migration is fine
             }
         }
+    }
+
+    /// <summary>
+    /// Normalizes a <see cref="NetworkCredential"/> returned by Windows Credential Manager.
+    /// CredMan internally stores domain\username as a single <c>UserName</c> field; on
+    /// read-back, <c>Domain</c> is empty and <c>UserName</c> contains "DOMAIN\user".
+    /// This method splits on the first backslash to restore separate fields.
+    /// </summary>
+    internal static NetworkCredential? NormalizeCredential(NetworkCredential? cred)
+    {
+        if (cred is null)
+            return null;
+
+        // If Domain is already populated, CredMan (or caller) split correctly -- leave as-is.
+        if (!string.IsNullOrEmpty(cred.Domain))
+            return cred;
+
+        var username = cred.UserName;
+        if (string.IsNullOrEmpty(username))
+            return cred;
+
+        var backslashIndex = username.IndexOf('\\');
+        if (backslashIndex < 0)
+            return cred;
+
+        // Split on the FIRST backslash only: "DOMAIN\sub\user" -> domain="DOMAIN", user="sub\user"
+        cred.Domain = username[..backslashIndex];
+        cred.UserName = username[(backslashIndex + 1)..];
+        return cred;
+    }
+
+    /// <summary>
+    /// Defensive guard for Store operations: if the username already contains the
+    /// domain prefix (from a previously corrupted read), strip it to prevent
+    /// double-concatenation when CredMan re-merges domain\username internally.
+    /// </summary>
+    internal static string StripDomainPrefix(string username, string? domain)
+    {
+        if (string.IsNullOrEmpty(domain) || string.IsNullOrEmpty(username))
+            return username;
+
+        var prefix = domain + "\\";
+        if (username.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return username[prefix.Length..];
+
+        return username;
     }
 
     /// <summary>
