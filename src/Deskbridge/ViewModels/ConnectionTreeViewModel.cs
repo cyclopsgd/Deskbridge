@@ -410,6 +410,30 @@ public partial class ConnectionTreeViewModel : ObservableObject
         model.CredentialMode = connVm.CredentialMode;
         model.UpdatedAt = DateTime.UtcNow;
         _connectionStore.Save(model);
+
+        // Sync username/domain to CredentialManager when a stored credential exists.
+        // Without this, domain/username edits in quick properties silently desync from
+        // CredentialManager -- ResolveCredentialsStage reads CredentialManager at connect
+        // time and overwrites the model with the stale values.
+        if (connVm.CredentialMode == CredentialMode.Own)
+        {
+            try
+            {
+                var existing = _credentialService.GetForConnection(model);
+                if (existing is not null && !string.IsNullOrEmpty(existing.Password))
+                {
+                    _credentialService.StoreForConnection(
+                        model,
+                        connVm.Username ?? string.Empty,
+                        connVm.Domain,
+                        existing.Password);
+                }
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Failed to sync credentials for connection {ConnectionId} via quick-properties", model.Id);
+            }
+        }
     }
 
     /// <summary>
