@@ -37,6 +37,7 @@ public sealed class AirspaceSwapper : IDisposable
     private readonly List<HwndSource> _hookedSources = new();
     private readonly ILogger<AirspaceSwapper> _logger;
     private bool _inSizeMove;
+    private bool _inDialogMode;
     private bool _disposed;
 
     // WR-06 (Phase 5 / Pattern 4): pre-drag visibility snapshot taken on
@@ -46,6 +47,11 @@ public sealed class AirspaceSwapper : IDisposable
     // Visible on every drag-resize would briefly expose the live RDP surfaces
     // of every background tab. Null when no drag is in progress.
     private Dictionary<WindowsFormsHost, Visibility>? _preDragVisibility;
+
+    // Dialog-scoped visibility snapshot taken by SnapshotAndHideAll and restored
+    // by RestoreAll. Same pattern as _preDragVisibility but for programmatic
+    // dialog overlay bypass. Null when no dialog is in progress.
+    private Dictionary<WindowsFormsHost, Visibility>? _preDialogVisibility;
 
     public AirspaceSwapper() : this(NullLogger<AirspaceSwapper>.Instance) { }
 
@@ -92,6 +98,69 @@ public sealed class AirspaceSwapper : IDisposable
     }
 
     /// <summary>
+    /// Dialog-scoped airspace bypass: captures a bitmap snapshot of every visible
+    /// registered WFH via <see cref="CaptureHwnd"/>, shows the snapshot overlay,
+    /// and collapses the WFH. Call before <c>ContentDialog.ShowAsync()</c> so the
+    /// dialog renders on top of the frozen bitmap instead of behind the live HWND.
+    /// Pair with <see cref="RestoreAll"/> in a <c>finally</c> block.
+    /// </summary>
+    public void SnapshotAndHideAll()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        AssertDispatcher();
+
+        _preDialogVisibility = _hosts.Keys.ToDictionary(h => h, h => h.Visibility);
+        _inDialogMode = true;
+
+        foreach (var (host, overlay) in _hosts)
+        {
+            // Skip hosts that are already Collapsed (background tabs).
+            if (host.Visibility == Visibility.Collapsed)
+                continue;
+
+            var snapshot = CaptureHwnd(host);
+            if (snapshot is not null)
+            {
+                overlay.Source = snapshot;
+                overlay.Visibility = Visibility.Visible;
+            }
+
+            // Use Collapsed (not Hidden) — Hidden has been observed to cause the
+            // hosted AxHost child HWND to be torn down on some servers (e.g. xrdp).
+            host.Visibility = Visibility.Collapsed;
+        }
+
+        _logger.LogDebug("[airspace] Dialog: snapshot taken, WFH visibility -> Collapsed (hosts={Count})", _hosts.Count);
+    }
+
+    /// <summary>
+    /// Restores every registered WFH to its pre-dialog visibility captured by
+    /// <see cref="SnapshotAndHideAll"/>. Hides the snapshot overlays and clears
+    /// the dialog-mode flag so <c>WM_ENTERSIZEMOVE</c> resumes normal operation.
+    /// </summary>
+    public void RestoreAll()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        AssertDispatcher();
+
+        foreach (var (host, overlay) in _hosts)
+        {
+            // Restore per-host captured visibility — background tabs (Collapsed
+            // by tab-switch) stay Collapsed after the dialog closes.
+            host.Visibility = _preDialogVisibility is not null && _preDialogVisibility.TryGetValue(host, out var v)
+                ? v
+                : Visibility.Visible;
+            overlay.Visibility = Visibility.Collapsed;
+            overlay.Source = null;
+        }
+
+        _preDialogVisibility = null;
+        _inDialogMode = false;
+
+        _logger.LogDebug("[airspace] Dialog: snapshot hidden, WFH visibility restored (hosts={Count})", _hosts.Count);
+    }
+
+    /// <summary>
     /// Hides the given WFH without capturing a bitmap snapshot. Returns an
     /// <see cref="IDisposable"/> whose <see cref="IDisposable.Dispose"/> restores
     /// <see cref="UIElement.Visibility"/> to <see cref="Visibility.Visible"/>.
@@ -121,10 +190,15 @@ public sealed class AirspaceSwapper : IDisposable
         _hookedSources.Clear();
         _hosts.Clear();
         _preDragVisibility = null;
+        _preDialogVisibility = null;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        // Dialog mode: hosts are already hidden by SnapshotAndHideAll; a drag
+        // during dialog should not double-snapshot or interfere with restore.
+        if (_inDialogMode) return IntPtr.Zero;
+
         if (msg == WM_ENTERSIZEMOVE && !_inSizeMove)
         {
             _inSizeMove = true;

@@ -152,6 +152,90 @@ public sealed class AirspaceSwapperTests
         });
     }
 
+    // --- SnapshotAndHideAll / RestoreAll tests ---
+
+    /// <summary>
+    /// SnapshotAndHideAll collapses visible hosts and skips already-collapsed ones.
+    /// Overlay becomes visible for the active host; the background host's overlay
+    /// stays collapsed (it was already Collapsed before the call).
+    /// </summary>
+    [Fact]
+    public void SnapshotAndHideAll_CollapseVisibleHosts_SkipsAlreadyCollapsed()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            using var swapper = new AirspaceSwapper();
+            var hostA = new WindowsFormsHost { Visibility = Visibility.Visible };
+            var hostB = new WindowsFormsHost { Visibility = Visibility.Collapsed };
+            var overlayA = new Image();
+            var overlayB = new Image();
+            swapper.RegisterHost(hostA, overlayA);
+            swapper.RegisterHost(hostB, overlayB);
+
+            swapper.SnapshotAndHideAll();
+
+            // Host A was Visible, should now be Collapsed
+            hostA.Visibility.Should().Be(Visibility.Collapsed,
+                "SnapshotAndHideAll collapses visible hosts");
+            // Host B was already Collapsed, should stay Collapsed
+            hostB.Visibility.Should().Be(Visibility.Collapsed,
+                "SnapshotAndHideAll skips already-collapsed hosts");
+            // Overlay B should NOT become Visible (host B was skipped)
+            overlayB.Visibility.Should().Be(Visibility.Collapsed,
+                "overlay for already-collapsed host stays collapsed");
+        });
+    }
+
+    /// <summary>
+    /// After SnapshotAndHideAll, RestoreAll returns each host to its pre-snapshot
+    /// visibility. Background tabs (Collapsed) stay Collapsed; active tabs (Visible)
+    /// return to Visible.
+    /// </summary>
+    [Fact]
+    public void RestoreAll_RestoresPerHostVisibility()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            using var swapper = new AirspaceSwapper();
+            var hostA = new WindowsFormsHost { Visibility = Visibility.Visible };
+            var hostB = new WindowsFormsHost { Visibility = Visibility.Collapsed };
+            var overlayA = new Image();
+            var overlayB = new Image();
+            swapper.RegisterHost(hostA, overlayA);
+            swapper.RegisterHost(hostB, overlayB);
+
+            swapper.SnapshotAndHideAll();
+            swapper.RestoreAll();
+
+            hostA.Visibility.Should().Be(Visibility.Visible,
+                "RestoreAll returns active host to Visible");
+            hostB.Visibility.Should().Be(Visibility.Collapsed,
+                "RestoreAll returns background host to Collapsed (NOT Visible)");
+            overlayA.Visibility.Should().Be(Visibility.Collapsed,
+                "overlay hidden after RestoreAll");
+            overlayA.Source.Should().BeNull(
+                "overlay source cleared after RestoreAll");
+        });
+    }
+
+    /// <summary>
+    /// SnapshotAndHideAll with no registered hosts is a no-op (no crash).
+    /// </summary>
+    [Fact]
+    public void SnapshotAndHideAll_WhenNoHostsRegistered_NoOp()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            using var swapper = new AirspaceSwapper();
+            // Should not throw
+            swapper.SnapshotAndHideAll();
+            swapper.RestoreAll();
+        });
+    }
+
     /// <summary>
     /// Invokes the private <c>WndProc</c> on the swapper directly. We bypass the
     /// HwndSource hook because simulating a real drag-resize in a hidden unit-test
