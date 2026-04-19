@@ -165,7 +165,9 @@ public partial class ConnectionEditorViewModel : ObservableValidator
                 SmartSizing = existing.DisplaySettings.SmartSizing;
             }
 
-            // Load credential username/domain for Own mode (never load password)
+            // Load credential username/domain for Own mode (never load password).
+            // CredentialManager normalizes domain\username on read, so these
+            // fields are properly split even if CredMan merged them internally.
             if (existing.CredentialMode == CredentialMode.Own)
             {
                 var cred = _credentialService.GetForConnection(existing);
@@ -173,7 +175,14 @@ public partial class ConnectionEditorViewModel : ObservableValidator
                 {
                     Username = cred.UserName;
                     Domain = cred.Domain;
-                    HasStoredPassword = true;
+                    HasStoredPassword = !string.IsNullOrEmpty(cred.Password);
+                }
+                else
+                {
+                    // No stored credential yet -- use model values (quick panel may
+                    // have set username/domain before a password was saved)
+                    Username = existing.Username;
+                    Domain = existing.Domain;
                 }
             }
 
