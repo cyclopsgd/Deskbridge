@@ -28,6 +28,9 @@ releases/
 .planning/
 
 # Claude Code
+.claude/
+
+# Claude Code
 CLAUDE.md
 
 # Secrets
