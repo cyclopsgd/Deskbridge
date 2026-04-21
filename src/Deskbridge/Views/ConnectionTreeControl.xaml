@@ -465,13 +465,12 @@
              so only the header shows.
         -->
         <Border Grid.Row="3"
-                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
                 BorderBrush="{StaticResource PanelEdgeGradientHorizontal}"
                 BorderThickness="0,1,0,0">
             <DockPanel LastChildFill="True">
-                <!-- Header strip — always visible -->
-                <Border DockPanel.Dock="Top"
-                        Style="{StaticResource PanelHeaderStyle}">
+                <!-- Header — always visible -->
+                <Border DockPanel.Dock="Top" Height="28">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
