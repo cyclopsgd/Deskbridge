@@ -95,4 +95,11 @@
         <GradientStop Color="Transparent" Offset="0.3" />
     </LinearGradientBrush>
 
+    <!-- Softer variant for narrow panels where the full gradient reads as a hard line -->
+    <LinearGradientBrush x:Key="PanelEdgeGradientHorizontalSoft"
+        StartPoint="0,0" EndPoint="1,0" Opacity="0.4">
+        <GradientStop Color="{StaticResource ControlStrokeColorDefault}" Offset="0" />
+        <GradientStop Color="Transparent" Offset="0.3" />
+    </LinearGradientBrush>
+
 </ResourceDictionary>

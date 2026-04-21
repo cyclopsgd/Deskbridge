@@ -466,7 +466,7 @@
         -->
         <Border Grid.Row="3"
                 Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
-                BorderBrush="{StaticResource PanelEdgeGradientHorizontal}"
+                BorderBrush="{StaticResource PanelEdgeGradientHorizontalSoft}"
                 BorderThickness="0,1,0,0">
             <DockPanel LastChildFill="True">
                 <!-- Header — always visible -->
