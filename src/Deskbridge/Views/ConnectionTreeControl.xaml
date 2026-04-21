@@ -448,7 +448,7 @@
             Height="4"
             HorizontalAlignment="Stretch"
             ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
-            Background="{DynamicResource ControlStrokeColorDefaultBrush}"
+            Background="Transparent"
             Visibility="{Binding IsQuickPropertiesExpanded, Converter={StaticResource BoolToVisibility}}"
             DragCompleted="PanelSplitter_DragCompleted" />
 
