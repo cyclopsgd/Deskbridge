@@ -48,6 +48,9 @@ public partial class ImportWizardDialog : ContentDialog
                 return;
             }
 
+            // IMP-02: prevent double-click while processing
+            if (_viewModel.IsProcessing) return;
+
             // Advance the wizard step
             _ = _viewModel.NextStepCommand.ExecuteAsync(null);
             return; // Don't close the dialog
