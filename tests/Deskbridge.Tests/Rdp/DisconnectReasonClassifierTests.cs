@@ -16,7 +16,7 @@ public sealed class DisconnectReasonClassifierTests
     // --- Classify: table-driven over the 19 documented codes ---
 
     [Theory]
-    [InlineData(1, DisconnectCategory.UserInitiated)]
+    [InlineData(1, DisconnectCategory.Logoff)]
     [InlineData(2, DisconnectCategory.UserInitiated)]
     [InlineData(3, DisconnectCategory.ServerInitiated)]
     [InlineData(264, DisconnectCategory.NetworkLost)]
