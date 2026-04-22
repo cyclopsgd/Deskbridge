@@ -447,16 +447,46 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     /// </summary>
     private void SetActiveHostVisibility(Guid activeId)
     {
+        WindowsFormsHost? outgoing = null;
+        WindowsFormsHost? incoming = null;
+
+        // Identify outgoing (currently visible) and incoming (target) hosts.
+        foreach (var child in HostContainer.Children)
+        {
+            if (child is WindowsFormsHost wfh && wfh.Tag is Guid id)
+            {
+                if (id == activeId)
+                    incoming = wfh;
+                else if (wfh.Visibility == Visibility.Visible)
+                    outgoing = wfh;
+            }
+        }
+
+        if (incoming is null) return;
+        if (outgoing == incoming) return;
+
+        // STAB-02: capture outgoing frame as bitmap overlay before hiding. This
+        // covers the single-frame black gap between the WPF layout pass completing
+        // and the incoming Win32 child HWND finishing its first WM_PAINT. The
+        // bitmap is shown on the shared ViewportSnapshot Image registered in
+        // AirspaceSwapper, which sits at the same Z-position as the HWND viewport.
+        bool snapshotTaken = false;
+        if (outgoing is not null)
+        {
+            snapshotTaken = _airspace.SnapshotSingleHost(outgoing);
+        }
+
+        // Apply visibility: exactly one WFH Visible + IsEnabled, all others Collapsed.
+        // Use Collapsed (not Hidden). AirspaceSwapper.WndProc documents that
+        // Hidden tears down the AxHost child HWND on some servers (e.g. xrdp),
+        // raising OnDisconnected with discReason=2 and ending the live RDP
+        // session. Collapsed removes the WFH from the layout pass without
+        // destroying its child HWND, so the RDP session survives tab switches.
         foreach (var child in HostContainer.Children)
         {
             if (child is WindowsFormsHost wfh)
             {
                 var isActive = wfh.Tag is Guid id && id == activeId;
-                // Use Collapsed (not Hidden). AirspaceSwapper.WndProc documents that
-                // Hidden tears down the AxHost child HWND on some servers (e.g. xrdp),
-                // raising OnDisconnected with discReason=2 and ending the live RDP
-                // session. Collapsed removes the WFH from the layout pass without
-                // destroying its child HWND, so the RDP session survives tab switches.
                 wfh.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
                 wfh.IsEnabled = isActive;
             }
@@ -467,6 +497,19 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 var isActive = ov.Tag is Guid id && id == activeId;
                 ov.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
             }
+        }
+
+        // STAB-02: clear snapshot overlay after the incoming WFH has had a chance
+        // to paint. DispatcherPriority.Loaded fires after layout + render, giving
+        // the incoming HWND time to process its first WM_PAINT so the user sees
+        // the new session frame instead of black.
+        if (snapshotTaken && outgoing is not null)
+        {
+            var hostToClean = outgoing;
+            Dispatcher.InvokeAsync(() =>
+            {
+                _airspace.ClearSingleHostSnapshot(hostToClean);
+            }, DispatcherPriority.Loaded);
         }
     }
 
