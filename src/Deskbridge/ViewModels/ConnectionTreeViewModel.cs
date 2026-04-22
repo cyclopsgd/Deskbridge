@@ -439,6 +439,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
             SortSiblings(kvp.Value.Children);
         }
 
+        // STAB-05: Compute depth from group hierarchy so converters don't walk the visual tree
+        AssignDepths(rootItems, 0);
+
         _fullTree = rootItems;
         RootItems = new ObservableCollection<TreeItemViewModel>(rootItems);
 
@@ -461,6 +464,20 @@ public partial class ConnectionTreeViewModel : ObservableObject
         siblings.Clear();
         foreach (var item in sorted)
             siblings.Add(item);
+    }
+
+    /// <summary>
+    /// STAB-05: Recursively assign depth values to all items in the tree.
+    /// Internal + static so unit tests can exercise it via InternalsVisibleTo.
+    /// </summary>
+    internal static void AssignDepths(IEnumerable<TreeItemViewModel> items, int depth)
+    {
+        foreach (var item in items)
+        {
+            item.Depth = depth;
+            if (item is GroupTreeItemViewModel group)
+                AssignDepths(group.Children, depth + 1);
+        }
     }
 
     private static int GetSortOrder(TreeItemViewModel item) => item switch

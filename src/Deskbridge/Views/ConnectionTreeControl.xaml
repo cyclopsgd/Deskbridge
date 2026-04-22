@@ -175,9 +175,9 @@
                                 <Grid>
                                     <!-- TREE-03: Vertical indent guide lines -->
                                     <ItemsControl x:Name="IndentGuides"
-                                                  ItemsSource="{Binding
-                                                      Converter={StaticResource DepthToGuideLines},
-                                                      RelativeSource={RelativeSource TemplatedParent}}"
+                                                  ItemsSource="{Binding DataContext.Depth,
+                                                      RelativeSource={RelativeSource TemplatedParent},
+                                                      Converter={StaticResource DepthToGuideLines}}"
                                                   IsHitTestVisible="False">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
@@ -211,9 +211,9 @@
                                                Visibility="Collapsed" />
 
                                     <!-- Content indented by depth * 19px -->
-                                    <Grid Margin="{Binding
-                                            Converter={StaticResource TreeViewItemIndent},
-                                            RelativeSource={RelativeSource TemplatedParent}}">
+                                    <Grid Margin="{Binding DataContext.Depth,
+                                            RelativeSource={RelativeSource TemplatedParent},
+                                            Converter={StaticResource TreeViewItemIndent}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="19" />
                                             <ColumnDefinition Width="*" />
@@ -338,7 +338,9 @@
                       ItemContainerStyle="{StaticResource FullRowTreeViewItemStyle}"
                       HorizontalContentAlignment="Stretch"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                      VirtualizingPanel.IsVirtualizing="False"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.CanContentScroll="True"
                       BorderThickness="0"
                       Background="Transparent"
                       Padding="0"
