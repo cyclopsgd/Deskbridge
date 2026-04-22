@@ -418,10 +418,11 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         // RELY-02: logoff from within the session -> close the tab, no overlay.
         if (category == DisconnectCategory.Logoff)
         {
-            _coordinatorHosts.Remove(host.ConnectionId);
             if (_activeId == host.ConnectionId) _activeId = null;
             try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
             catch { /* disposed host may throw */ }
+            HostUnmounted?.Invoke(this, host);
+            _coordinatorHosts.Remove(host.ConnectionId);
             try { host.Dispose(); }
             catch (Exception ex)
             {
@@ -429,9 +430,6 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
                     "Host dispose during logoff threw: {ExceptionType} HResult={HResult:X8}",
                     ex.GetType().Name, ex.HResult);
             }
-            // Publish ConnectionClosedEvent so TabHostManager closes the tab and
-            // MainWindow unparents the WFH. DisconnectReason.RemoteDisconnect because
-            // the server ended the session (the user logged off inside the VM).
             _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.RemoteDisconnect));
             return;
         }
