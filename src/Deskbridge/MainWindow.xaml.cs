@@ -189,6 +189,12 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             if (DataContext is ViewModels.MainWindowViewModel vm)
             {
                 vm.ApplySecuritySettings(_loadedSettings.Security);
+
+                // Phase 14 (UX-02): apply persisted text scale
+                var appearance = _loadedSettings.Appearance ?? AppearanceRecord.Default;
+                vm.ApplyAppearanceSettings(appearance);
+                vm.SetTextScaleCallback(ApplyTextScale);
+                ApplyTextScale(appearance.TextScale);
             }
 
             // Phase 9 (D-02): apply persisted card expand/collapse state
@@ -321,11 +327,17 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 ?? _loadedSettings.PropertiesPanel
                 ?? PropertiesPanelRecord.Default;
 
+            // Phase 14 (UX-02): capture current text scale from ViewModel
+            var appearance = vm?.CurrentAppearanceSettings
+                ?? _loadedSettings.Appearance
+                ?? AppearanceRecord.Default;
+
             var updated = _loadedSettings with
             {
                 Window = new WindowStateRecord(x, y, w, h, isMaximized, sidebarOpen, sidebarWidth),
                 Security = security,
                 PropertiesPanel = propertiesPanel,
+                Appearance = appearance,
             };
 
             _windowState.SaveAsync(updated).GetAwaiter().GetResult();
@@ -334,6 +346,31 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         {
             Serilog.Log.Warning(ex, "Failed to save window state on close");
         }
+    }
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): overwrites the DynamicResource font-size keys in
+    /// <see cref="Application.Current.Resources"/> so all typography styles update
+    /// immediately. Called on startup with the persisted scale and at runtime via the
+    /// <see cref="ViewModels.MainWindowViewModel.SetTextScaleCallback"/> callback.
+    /// </summary>
+    internal static void ApplyTextScale(TextScale scale)
+    {
+        // Scale offsets: Small = -2px, Default = 0, Large = +2px
+        var offset = scale switch
+        {
+            TextScale.Small => -2.0,
+            TextScale.Large => 2.0,
+            _ => 0.0
+        };
+
+        // Base sizes match TypographyStyles.xaml defaults
+        Application.Current.Resources["DeskbridgeSectionFontSize"] = 11.0 + offset;
+        Application.Current.Resources["DeskbridgeCaptionFontSize"] = 12.0 + offset;
+        Application.Current.Resources["DeskbridgeBodyFontSize"] = 14.0 + offset;
+        Application.Current.Resources["DeskbridgeCardTitleFontSize"] = 16.0 + offset;
+        Application.Current.Resources["DeskbridgeSubtitleFontSize"] = 20.0 + offset;
+        Application.Current.Resources["DeskbridgeHintFontSize"] = 12.0 + offset;
     }
 
     private void OnHostMounted(object? sender, IProtocolHost host)

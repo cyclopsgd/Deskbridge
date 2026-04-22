@@ -216,9 +216,31 @@
                         -->
                         <StackPanel Margin="{StaticResource PanelContentMargin}"
                                     Visibility="{Binding IsSettingsActive, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="SECURITY"
+
+                            <!-- Phase 14 Plan 14-02 (UX-02): Appearance section for text scaling -->
+                            <TextBlock Text="APPEARANCE"
                                        Style="{StaticResource SectionLabelStyle}"
                                        Margin="{StaticResource SectionLabelMargin}" />
+                            <Border Style="{StaticResource CardContainerStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Text size"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <ComboBox ItemsSource="{Binding TextScaleOptions}"
+                                              SelectedValue="{Binding TextScale}"
+                                              SelectedValuePath="Value"
+                                              Margin="{StaticResource FormFieldSpacing}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding DisplayName}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="SECURITY"
+                                       Style="{StaticResource SectionLabelStyle}"
+                                       Margin="0,16,0,4" />
                             <Border Style="{StaticResource CardContainerStyle}">
                                 <StackPanel>
                                     <!-- Require Password/PIN toggle -->
