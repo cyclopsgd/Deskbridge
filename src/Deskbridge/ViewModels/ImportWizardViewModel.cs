@@ -122,7 +122,7 @@ public partial class ImportWizardViewModel : ObservableObject
     [RelayCommand]
     private async Task NextStepAsync()
     {
-        if (!CanGoNext) return;
+        if (!CanGoNext || IsProcessing) return;
 
         switch (CurrentStep)
         {
@@ -171,7 +171,7 @@ public partial class ImportWizardViewModel : ObservableObject
 
     internal async Task ParseFileAsync()
     {
-        if (SelectedImporter is null || string.IsNullOrEmpty(FilePath)) return;
+        if (SelectedImporter is null || string.IsNullOrEmpty(FilePath) || IsProcessing) return;
 
         IsProcessing = true;
         ErrorMessage = null;
@@ -260,7 +260,7 @@ public partial class ImportWizardViewModel : ObservableObject
 
     internal async Task ImportSelectedAsync()
     {
-        if (SelectedImporter is null) return;
+        if (SelectedImporter is null || IsProcessing) return;
 
         IsProcessing = true;
         var imported = 0;
