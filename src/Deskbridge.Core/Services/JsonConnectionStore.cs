@@ -124,6 +124,25 @@ public sealed class JsonConnectionStore : IConnectionStore
         PersistAtomically();
     }
 
+    public void DeleteBatch(IEnumerable<Guid> connectionIds, IEnumerable<Guid> groupIds)
+    {
+        // Remove groups first (they may orphan connections that are also in connectionIds)
+        foreach (var groupId in groupIds)
+        {
+            _data.Groups.RemoveAll(g => g.Id == groupId);
+            // Orphan connections belonging to deleted group
+            foreach (var conn in _data.Connections.Where(c => c.GroupId == groupId))
+                conn.GroupId = null;
+        }
+
+        // Remove connections
+        var idSet = connectionIds.ToHashSet();
+        if (idSet.Count > 0)
+            _data.Connections.RemoveAll(c => idSet.Contains(c.Id));
+
+        PersistAtomically(); // Single write at the end
+    }
+
     private void PersistAtomically()
     {
         var directory = Path.GetDirectoryName(_filePath);

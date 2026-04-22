@@ -12,5 +12,6 @@ public interface IConnectionStore
     ConnectionGroup? GetGroupById(Guid id);
     void SaveGroup(ConnectionGroup group);
     void DeleteGroup(Guid groupId);
+    void DeleteBatch(IEnumerable<Guid> connectionIds, IEnumerable<Guid> groupIds);
     void Load();
 }
