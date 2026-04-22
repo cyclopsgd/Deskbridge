@@ -244,6 +244,9 @@ public partial class ImportWizardViewModel : ObservableObject
             Type = node.Type,
             Protocol = node.Protocol,
             Hostname = node.Hostname,
+            Username = node.Username,
+            Domain = node.Domain,
+            Port = node.Port,
             IsChecked = node.Protocol == Protocol.Rdp || node.Type == ImportNodeType.Container,
         };
         foreach (var child in node.Children)
