@@ -1,6 +1,24 @@
 namespace Deskbridge.Core.Settings;
 
 /// <summary>
+/// Phase 14 Plan 14-02 (UX-02): text scaling preference. Controls the font-size
+/// offset applied to all typography styles at runtime via DynamicResource keys.
+/// Small = -2px, Default = 0, Large = +2px relative to base sizes.
+/// </summary>
+public enum TextScale { Small, Default, Large }
+
+/// <summary>
+/// Phase 14 Plan 14-02 (UX-02): appearance preferences persisted in settings.json.
+/// Null-coalesced to <see cref="Default"/> on load for backward compatibility
+/// with pre-Phase-14 settings.json files (same pattern as <see cref="PropertiesPanelRecord"/>).
+/// </summary>
+public sealed record AppearanceRecord(
+    TextScale TextScale = TextScale.Default)
+{
+    public static AppearanceRecord Default { get; } = new();
+}
+
+/// <summary>
 /// Phase 6 Plan 06-02 (NOTF-04) + Plan 06-04 (SEC-03 / SEC-05): the single
 /// <c>settings.json</c> schema covering window state and security preferences.
 /// Plan 06-02 lands and consumes <see cref="Window"/>; Plan 06-04 will read/write
@@ -13,6 +31,7 @@ public sealed record AppSettings(
     SecuritySettingsRecord Security,
     UpdateSettingsRecord Update,
     PropertiesPanelRecord? PropertiesPanel = null,
+    AppearanceRecord? Appearance = null,
     int SchemaVersion = 1)
 {
     /// <summary>Default-constructed settings — used as the fallback when <c>settings.json</c> is missing or invalid.</summary>

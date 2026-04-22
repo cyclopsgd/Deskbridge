@@ -1,68 +1,80 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Phase 14 Plan 14-02 (UX-02): scalable font size keys. All typography styles
+         reference these via DynamicResource so ApplyTextScale() in MainWindow.xaml.cs
+         can overwrite them at runtime to resize text globally.
+         Base sizes: Section=11, Caption=12, Body=14, CardTitle=16, Subtitle=20, Hint=12 -->
+    <sys:Double x:Key="DeskbridgeSectionFontSize">11</sys:Double>
+    <sys:Double x:Key="DeskbridgeCaptionFontSize">12</sys:Double>
+    <sys:Double x:Key="DeskbridgeBodyFontSize">14</sys:Double>
+    <sys:Double x:Key="DeskbridgeCardTitleFontSize">16</sys:Double>
+    <sys:Double x:Key="DeskbridgeSubtitleFontSize">20</sys:Double>
+    <sys:Double x:Key="DeskbridgeHintFontSize">12</sys:Double>
 
     <!-- 11px UPPERCASE section labels: CONNECTIONS, SECURITY, DATA, PROPERTIES -->
     <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeSectionFontSize}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
     </Style>
 
     <!-- 12px caption: property labels, status bar, shortcuts -->
     <Style x:Key="CaptionStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeCaptionFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
     </Style>
 
     <!-- 14px body: tree items, tabs, buttons, menus (default) -->
     <Style x:Key="BodyStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeBodyFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
     </Style>
 
     <!-- 14px body muted: secondary text at body size -->
     <Style x:Key="BodyMutedStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeBodyFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
     </Style>
 
     <!-- 14px form field label (secondary color, common in dialogs/properties) -->
     <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeBodyFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         <Setter Property="Margin" Value="{StaticResource FormFieldLabelMargin}" />
     </Style>
 
     <!-- 12px form field label (compact, used in quick properties grid) -->
     <Style x:Key="FieldLabelCompactStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeCaptionFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <!-- 16px card title / dialog section titles -->
     <Style x:Key="CardTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeCardTitleFontSize}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
     </Style>
 
     <!-- 20px subtitle / empty-state titles, dialog titles -->
     <Style x:Key="SubtitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeSubtitleFontSize}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
     </Style>
 
     <!-- 12px tertiary: hints, empty-state body, placeholder descriptions -->
     <Style x:Key="HintStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeHintFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
     </Style>
 
     <!-- Error text (12px red, wrapping) -->
     <Style x:Key="ErrorTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeHintFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource DeskbridgeErrorBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
@@ -72,7 +84,7 @@
          No border, no input chrome — communicates non-editable status visually.
          D-06: applies to inherited credential fields AND computed display-only values. -->
     <Style x:Key="ReadOnlyFieldStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource DeskbridgeBodyFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Padding" Value="0" />

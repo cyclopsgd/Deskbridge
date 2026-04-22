@@ -9,6 +9,16 @@ using Serilog;
 
 namespace Deskbridge.ViewModels;
 
+/// <summary>
+/// Phase 14 Plan 14-02 (UX-02): display wrapper for the TextScale enum in the
+/// Appearance settings ComboBox. Same pattern as <see cref="CredentialModeOption"/>
+/// in <see cref="ConnectionEditorViewModel"/>.
+/// </summary>
+public record TextScaleOption(TextScale Value, string DisplayName)
+{
+    public override string ToString() => DisplayName;
+}
+
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ITabHostManager _tabHostManager;
@@ -86,6 +96,91 @@ public partial class MainWindowViewModel : ObservableObject
     /// confirmation dialog. Read-only — the VM owns the lifecycle.
     /// </summary>
     public IUpdateService? UpdateService => _updateService;
+
+    // ----------------------------------------------------------- Phase 14 Plan 14-02 (UX-02): text scaling
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): display options for the Appearance settings
+    /// Text size ComboBox. Same wrapper-record pattern as CredentialModeOption.
+    /// </summary>
+    public IReadOnlyList<TextScaleOption> TextScaleOptions { get; } = new[]
+    {
+        new TextScaleOption(TextScale.Small, "Small"),
+        new TextScaleOption(TextScale.Default, "Default"),
+        new TextScaleOption(TextScale.Large, "Large"),
+    };
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): current text scale preference. Two-way bound
+    /// to the Appearance ComboBox in the settings panel. Changes trigger
+    /// <see cref="OnTextScaleChanged"/> which invokes the callback and persists.
+    /// </summary>
+    [ObservableProperty]
+    public partial TextScale TextScale { get; set; } = TextScale.Default;
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): callback registered by MainWindow.xaml.cs to
+    /// apply font-size resource updates when the user changes the text scale.
+    /// </summary>
+    private Action<TextScale>? _applyTextScale;
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): registers the MainWindow's ApplyTextScale
+    /// method so runtime text-scale changes propagate to Application.Current.Resources.
+    /// Called AFTER <see cref="ApplyAppearanceSettings"/> in OnSourceInitialized.
+    /// </summary>
+    public void SetTextScaleCallback(Action<TextScale> callback) => _applyTextScale = callback;
+
+    partial void OnTextScaleChanged(TextScale value)
+    {
+        _applyTextScale?.Invoke(value);
+        PersistAppearanceSettings();
+    }
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): persists appearance settings to settings.json.
+    /// Same async-void fire-and-forget pattern as <see cref="PersistSecuritySettings"/>.
+    /// </summary>
+    private async void PersistAppearanceSettings()
+    {
+        if (_suppressPersist) return;
+        if (_windowState is null) return;
+        try
+        {
+            var current = await _windowState.LoadAsync().ConfigureAwait(false);
+            var updated = current with { Appearance = new AppearanceRecord(TextScale: TextScale) };
+            await _windowState.SaveAsync(updated).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to persist appearance settings");
+        }
+    }
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): applies loaded appearance settings to the VM
+    /// without triggering persistence (same suppress pattern as
+    /// <see cref="ApplySecuritySettings"/>). Called from MainWindow.OnSourceInitialized.
+    /// </summary>
+    public void ApplyAppearanceSettings(AppearanceRecord appearance)
+    {
+        ArgumentNullException.ThrowIfNull(appearance);
+        _suppressPersist = true;
+        try
+        {
+            TextScale = appearance.TextScale;
+        }
+        finally
+        {
+            _suppressPersist = false;
+        }
+    }
+
+    /// <summary>
+    /// Phase 14 Plan 14-02 (UX-02): snapshot of the current appearance preferences
+    /// for MainWindow.OnClosing persistence. Same pattern as <see cref="CurrentSecuritySettings"/>.
+    /// </summary>
+    public AppearanceRecord CurrentAppearanceSettings => new(TextScale: TextScale);
 
     /// <summary>
     /// Phase 7 Plan 07-01: sets the callback that <see cref="ApplyUpdateAsync"/>
