@@ -100,9 +100,34 @@
                         PlaceholderText="username"
                         IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="{StaticResource FormFieldSpacing}" />
 
-                    <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" />
-                    <ui:PasswordBox x:Name="PasswordBox"
-                        IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="{StaticResource FormFieldSpacing}" />
+                    <!-- Change Password button (visible for existing connections with stored credentials) -->
+                    <ui:Button Content="Change Password"
+                        Command="{Binding StartPasswordChangeCommand}"
+                        Visibility="{Binding ShowChangePasswordButton, Converter={StaticResource BoolToVisibility}}"
+                        HorizontalAlignment="Stretch"
+                        Appearance="Secondary"
+                        Margin="{StaticResource FormFieldSpacing}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="ShieldKeyhole24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+
+                    <!-- Password entry fields (visible for new connections, or after clicking Change Password) -->
+                    <StackPanel Visibility="{Binding ShowPasswordFields, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="New Password" Style="{StaticResource FieldLabelStyle}" />
+                        <ui:PasswordBox x:Name="PasswordBox"
+                            IsEnabled="{Binding IsCredentialFieldsEnabled}"
+                            Margin="{StaticResource FormFieldSpacing}" />
+
+                        <TextBlock Text="Confirm Password" Style="{StaticResource FieldLabelStyle}" />
+                        <ui:PasswordBox x:Name="ConfirmPasswordBox"
+                            IsEnabled="{Binding IsCredentialFieldsEnabled}"
+                            Margin="{StaticResource FormFieldSpacing}" />
+
+                        <TextBlock Text="{Binding PasswordMismatchError}"
+                            Style="{StaticResource ErrorTextStyle}"
+                            Margin="{StaticResource FormFieldSpacing}" />
+                    </StackPanel>
 
                     <TextBlock Text="Domain" Style="{StaticResource FieldLabelStyle}" />
                     <ui:TextBox Text="{Binding Domain}"
