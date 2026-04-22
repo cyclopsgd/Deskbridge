@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 
@@ -53,6 +54,8 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     [NotifyPropertyChangedFor(nameof(IsCredentialFieldsVisible))]
     [NotifyPropertyChangedFor(nameof(IsInheritInfoBarVisible))]
     [NotifyPropertyChangedFor(nameof(IsPromptInfoBarVisible))]
+    [NotifyPropertyChangedFor(nameof(ShowChangePasswordButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordFields))]
     public partial CredentialMode CredentialMode { get; set; } = CredentialMode.Inherit;
 
     // Display-friendly options for the CredentialMode ComboBox.
@@ -79,6 +82,58 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     public bool IsCredentialFieldsVisible => CredentialMode != CredentialMode.Prompt;
     public bool IsInheritInfoBarVisible => CredentialMode == CredentialMode.Inherit;
     public bool IsPromptInfoBarVisible => CredentialMode == CredentialMode.Prompt;
+
+    // --- Change Password UX state (UX-01) ---
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowChangePasswordButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordFields))]
+    public partial bool IsChangingPassword { get; set; }
+
+    [ObservableProperty]
+    public partial string PasswordMismatchError { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Shows the "Change Password" button when editing an existing connection
+    /// that has stored credentials in Own mode and the user has not yet clicked it.
+    /// </summary>
+    public bool ShowChangePasswordButton =>
+        HasStoredPassword && !IsChangingPassword && IsCredentialFieldsEnabled;
+
+    /// <summary>
+    /// Shows the password entry fields: always for new connections in Own mode,
+    /// or for existing connections after the user clicks "Change Password".
+    /// </summary>
+    public bool ShowPasswordFields =>
+        IsCredentialFieldsEnabled && (!HasStoredPassword || IsChangingPassword);
+
+    [RelayCommand]
+    private void StartPasswordChange()
+    {
+        IsChangingPassword = true;
+    }
+
+    /// <summary>
+    /// Validates that password and confirmation match when changing password.
+    /// Called by code-behind before SetPassword.
+    /// </summary>
+    public bool ValidatePasswordMatch(string password, string confirm)
+    {
+        if (!IsChangingPassword)
+            return true;
+
+        if (string.IsNullOrEmpty(password) && string.IsNullOrEmpty(confirm) && HasStoredPassword)
+            return true;
+
+        if (password != confirm)
+        {
+            PasswordMismatchError = "Passwords do not match";
+            return false;
+        }
+
+        PasswordMismatchError = string.Empty;
+        return true;
+    }
 
     // --- Display tab ---
 
