@@ -33,11 +33,11 @@ public class ConnectionModel
     public bool EnableCredSspSupport { get; set; } = true;
 
     /// <summary>
-    /// Server authentication level. 0 = no authentication required (accepts any cert, useful for
-    /// self-signed xrdp setups); 1 = must authenticate; 2 = warn on auth failure. Default 2 for
-    /// production Windows targets; set 0 for xrdp / self-signed certificate scenarios.
+    /// Server authentication level. 0 = no authentication required (accepts any cert -- default for
+    /// seamless connection experience); 1 = must authenticate; 2 = warn on auth failure. Default 0
+    /// to skip certificate prompts. Users can override per-connection if needed.
     /// </summary>
-    public uint AuthenticationLevel { get; set; } = 2;
+    public uint AuthenticationLevel { get; set; } = 0;
 }
 
 public class DisplaySettings

@@ -8,7 +8,7 @@ namespace Deskbridge.Core.Services;
 /// </summary>
 public enum DisconnectCategory
 {
-    /// <summary>Codes 1, 2 — user- or app-initiated disconnect. Never auto-retry.</summary>
+    /// <summary>Code 2 — app-initiated disconnect. Never auto-retry.</summary>
     UserInitiated,
     /// <summary>Code 3 — server terminated the session. Retry with overlay.</summary>
     ServerInitiated,
@@ -25,6 +25,8 @@ public enum DisconnectCategory
     Licensing,
     /// <summary>Code 3334 — protocol error. Retry with overlay (may be transient).</summary>
     Protocol,
+    /// <summary>Code 1 -- user logged off from within the remote session. Close the tab.</summary>
+    Logoff,
     /// <summary>Any code not in the documented table. Default retry behaviour.</summary>
     Unknown,
 }
@@ -42,7 +44,8 @@ public enum DisconnectCategory
 /// </summary>
 public static class DisconnectReasonClassifier
 {
-    private static readonly HashSet<int> UserInitiatedCodes = [1, 2];
+    private static readonly HashSet<int> UserInitiatedCodes = [2];
+    private static readonly HashSet<int> LogoffCodes = [1];
     private static readonly HashSet<int> ServerInitiatedCodes = [3];
     private static readonly HashSet<int> NetworkLostCodes = [264, 516, 772, 1028, 2308];
     private static readonly HashSet<int> DnsFailureCodes = [260, 520];
@@ -56,6 +59,7 @@ public static class DisconnectReasonClassifier
     /// </summary>
     public static DisconnectCategory Classify(int discReason) => discReason switch
     {
+        _ when LogoffCodes.Contains(discReason) => DisconnectCategory.Logoff,
         _ when UserInitiatedCodes.Contains(discReason) => DisconnectCategory.UserInitiated,
         _ when ServerInitiatedCodes.Contains(discReason) => DisconnectCategory.ServerInitiated,
         _ when NetworkLostCodes.Contains(discReason) => DisconnectCategory.NetworkLost,

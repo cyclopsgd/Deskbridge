@@ -415,6 +415,27 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             "Post-connect disconnect for {Hostname}: discReason={DiscReason} category={Category}",
             model.Hostname, discReason, category);
 
+        // RELY-02: logoff from within the session -> close the tab, no overlay.
+        if (category == DisconnectCategory.Logoff)
+        {
+            _coordinatorHosts.Remove(host.ConnectionId);
+            if (_activeId == host.ConnectionId) _activeId = null;
+            try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
+            catch { /* disposed host may throw */ }
+            try { host.Dispose(); }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    "Host dispose during logoff threw: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
+            // Publish ConnectionClosedEvent so TabHostManager closes the tab and
+            // MainWindow unparents the WFH. DisconnectReason.RemoteDisconnect because
+            // the server ended the session (the user logged off inside the VM).
+            _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.RemoteDisconnect));
+            return;
+        }
+
         // Suppress the HostUnmounted/Dispose that the normal failure / closed pipeline
         // would trigger — we want the overlay to stay visible over the viewport until
         // either a fresh host mounts (success) or the user closes the overlay.
