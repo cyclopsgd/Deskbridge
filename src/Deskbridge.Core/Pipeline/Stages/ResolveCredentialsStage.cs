@@ -46,15 +46,30 @@ public sealed class ResolveCredentialsStage(
             case CredentialMode.Inherit:
             {
                 var cred = creds.ResolveInherited(c, store);
-                if (cred is null)
+                if (cred is not null)
                 {
-                    log.LogInformation("No inherited credential for {Hostname} — prompting", c.Hostname);
-                    bus.Publish(new CredentialRequestedEvent(c));
-                    return new PipelineResult(false, "No inherited credential found");
+                    ApplyCredential(ctx, cred);
+                    log.LogInformation("Inherited credentials resolved for {Hostname}", c.Hostname);
+                    return new PipelineResult(true);
                 }
-                ApplyCredential(ctx, cred);
-                log.LogInformation("Inherited credentials resolved for {Hostname}", c.Hostname);
-                return new PipelineResult(true);
+
+                // RELY-03: inheritance chain exhausted -- fall back to connection's own
+                // stored credential before prompting. This covers the common case where
+                // a connection sits at the root level (no parent group) or all ancestor
+                // groups lack credentials, but the user has stored credentials directly
+                // on the connection itself.
+                var ownCred = creds.GetForConnection(c);
+                if (ownCred is not null)
+                {
+                    ApplyCredential(ctx, ownCred);
+                    log.LogInformation(
+                        "Inherited credential not found for {Hostname} -- fell back to own credential",
+                        c.Hostname);
+                    return new PipelineResult(true);
+                }
+
+                log.LogInformation("No inherited or own credential for {Hostname} -- prompting", c.Hostname);
+                return await PromptForCredentialsAsync(ctx);
             }
             case CredentialMode.Prompt:
             default:
