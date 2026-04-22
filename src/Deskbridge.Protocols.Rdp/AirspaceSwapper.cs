@@ -162,6 +162,49 @@ public sealed class AirspaceSwapper : IDisposable
     }
 
     /// <summary>
+    /// Tab-switch airspace bypass: captures a bitmap snapshot of a single visible WFH
+    /// and shows its overlay Image. Does NOT hide the WFH itself -- the caller controls
+    /// visibility. Returns <c>true</c> if the snapshot was taken successfully,
+    /// <c>false</c> if the host was not registered, already collapsed, or capture failed.
+    /// Call <see cref="ClearSingleHostSnapshot"/> after the incoming tab has painted.
+    /// </summary>
+    public bool SnapshotSingleHost(WindowsFormsHost host)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        AssertDispatcher();
+
+        if (!_hosts.TryGetValue(host, out var overlay))
+            return false;
+
+        if (host.Visibility == Visibility.Collapsed)
+            return false;
+
+        var snapshot = CaptureHwnd(host);
+        if (snapshot is null)
+            return false;
+
+        overlay.Source = snapshot;
+        overlay.Visibility = Visibility.Visible;
+        return true;
+    }
+
+    /// <summary>
+    /// Clears the snapshot overlay set by <see cref="SnapshotSingleHost"/> for a
+    /// single host after the incoming tab has painted.
+    /// </summary>
+    public void ClearSingleHostSnapshot(WindowsFormsHost host)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        AssertDispatcher();
+
+        if (_hosts.TryGetValue(host, out var overlay))
+        {
+            overlay.Visibility = Visibility.Collapsed;
+            overlay.Source = null;
+        }
+    }
+
+    /// <summary>
     /// Hides the given WFH without capturing a bitmap snapshot. Returns an
     /// <see cref="IDisposable"/> whose <see cref="IDisposable.Dispose"/> restores
     /// <see cref="UIElement.Visibility"/> to <see cref="Visibility.Visible"/>.
