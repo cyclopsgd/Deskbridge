@@ -919,29 +919,75 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
         if (result != ContentDialogResult.Primary) return;
 
-        // Delete confirmed - execute deletions
-        foreach (var item in itemsToDelete)
+        // STAB-01: Wrap entire delete block in try/catch to prevent unhandled crash
+        try
         {
-            if (item is ConnectionTreeItemViewModel connItem)
+            // Step 1: Close active RDP sessions before deleting data (Vector 4)
+            foreach (var item in itemsToDelete)
             {
-                var model = _connectionStore.GetById(connItem.Id);
-                if (model is not null)
+                if (item is ConnectionTreeItemViewModel connItem)
                 {
-                    _credentialService.DeleteForConnection(model);
+                    if (_tabHostManager.TryGetExistingTab(connItem.Id, out _))
+                        await _tabHostManager.CloseTabAsync(connItem.Id);
                 }
-                _connectionStore.Delete(connItem.Id);
+                else if (item is GroupTreeItemViewModel groupItem)
+                {
+                    // Close tabs for all descendant connections in the group
+                    await CloseTabsForGroupDescendants(groupItem);
+                }
             }
-            else if (item is GroupTreeItemViewModel groupItem)
+
+            // Step 2: Collect IDs and delete credentials before batch delete
+            var connectionIdsToDelete = new List<Guid>();
+            var groupIdsToDelete = new List<Guid>();
+
+            foreach (var item in itemsToDelete)
             {
-                // T-03-15: DeleteGroup orphans connections (sets GroupId=null), does not delete them
-                _credentialService.DeleteForGroup(groupItem.Id);
-                _connectionStore.DeleteGroup(groupItem.Id);
+                if (item is ConnectionTreeItemViewModel connItem)
+                {
+                    var model = _connectionStore.GetById(connItem.Id);
+                    if (model is not null)
+                        _credentialService.DeleteForConnection(model);
+                    connectionIdsToDelete.Add(connItem.Id);
+                }
+                else if (item is GroupTreeItemViewModel groupItem)
+                {
+                    _credentialService.DeleteForGroup(groupItem.Id);
+                    groupIdsToDelete.Add(groupItem.Id);
+                }
             }
+
+            // Step 3: Single-persist batch delete (Vector 1)
+            _connectionStore.DeleteBatch(connectionIdsToDelete, groupIdsToDelete);
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Bulk delete failed");
         }
 
         SelectedItems.Clear();
         PrimarySelectedItem = null;
         RefreshTree();
+    }
+
+    /// <summary>
+    /// STAB-01: Recursively close active RDP tabs for all connections inside a group
+    /// (including nested sub-groups) before deleting the group data.
+    /// </summary>
+    private async Task CloseTabsForGroupDescendants(GroupTreeItemViewModel group)
+    {
+        foreach (var child in group.Children)
+        {
+            if (child is ConnectionTreeItemViewModel connItem)
+            {
+                if (_tabHostManager.TryGetExistingTab(connItem.Id, out _))
+                    await _tabHostManager.CloseTabAsync(connItem.Id);
+            }
+            else if (child is GroupTreeItemViewModel nestedGroup)
+            {
+                await CloseTabsForGroupDescendants(nestedGroup);
+            }
+        }
     }
 
     [RelayCommand]
