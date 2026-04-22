@@ -61,6 +61,12 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     /// <summary>Plan 06-03 CMD-01: idempotence guard so a held-down Ctrl+Shift+P doesn't stack dialogs.</summary>
     private bool _paletteOpen;
 
+    /// <summary>
+    /// Phase 16 (STAB-03): debounce timer for dynamic resolution updates on window resize.
+    /// T-16-03: 500ms debounce prevents flooding UpdateSessionDisplaySettings.
+    /// </summary>
+    private DispatcherTimer? _resizeTimer;
+
     /// <summary>Plan 06-03 D-05: saved WindowStyle/WindowState for fullscreen restore.</summary>
     private System.Windows.WindowStyle _savedWindowStyle;
     private System.Windows.WindowState _savedWindowState;
@@ -208,6 +214,11 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         }
 
         _airspace.AttachToWindow(this);
+
+        // Phase 16 (STAB-03): subscribe to ViewportGrid.SizeChanged for debounced
+        // dynamic resolution updates. Must be AFTER OnSourceInitialized completes
+        // so PresentationSource is available for DPI measurement.
+        ViewportGrid.SizeChanged += OnViewportSizeChanged;
     }
 
     /// <summary>
@@ -373,6 +384,43 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         Application.Current.Resources["DeskbridgeHintFontSize"] = 12.0 + offset;
     }
 
+    /// <summary>
+    /// Phase 16 (STAB-03 / T-16-03): debounced resize handler. Resets the 500ms timer
+    /// on every SizeChanged event. Only fires <see cref="OnResizeSettled"/> when the
+    /// user stops dragging, preventing flooding of <c>UpdateSessionDisplaySettings</c>.
+    /// </summary>
+    private void OnViewportSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        _resizeTimer?.Stop();
+        _resizeTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _resizeTimer.Tick -= OnResizeSettled;
+        _resizeTimer.Tick += OnResizeSettled;
+        _resizeTimer.Start();
+    }
+
+    /// <summary>
+    /// Phase 16 (STAB-03): fires 500ms after the last resize event. Measures the
+    /// viewport's physical pixel dimensions and calls <see cref="RdpHostControl.UpdateResolution"/>
+    /// on the active host to dynamically adjust the remote session resolution.
+    /// </summary>
+    private void OnResizeSettled(object? sender, EventArgs e)
+    {
+        _resizeTimer?.Stop();
+
+        // Only update if the active host is an RDP session
+        var activeId = _tabHostManager.ActiveId;
+        if (activeId is null) return;
+        var host = _tabHostManager.GetHost(activeId.Value);
+        if (host is not RdpHostControl activeRdp) return;
+
+        var (w, h) = ViewportMeasurement.GetPhysicalPixelSize(ViewportGrid);
+        var source = System.Windows.PresentationSource.FromVisual(ViewportGrid);
+        var dpiPercent = source?.CompositionTarget is { } ct
+            ? ViewportMeasurement.GetDpiPercent(ct.TransformToDevice.M11)
+            : 100.0;
+        activeRdp.UpdateResolution(w, h, dpiPercent);
+    }
+
     private void OnHostMounted(object? sender, IProtocolHost host)
     {
         if (host is not RdpHostControl rdp) return;
@@ -399,6 +447,17 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             HostContainer.UpdateLayout();
 
             _airspace.RegisterHost(rdp.Host, ViewportSnapshot);
+
+            // STAB-03: Measure viewport physical pixels and pass to RdpHostControl
+            // so RdpConnectionConfigurator sets DesktopWidth/Height to match.
+            // Must happen AFTER UpdateLayout (so ViewportGrid has final dimensions)
+            // and BEFORE ConnectStage (Order=300) calls ConnectAsync.
+            var (vpWidth, vpHeight) = ViewportMeasurement.GetPhysicalPixelSize(ViewportGrid);
+            var source = System.Windows.PresentationSource.FromVisual(ViewportGrid);
+            var dpiPercent = source?.CompositionTarget is { } ct
+                ? ViewportMeasurement.GetDpiPercent(ct.TransformToDevice.M11)
+                : 100.0;
+            rdp.SetViewportDimensions(vpWidth, vpHeight, dpiPercent);
 
             // TabHostManager's OnHostMounted handler runs via the same coordinator
             // event and publishes TabSwitchedEvent(previous, thisHost). OnTabSwitched

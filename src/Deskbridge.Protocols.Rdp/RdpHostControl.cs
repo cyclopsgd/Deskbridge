@@ -33,6 +33,22 @@ public sealed class RdpHostControl : IProtocolHost
     private TaskCompletionSource<bool>? _loginTcs;
     private bool _disposed;
 
+    // Phase 16 (STAB-03): viewport pixel dimensions measured from the WPF visual tree.
+    // Set by MainWindow.OnHostMounted via SetViewportDimensions BEFORE ConnectAsync.
+    // Injected into ConnectionContext.Properties so RdpConnectionConfigurator reads them.
+    private int _viewportPixelWidth;
+    private int _viewportPixelHeight;
+    private double _dpiPercent;
+
+    // Phase 16: gates dynamic resize calls. UpdateSessionDisplaySettings throws E_FAIL
+    // before the RDP session is fully established. [CITED: 16-RESEARCH Pitfall 4]
+    private bool _loginComplete;
+
+    // Phase 16: once set, skip further UpdateSessionDisplaySettings calls and rely on
+    // SmartSizing fallback. Prevents repeated COMException spam for servers that don't
+    // support dynamic resolution (xrdp, RDP < 8.1). [CITED: 16-RESEARCH Pitfall 5]
+    private bool _dynamicResizeFailed;
+
     // Phase 5 fire-and-forget close integration: set by DisconnectAsync before
     // _rdp.Disconnect(). Consumed by OnDisconnectedAfterConnectHandler to
     // suppress DisconnectedAfterConnect when the user initiated the close —
@@ -101,7 +117,16 @@ public sealed class RdpHostControl : IProtocolHost
 
         _logger = logger;
         ConnectionId = connectionId;
-        _host = new WindowsFormsHost { Background = System.Windows.Media.Brushes.Black };
+        // STAB-04: explicit Stretch alignment + zero margin ensures the WFH fills its
+        // layout slot completely. Without this, DPI rounding can produce a 1-pixel gap
+        // revealing the parent's background as a grey border.
+        _host = new WindowsFormsHost
+        {
+            Background = System.Windows.Media.Brushes.Black,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+            VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
+            Margin = new System.Windows.Thickness(0),
+        };
         _rdp = new AxMsRdpClient9NotSafeForScripting();
         // [CITED: RDP-ACTIVEX-PITFALLS §1] Pre-wire AxHost as WFH.Child so that when the
         // caller (MainWindow.OnHostMounted) adds _host to the visual tree, the AxHost's
@@ -110,6 +135,9 @@ public sealed class RdpHostControl : IProtocolHost
         // "not sited" despite the WFH being parented. Matches the canonical sequence used
         // by Plan 04-01's RdpSmokeHost via AxSiting.SiteAndConfigure (step 1).
         _host.Child = _rdp;
+        // STAB-04: ensure the AxHost child fills the WFH completely — eliminates grey
+        // border caused by DPI rounding mismatch between WPF DIPs and WinForms pixels.
+        _rdp.Dock = System.Windows.Forms.DockStyle.Fill;
     }
 
     public Task ConnectAsync(ConnectionContext context)
@@ -131,6 +159,17 @@ public sealed class RdpHostControl : IProtocolHost
         _rdp.OnLoginComplete += OnLoginComplete;
         _rdp.OnDisconnected += OnDisconnectedDuringConnect;
         _rdp.OnLogonError += OnLogonError;
+
+        // Phase 16 (STAB-03): inject viewport pixel dimensions into the context so
+        // RdpConnectionConfigurator can set DesktopWidth/Height to match the viewport
+        // instead of using the hardcoded 1920x1080 fallback. SetViewportDimensions
+        // is called by MainWindow.OnHostMounted after measuring ViewportGrid.
+        if (_viewportPixelWidth > 0 && _viewportPixelHeight > 0)
+        {
+            context.Properties["ViewportPixelWidth"] = _viewportPixelWidth;
+            context.Properties["ViewportPixelHeight"] = _viewportPixelHeight;
+            context.Properties["DpiPercent"] = _dpiPercent;
+        }
 
         RdpConnectionConfigurator.Apply(_rdp, context);
 
@@ -345,6 +384,10 @@ public sealed class RdpHostControl : IProtocolHost
 
     private void OnLoginComplete(object? sender, EventArgs e)
     {
+        // Phase 16: gate dynamic resize calls — UpdateSessionDisplaySettings throws
+        // E_FAIL before the session is fully established. [CITED: 16-RESEARCH Pitfall 4]
+        _loginComplete = true;
+
         // Swap OnDisconnected from "during connect" (fails _loginTcs) to "after connect"
         // (raises DisconnectedAfterConnect for Plan 04-03 reconnect coordinator).
         if (_rdp is not null)
@@ -383,6 +426,68 @@ public sealed class RdpHostControl : IProtocolHost
     {
         ErrorOccurred?.Invoke(this, $"LogonError: {e.lError}");
         _logger.LogWarning("OnLogonError: lError={LError}", e.lError);
+    }
+
+    // --- Phase 16: viewport dimension injection + dynamic resize -------------
+
+    /// <summary>
+    /// Sets the viewport pixel dimensions measured from the WPF visual tree.
+    /// Must be called AFTER the host is added to the visual tree and BEFORE ConnectAsync.
+    /// <see cref="ConnectAsync"/> injects these values into
+    /// <see cref="ConnectionContext.Properties"/> so <see cref="RdpConnectionConfigurator"/>
+    /// sets DesktopWidth/Height to match the viewport instead of 1920x1080.
+    /// </summary>
+    public void SetViewportDimensions(int pixelWidth, int pixelHeight, double dpiPercent)
+    {
+        _viewportPixelWidth = pixelWidth;
+        _viewportPixelHeight = pixelHeight;
+        _dpiPercent = dpiPercent;
+    }
+
+    /// <summary>
+    /// Dynamically updates the remote session resolution without reconnecting.
+    /// Only callable after <c>OnLoginComplete</c> fires. Falls back to
+    /// <c>SmartSizing=true</c> if the server does not support dynamic resolution
+    /// (xrdp, RDP &lt; 8.1).
+    /// [CITED: 16-RESEARCH.md Pattern 4, Pitfall 4, Pitfall 5]
+    /// </summary>
+    public void UpdateResolution(int pixelWidth, int pixelHeight, double dpiPercent)
+    {
+        if (_disposed || _rdp is null || !_loginComplete || _dynamicResizeFailed) return;
+
+        pixelWidth = ViewportMeasurement.ClampDesktopDimension(pixelWidth);
+        pixelHeight = ViewportMeasurement.ClampDesktopDimension(pixelHeight);
+        var (desktopScale, deviceScale) = ViewportMeasurement.GetScaleFactors(dpiPercent);
+
+        try
+        {
+            // UpdateSessionDisplaySettings is on IMsRdpClient9 which the AxHost wraps.
+            // Access via the generated wrapper — AxMsRdpClient9NotSafeForScripting
+            // exposes this method directly from the interop assembly.
+            _rdp.UpdateSessionDisplaySettings(
+                (uint)pixelWidth, (uint)pixelHeight,
+                (uint)pixelWidth, (uint)pixelHeight,
+                0,  // orientation: landscape
+                desktopScale, deviceScale);
+        }
+        catch (COMException ex)
+        {
+            // Server does not support dynamic resolution — fall back to SmartSizing.
+            // T-16-03: _dynamicResizeFailed prevents repeated COMException spam.
+            _dynamicResizeFailed = true;
+            _rdp.AdvancedSettings9.SmartSizing = true;
+            _logger.LogWarning(
+                "UpdateSessionDisplaySettings not supported for {ConnectionId}: {ExceptionType} HResult=0x{HResult:X8} -- falling back to SmartSizing",
+                ConnectionId, ex.GetType().Name, ex.HResult);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            // Unexpected error — log and disable dynamic resize for this session.
+            _dynamicResizeFailed = true;
+            _logger.LogWarning(
+                "UpdateResolution unexpected error for {ConnectionId}: {ExceptionType} -- disabling dynamic resize",
+                ConnectionId, ex.GetType().Name);
+        }
     }
 
     // --- Helpers -------------------------------------------------------------
