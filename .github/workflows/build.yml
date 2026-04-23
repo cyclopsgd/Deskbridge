@@ -130,3 +130,130 @@ jobs:
           --releaseName "Deskbridge ${{ steps.version.outputs.version }}"
           --tag ${{ github.ref_name }}
           ${{ steps.channel.outputs.prerelease == 'true' && '--pre' || '' }}
+
+  msix:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          # MSIX requires 4-part version (X.Y.Z.0)
+          echo "version=${ver}.0" >> $GITHUB_OUTPUT
+          echo "tag_version=${ver}" >> $GITHUB_OUTPUT
+
+      - name: Publish for MSIX
+        run: >
+          dotnet publish src/Deskbridge/Deskbridge.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:Version=${{ steps.version.outputs.tag_version }}
+          --output publish-msix
+
+      - name: Generate Store assets from icon
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          $outDir = "publish-msix/Assets"
+          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+          $ico = New-Object System.Drawing.Icon("src/Deskbridge/Assets/app.ico", 256, 256)
+          $srcBmp = $ico.ToBitmap()
+          $items = @{
+            "Square44x44Logo" = @(44, 44)
+            "Square150x150Logo" = @(150, 150)
+            "Square310x310Logo" = @(310, 310)
+            "Wide310x150Logo" = @(310, 150)
+            "StoreLogo" = @(50, 50)
+          }
+          foreach ($kv in $items.GetEnumerator()) {
+            $name = $kv.Key; $w = $kv.Value[0]; $h = $kv.Value[1]
+            $bmp = New-Object System.Drawing.Bitmap($w, $h)
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $g.Clear([System.Drawing.Color]::Transparent)
+            if ($name -eq "Wide310x150Logo") {
+              $iconSize = 120
+              $x = [int](($w - $iconSize) / 2); $y = [int](($h - $iconSize) / 2)
+              $g.DrawImage($srcBmp, $x, $y, $iconSize, $iconSize)
+            } else {
+              $padding = [int]($w * 0.1)
+              $g.DrawImage($srcBmp, $padding, $padding, $w - ($padding * 2), $h - ($padding * 2))
+            }
+            $g.Dispose()
+            $bmp.Save((Join-Path $outDir "$name.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+          }
+          $srcBmp.Dispose(); $ico.Dispose()
+
+      - name: Create AppxManifest.xml
+        shell: bash
+        run: |
+          cat > publish-msix/AppxManifest.xml << 'MANIFEST'
+          <?xml version="1.0" encoding="utf-8"?>
+          <Package
+            xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+            xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+            xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+            IgnorableNamespaces="uap rescap">
+            <Identity
+              Name="GeorgeAD.Deskbridge"
+              Publisher="CN=2FA7567B-3409-4DA3-BDA6-58F79513C2B7"
+              Version="VERSION_PLACEHOLDER"
+              ProcessorArchitecture="x64" />
+            <Properties>
+              <DisplayName>Deskbridge</DisplayName>
+              <PublisherDisplayName>GeorgeAD</PublisherDisplayName>
+              <Logo>Assets\StoreLogo.png</Logo>
+            </Properties>
+            <Dependencies>
+              <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+            </Dependencies>
+            <Resources>
+              <Resource Language="en-us" />
+            </Resources>
+            <Applications>
+              <Application Id="Deskbridge"
+                Executable="Deskbridge.exe"
+                EntryPoint="Windows.FullTrustApplication">
+                <uap:VisualElements
+                  DisplayName="Deskbridge"
+                  Description="Modern Windows RDP connection manager"
+                  BackgroundColor="transparent"
+                  Square150x150Logo="Assets\Square150x150Logo.png"
+                  Square44x44Logo="Assets\Square44x44Logo.png">
+                  <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\Square310x310Logo.png" />
+                </uap:VisualElements>
+              </Application>
+            </Applications>
+            <Capabilities>
+              <rescap:Capability Name="runFullTrust" />
+            </Capabilities>
+          </Package>
+          MANIFEST
+          sed -i "s/VERSION_PLACEHOLDER/${{ steps.version.outputs.version }}/" publish-msix/AppxManifest.xml
+
+      - name: Pack MSIX
+        shell: pwsh
+        run: |
+          $makeappx = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe" | Sort-Object FullName | Select-Object -Last 1
+          & $makeappx.FullName pack /d publish-msix /p "Deskbridge-${{ steps.version.outputs.tag_version }}.msix" /o
+
+      - name: Upload MSIX artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Deskbridge-MSIX-${{ steps.version.outputs.tag_version }}
+          path: "Deskbridge-*.msix"
+          retention-days: 90
+          if-no-files-found: error

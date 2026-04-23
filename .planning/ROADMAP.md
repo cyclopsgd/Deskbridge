@@ -298,8 +298,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md -- Bulk delete crash fix (DeleteBatch + active session close) and TreeView virtualization (Depth property + converter refactor + enable virtualization)
-- [ ] 15-02-PLAN.md -- Tab switch black screen fix (AirspaceSwapper SnapshotSingleHost + bitmap overlay during switch)
+- [x] 15-01-PLAN.md -- Bulk delete crash fix (DeleteBatch + active session close) and TreeView virtualization (Depth property + converter refactor + enable virtualization)
+- [x] 15-02-PLAN.md -- Tab switch black screen fix (AirspaceSwapper SnapshotSingleHost + bitmap overlay during switch)
 
 ### Phase 16: RDP Quality
 **Goal**: RDP sessions look sharp and fill the viewport cleanly, matching or exceeding mRemoteNG visual quality on the same hardware
@@ -308,7 +308,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User sees RDP sessions rendered at native resolution matching their monitor DPI, with noticeably less blur compared to mRemoteNG on the same connection
   2. User sees no grey border around the VM viewport (or if the border is caused by Group Policy, investigation documents the root cause and any available mitigation)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 16-01-PLAN.md -- Resolution matching (viewport pixel measurement + DPI scale factors + SmartSizing=false) and dynamic resize (UpdateSessionDisplaySettings + debounced SizeChanged + SmartSizing fallback)
 
 ### Phase 17: Popout Window
 **Goal**: Users can detach an RDP session from the tab bar into its own floating window and bring it back, enabling multi-monitor workflows without losing tab management
@@ -344,6 +347,6 @@ Phase 14, 15, 16 can run in parallel after Phase 13. Phase 17 depends on 15 and 
 | 12. General Polish Sweep | v1.1 | 1/2 | In Progress | - |
 | 13. Quick Fixes | v1.2 | 2/2 | Complete    | 2026-04-22 |
 | 14. UX Improvements | v1.2 | 1/2 | Complete    | 2026-04-22 |
-| 15. Stability | v1.2 | 0/2 | Not started | - |
-| 16. RDP Quality | v1.2 | 0/0 | Not started | - |
+| 15. Stability | v1.2 | 2/2 | Complete    | 2026-04-22 |
+| 16. RDP Quality | v1.2 | 0/1 | Not started | - |
 | 17. Popout Window | v1.2 | 0/0 | Not started | - |
