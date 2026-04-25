@@ -368,6 +368,12 @@ public partial class ConnectionTreeControl : UserControl
         _suppressPasswordChanged = true;
         QuickPasswordBox.Password = "";
         _suppressPasswordChanged = false;
+        Serilog.Log.Debug(
+            "QuickPassword state: IsQuickPasswordVisible={Visible} ShowButton={Button} ShowField={Field} HasStored={Stored}",
+            _viewModel.IsQuickPasswordVisible,
+            _viewModel.ShowQuickPasswordButton,
+            _viewModel.ShowQuickPasswordField,
+            _viewModel.HasStoredCredential);
     }
 
     private void QuickPassword_GotFocus(object sender, RoutedEventArgs e)

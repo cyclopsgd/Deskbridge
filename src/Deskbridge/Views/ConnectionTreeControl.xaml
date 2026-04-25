@@ -709,6 +709,20 @@
                                                    Margin="0,4"
                                                    Visibility="{Binding IsQuickPasswordVisible,
                                                        Converter={StaticResource BoolToVisibility}}" />
+                                        <!-- No password set — click to add -->
+                                        <ui:Button Grid.Row="2" Grid.Column="1" Margin="0,4"
+                                            Content="No password"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left"
+                                            Appearance="Transparent" FontSize="12"
+                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                            Visibility="{Binding ShowQuickNoPassword,
+                                                Converter={StaticResource BoolToVisibility}}"
+                                            Click="QuickPasswordChange_Click">
+                                            <ui:Button.Icon>
+                                                <ui:SymbolIcon Symbol="Add16" FontSize="12" />
+                                            </ui:Button.Icon>
+                                        </ui:Button>
                                         <!-- Password saved button -->
                                         <ui:Button Grid.Row="2" Grid.Column="1" Margin="0,4"
                                             Content="Saved"

@@ -79,6 +79,10 @@ public partial class ConnectionTreeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsQuickCredentialFieldsEnabled))]
     [NotifyPropertyChangedFor(nameof(IsQuickPasswordVisible))]
     [NotifyPropertyChangedFor(nameof(HasStoredCredential))]
+    [NotifyPropertyChangedFor(nameof(ShowQuickPasswordButton))]
+    [NotifyPropertyChangedFor(nameof(ShowQuickPasswordField))]
+    [NotifyPropertyChangedFor(nameof(ShowQuickPasswordCancel))]
+    [NotifyPropertyChangedFor(nameof(ShowQuickNoPassword))]
     public partial TreeItemViewModel? PrimarySelectedItem { get; set; }
 
     /// <summary>
@@ -124,9 +128,12 @@ public partial class ConnectionTreeViewModel : ObservableObject
         IsQuickPasswordVisible && HasStoredCredential && !_isQuickChangingPassword;
 
     public bool ShowQuickPasswordField =>
-        IsQuickPasswordVisible && (!HasStoredCredential || _isQuickChangingPassword);
+        IsQuickPasswordVisible && _isQuickChangingPassword;
 
     public bool ShowQuickPasswordCancel => _isQuickChangingPassword;
+
+    public bool ShowQuickNoPassword =>
+        IsQuickPasswordVisible && !HasStoredCredential && !_isQuickChangingPassword;
 
     public void StartQuickPasswordChange()
     {
@@ -134,6 +141,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowQuickPasswordButton));
         OnPropertyChanged(nameof(ShowQuickPasswordField));
         OnPropertyChanged(nameof(ShowQuickPasswordCancel));
+        OnPropertyChanged(nameof(ShowQuickNoPassword));
     }
 
     public void CancelQuickPasswordChange()
@@ -142,6 +150,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowQuickPasswordButton));
         OnPropertyChanged(nameof(ShowQuickPasswordField));
         OnPropertyChanged(nameof(ShowQuickPasswordCancel));
+        OnPropertyChanged(nameof(ShowQuickNoPassword));
     }
 
     public void ClearQuickPassword()
@@ -162,6 +171,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowQuickPasswordButton));
         OnPropertyChanged(nameof(ShowQuickPasswordField));
         OnPropertyChanged(nameof(ShowQuickPasswordCancel));
+        OnPropertyChanged(nameof(ShowQuickNoPassword));
     }
 
     public void RefreshQuickProperties()
