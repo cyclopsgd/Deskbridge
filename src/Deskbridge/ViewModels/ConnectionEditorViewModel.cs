@@ -114,6 +114,13 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     }
 
     [RelayCommand]
+    private void CancelPasswordChange()
+    {
+        IsChangingPassword = false;
+        PasswordMismatchError = string.Empty;
+    }
+
+    [RelayCommand]
     private void ClearPassword()
     {
         HasStoredPassword = false;

@@ -115,10 +115,49 @@ public partial class ConnectionTreeViewModel : ObservableObject
     public bool IsQuickPasswordVisible =>
         SelectedItemCredentialMode == CredentialMode.Own;
 
+    private bool _isQuickChangingPassword;
+
+    public bool ShowQuickPasswordButton =>
+        IsQuickPasswordVisible && HasStoredCredential && !_isQuickChangingPassword;
+
+    public bool ShowQuickPasswordField =>
+        IsQuickPasswordVisible && (!HasStoredCredential || _isQuickChangingPassword);
+
+    public bool ShowQuickPasswordCancel => _isQuickChangingPassword;
+
+    public void StartQuickPasswordChange()
+    {
+        _isQuickChangingPassword = true;
+        OnPropertyChanged(nameof(ShowQuickPasswordButton));
+        OnPropertyChanged(nameof(ShowQuickPasswordField));
+        OnPropertyChanged(nameof(ShowQuickPasswordCancel));
+    }
+
+    public void CancelQuickPasswordChange()
+    {
+        _isQuickChangingPassword = false;
+        OnPropertyChanged(nameof(ShowQuickPasswordButton));
+        OnPropertyChanged(nameof(ShowQuickPasswordField));
+        OnPropertyChanged(nameof(ShowQuickPasswordCancel));
+    }
+
+    public void ClearQuickPassword()
+    {
+        if (PrimarySelectedItem is not ConnectionTreeItemViewModel connVm) return;
+        var model = _connectionStore.GetById(connVm.Id);
+        if (model is null) return;
+        try { _credentialService.DeleteForConnection(model); } catch { }
+        _isQuickChangingPassword = false;
+        OnPropertyChanged(nameof(HasStoredCredential));
+        OnPropertyChanged(nameof(ShowQuickPasswordButton));
+        OnPropertyChanged(nameof(ShowQuickPasswordField));
+    }
+
     public void RefreshStoredCredentialState() => OnPropertyChanged(nameof(HasStoredCredential));
 
     public void RefreshQuickProperties()
     {
+        _isQuickChangingPassword = false;
         OnPropertyChanged(nameof(PrimarySelectedItem));
         OnPropertyChanged(nameof(IsConnectionSelected));
         OnPropertyChanged(nameof(IsGroupSelected));
@@ -127,6 +166,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
         OnPropertyChanged(nameof(IsQuickCredentialFieldsVisible));
         OnPropertyChanged(nameof(IsQuickCredentialFieldsEnabled));
         OnPropertyChanged(nameof(HasStoredCredential));
+        OnPropertyChanged(nameof(ShowQuickPasswordButton));
+        OnPropertyChanged(nameof(ShowQuickPasswordField));
     }
 
     /// <summary>

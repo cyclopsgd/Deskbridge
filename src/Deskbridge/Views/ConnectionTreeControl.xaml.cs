@@ -410,6 +410,23 @@ public partial class ConnectionTreeControl : UserControl
         }
     }
 
+    private void QuickPasswordChange_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.StartQuickPasswordChange();
+    }
+
+    private void QuickPasswordClear_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ClearQuickPassword();
+        QuickPasswordBox.Password = "";
+    }
+
+    private void QuickPasswordCancel_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.CancelQuickPasswordChange();
+        QuickPasswordBox.Password = "";
+    }
+
     private void GroupQuickProperty_LostFocus(object sender, RoutedEventArgs e)
     {
         try

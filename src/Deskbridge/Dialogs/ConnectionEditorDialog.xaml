@@ -138,6 +138,13 @@
                         <TextBlock Text="{Binding PasswordMismatchError}"
                             Style="{StaticResource ErrorTextStyle}"
                             Margin="{StaticResource FormFieldSpacing}" />
+
+                        <ui:Button Content="Cancel"
+                            Command="{Binding CancelPasswordChangeCommand}"
+                            Visibility="{Binding IsChangingPassword, Converter={StaticResource BoolToVisibility}}"
+                            Appearance="Transparent"
+                            HorizontalAlignment="Right"
+                            Padding="8,4" FontSize="12" />
                     </StackPanel>
 
                     <TextBlock Text="Domain" Style="{StaticResource FieldLabelStyle}" />
