@@ -420,6 +420,18 @@ public partial class ConnectionTreeControl : UserControl
         QuickPasswordBox.Password = "";
     }
 
+    private void QuickPasswordSave_Click(object sender, RoutedEventArgs e)
+    {
+        var pw = QuickPasswordBox.Password;
+        if (!string.IsNullOrEmpty(pw))
+        {
+            _viewModel.SaveQuickPassword(pw);
+            _viewModel.RefreshStoredCredentialState();
+        }
+        _viewModel.CancelQuickPasswordChange();
+        QuickPasswordBox.Password = "";
+    }
+
     private void GroupQuickProperty_LostFocus(object sender, RoutedEventArgs e)
     {
         try

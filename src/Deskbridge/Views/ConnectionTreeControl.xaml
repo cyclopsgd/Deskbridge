@@ -746,12 +746,18 @@
                                                 GotFocus="QuickPassword_GotFocus"
                                                 LostFocus="QuickPassword_LostFocus"
                                                 PasswordChanged="QuickPassword_PasswordChanged" />
-                                            <ui:Button Content="Cancel" FontSize="11"
-                                                Appearance="Transparent"
-                                                HorizontalAlignment="Right"
-                                                Padding="6,2" Margin="0,2,0,0"
-                                                Visibility="{Binding ShowQuickPasswordCancel, Converter={StaticResource BoolToVisibility}}"
-                                                Click="QuickPasswordCancel_Click" />
+                                            <StackPanel Orientation="Horizontal"
+                                                HorizontalAlignment="Right" Margin="0,2,0,0"
+                                                Visibility="{Binding ShowQuickPasswordCancel, Converter={StaticResource BoolToVisibility}}">
+                                                <ui:Button Content="Cancel" FontSize="11"
+                                                    Appearance="Transparent"
+                                                    Padding="6,2"
+                                                    Click="QuickPasswordCancel_Click" />
+                                                <ui:Button Content="Save" FontSize="11"
+                                                    Appearance="Primary"
+                                                    Padding="6,2" Margin="4,0,0,0"
+                                                    Click="QuickPasswordSave_Click" />
+                                            </StackPanel>
                                         </StackPanel>
 
                                         <!-- Domain — editable when Own, read-only when Inherit (D-05, D-06) -->
