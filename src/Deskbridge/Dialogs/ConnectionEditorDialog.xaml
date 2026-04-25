@@ -9,6 +9,7 @@
     PrimaryButtonText="Save"
     CloseButtonText="Cancel"
     PrimaryButtonAppearance="Primary"
+    IsPrimaryButtonEnabled="{Binding CanSave}"
     DefaultButton="Primary">
 
     <!-- BasedOn style for WPF-UI theming -->
@@ -30,6 +31,9 @@
                 <TextBlock Text="Hostname" Style="{StaticResource FieldLabelStyle}" />
                 <ui:TextBox Text="{Binding Hostname, UpdateSourceTrigger=PropertyChanged}"
                     PlaceholderText="hostname or IP" Margin="{StaticResource FormFieldSpacing}" />
+                <TextBlock Text="{Binding HostnameError}"
+                    Style="{StaticResource ErrorTextStyle}"
+                    Visibility="{Binding CanSave, Converter={StaticResource InverseBoolToVisibility}}" />
 
                 <TextBlock Text="Port" Style="{StaticResource FieldLabelStyle}" />
                 <ui:TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"

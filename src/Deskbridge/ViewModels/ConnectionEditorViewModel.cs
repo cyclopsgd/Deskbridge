@@ -35,8 +35,15 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSave))]
+    [NotifyPropertyChangedFor(nameof(HostnameError))]
     [Required]
     public partial string Hostname { get; set; } = string.Empty;
+
+    public bool CanSave => !string.IsNullOrWhiteSpace(Hostname);
+
+    public string HostnameError =>
+        string.IsNullOrWhiteSpace(Hostname) ? "Hostname is required" : string.Empty;
 
     [ObservableProperty]
     public partial int Port { get; set; } = 3389;
