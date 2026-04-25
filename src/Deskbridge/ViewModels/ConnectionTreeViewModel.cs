@@ -312,6 +312,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
     /// <summary>Phase 9 (PROP-02): refresh status dot when selection changes.</summary>
     partial void OnPrimarySelectedItemChanged(TreeItemViewModel? value)
     {
+        _isQuickChangingPassword = false;
+
         if (value is ConnectionTreeItemViewModel conn)
         {
             SelectedConnectionState = _connectionStateMap.TryGetValue(conn.Id, out var state)
