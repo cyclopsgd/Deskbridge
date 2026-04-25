@@ -103,6 +103,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsQuickCredentialFieldsEnabled));
                 OnPropertyChanged(nameof(IsQuickPasswordVisible));
                 OnPropertyChanged(nameof(HasStoredCredential));
+                OnPropertyChanged(nameof(ShowQuickPasswordButton));
+                OnPropertyChanged(nameof(ShowQuickPasswordField));
+                OnPropertyChanged(nameof(ShowQuickPasswordCancel));
             }
         }
     }
@@ -153,7 +156,13 @@ public partial class ConnectionTreeViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowQuickPasswordField));
     }
 
-    public void RefreshStoredCredentialState() => OnPropertyChanged(nameof(HasStoredCredential));
+    public void RefreshStoredCredentialState()
+    {
+        OnPropertyChanged(nameof(HasStoredCredential));
+        OnPropertyChanged(nameof(ShowQuickPasswordButton));
+        OnPropertyChanged(nameof(ShowQuickPasswordField));
+        OnPropertyChanged(nameof(ShowQuickPasswordCancel));
+    }
 
     public void RefreshQuickProperties()
     {

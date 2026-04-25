@@ -54,7 +54,8 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     [NotifyPropertyChangedFor(nameof(IsCredentialFieldsVisible))]
     [NotifyPropertyChangedFor(nameof(IsInheritInfoBarVisible))]
     [NotifyPropertyChangedFor(nameof(IsPromptInfoBarVisible))]
-    [NotifyPropertyChangedFor(nameof(ShowChangePasswordButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordSavedButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordOptions))]
     [NotifyPropertyChangedFor(nameof(ShowPasswordFields))]
     public partial CredentialMode CredentialMode { get; set; } = CredentialMode.Inherit;
 
@@ -84,39 +85,52 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     public bool IsPromptInfoBarVisible => CredentialMode == CredentialMode.Prompt;
 
     // --- Change Password UX state (UX-01) ---
+    // Layer 1: "Password saved" button (default when password exists)
+    // Layer 2: "Change Password" + "Clear Password" + undo button
+    // Layer 3: Password + confirm fields (after clicking Change Password)
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowChangePasswordButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordSavedButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordOptions))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordFields))]
+    public partial bool IsShowingPasswordOptions { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordSavedButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordOptions))]
     [NotifyPropertyChangedFor(nameof(ShowPasswordFields))]
     public partial bool IsChangingPassword { get; set; }
 
     [ObservableProperty]
     public partial string PasswordMismatchError { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Shows the "Change Password" button when editing an existing connection
-    /// that has stored credentials in Own mode and the user has not yet clicked it.
-    /// </summary>
-    public bool ShowChangePasswordButton =>
-        HasStoredPassword && !IsChangingPassword && IsCredentialFieldsEnabled;
+    public bool ShowPasswordSavedButton =>
+        HasStoredPassword && !IsShowingPasswordOptions && !IsChangingPassword && IsCredentialFieldsEnabled;
 
-    /// <summary>
-    /// Shows the password entry fields: always for new connections in Own mode,
-    /// or for existing connections after the user clicks "Change Password".
-    /// </summary>
+    public bool ShowPasswordOptions =>
+        HasStoredPassword && IsShowingPasswordOptions && !IsChangingPassword && IsCredentialFieldsEnabled;
+
     public bool ShowPasswordFields =>
         IsCredentialFieldsEnabled && (!HasStoredPassword || IsChangingPassword);
+
+    [RelayCommand]
+    private void ShowPasswordActions()
+    {
+        IsShowingPasswordOptions = true;
+    }
 
     [RelayCommand]
     private void StartPasswordChange()
     {
         IsChangingPassword = true;
+        IsShowingPasswordOptions = false;
     }
 
     [RelayCommand]
     private void CancelPasswordChange()
     {
         IsChangingPassword = false;
+        IsShowingPasswordOptions = false;
         PasswordMismatchError = string.Empty;
     }
 
@@ -125,6 +139,7 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     {
         HasStoredPassword = false;
         IsChangingPassword = false;
+        IsShowingPasswordOptions = false;
         _password = string.Empty;
         PasswordMismatchError = string.Empty;
     }
@@ -198,7 +213,8 @@ public partial class ConnectionEditorViewModel : ObservableValidator
         {
             if (SetProperty(ref _hasStoredPassword, value))
             {
-                OnPropertyChanged(nameof(ShowChangePasswordButton));
+                OnPropertyChanged(nameof(ShowPasswordSavedButton));
+                OnPropertyChanged(nameof(ShowPasswordOptions));
                 OnPropertyChanged(nameof(ShowPasswordFields));
             }
         }

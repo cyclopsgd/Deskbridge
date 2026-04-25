@@ -100,30 +100,52 @@
                         PlaceholderText="username"
                         IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="{StaticResource FormFieldSpacing}" />
 
-                    <!-- Password saved indicator (visible when password exists and not changing) -->
-                    <Grid Visibility="{Binding ShowChangePasswordButton, Converter={StaticResource BoolToVisibility}}"
+                    <!-- Layer 1: "Password saved" button -->
+                    <ui:Button Content="Password saved"
+                        Command="{Binding ShowPasswordActionsCommand}"
+                        Visibility="{Binding ShowPasswordSavedButton, Converter={StaticResource BoolToVisibility}}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Appearance="Secondary"
+                        Margin="{StaticResource FormFieldSpacing}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="LockClosed24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+
+                    <!-- Layer 2: Change / Clear options + undo -->
+                    <Grid Visibility="{Binding ShowPasswordOptions, Converter={StaticResource BoolToVisibility}}"
                           Margin="{StaticResource FormFieldSpacing}">
-                        <ui:Button Content="Password saved"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:Button Grid.Column="0" Content="Change"
                             Command="{Binding StartPasswordChangeCommand}"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Left"
+                            HorizontalAlignment="Stretch" Margin="0,0,4,0"
                             Appearance="Secondary">
                             <ui:Button.Icon>
-                                <ui:SymbolIcon Symbol="LockClosed24" />
+                                <ui:SymbolIcon Symbol="Edit24" />
                             </ui:Button.Icon>
                         </ui:Button>
-                        <ui:Button Appearance="Transparent"
+                        <ui:Button Grid.Column="1" Content="Clear"
                             Command="{Binding ClearPasswordCommand}"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Width="28" Height="28"
-                            Padding="0" Margin="0,0,4,0"
-                            ToolTip="Clear password">
-                            <ui:SymbolIcon Symbol="Dismiss16" FontSize="12" />
+                            HorizontalAlignment="Stretch" Margin="4,0,4,0"
+                            Appearance="Secondary">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="Delete24" />
+                            </ui:Button.Icon>
+                        </ui:Button>
+                        <ui:Button Grid.Column="2" Appearance="Transparent"
+                            Command="{Binding CancelPasswordChangeCommand}"
+                            Width="32" Height="32" Padding="0"
+                            ToolTip="Back">
+                            <ui:SymbolIcon Symbol="ArrowUndo24" />
                         </ui:Button>
                     </Grid>
 
-                    <!-- Password entry fields (visible for new connections, or after clicking Change Password) -->
+                    <!-- Layer 3: Password entry fields (new connections, or after clicking Change) -->
                     <StackPanel Visibility="{Binding ShowPasswordFields, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" />
                         <ui:PasswordBox x:Name="PasswordBox"
