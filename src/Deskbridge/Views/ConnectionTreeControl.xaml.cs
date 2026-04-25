@@ -361,24 +361,17 @@ public partial class ConnectionTreeControl : UserControl
         }
     }
 
-    private const string PasswordPlaceholder = "••••••••••";
     private bool _suppressPasswordChanged;
 
     private void UpdatePasswordFieldVisibility()
     {
         _suppressPasswordChanged = true;
-        QuickPasswordBox.Password = _viewModel.HasStoredCredential ? PasswordPlaceholder : "";
+        QuickPasswordBox.Password = "";
         _suppressPasswordChanged = false;
     }
 
     private void QuickPassword_GotFocus(object sender, RoutedEventArgs e)
     {
-        if (QuickPasswordBox.Password == PasswordPlaceholder)
-        {
-            _suppressPasswordChanged = true;
-            QuickPasswordBox.Password = "";
-            _suppressPasswordChanged = false;
-        }
     }
 
     private void QuickPassword_PasswordChanged(object sender, RoutedEventArgs e)
@@ -392,13 +385,7 @@ public partial class ConnectionTreeControl : UserControl
         try
         {
             var pw = QuickPasswordBox.Password;
-            if (string.IsNullOrEmpty(pw) && _viewModel.HasStoredCredential)
-            {
-                _suppressPasswordChanged = true;
-                QuickPasswordBox.Password = PasswordPlaceholder;
-                _suppressPasswordChanged = false;
-            }
-            else if (!string.IsNullOrEmpty(pw) && pw != PasswordPlaceholder)
+            if (!string.IsNullOrEmpty(pw))
             {
                 _viewModel.SaveQuickPassword(pw);
                 _viewModel.RefreshStoredCredentialState();

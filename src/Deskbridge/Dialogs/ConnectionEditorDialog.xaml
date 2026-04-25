@@ -113,39 +113,30 @@
                         </ui:Button.Icon>
                     </ui:Button>
 
-                    <!-- Layer 2: Change / Clear options + undo -->
+                    <!-- Layer 2: "Clear password" button + undo arrow -->
                     <Grid Visibility="{Binding ShowPasswordOptions, Converter={StaticResource BoolToVisibility}}"
                           Margin="{StaticResource FormFieldSpacing}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:Button Grid.Column="0" Content="Change"
+                        <ui:Button Content="Clear password"
                             Command="{Binding StartPasswordChangeCommand}"
-                            HorizontalAlignment="Stretch" Margin="0,0,4,0"
-                            Appearance="Secondary">
-                            <ui:Button.Icon>
-                                <ui:SymbolIcon Symbol="Edit24" />
-                            </ui:Button.Icon>
-                        </ui:Button>
-                        <ui:Button Grid.Column="1" Content="Clear"
-                            Command="{Binding ClearPasswordCommand}"
-                            HorizontalAlignment="Stretch" Margin="4,0,4,0"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
                             Appearance="Secondary">
                             <ui:Button.Icon>
                                 <ui:SymbolIcon Symbol="Delete24" />
                             </ui:Button.Icon>
                         </ui:Button>
-                        <ui:Button Grid.Column="2" Appearance="Transparent"
+                        <ui:Button Appearance="Transparent"
                             Command="{Binding CancelPasswordChangeCommand}"
-                            Width="32" Height="32" Padding="0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Width="28" Height="28"
+                            Padding="0" Margin="0,0,4,0"
                             ToolTip="Back">
-                            <ui:SymbolIcon Symbol="ArrowUndo24" />
+                            <ui:SymbolIcon Symbol="ArrowUndo24" FontSize="14" />
                         </ui:Button>
                     </Grid>
 
-                    <!-- Layer 3: Password entry fields (new connections, or after clicking Change) -->
+                    <!-- Password entry fields (new connections, or after clicking Clear password) -->
                     <StackPanel Visibility="{Binding ShowPasswordFields, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" />
                         <ui:PasswordBox x:Name="PasswordBox"

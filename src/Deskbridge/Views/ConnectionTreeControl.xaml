@@ -709,29 +709,19 @@
                                                    Margin="0,4"
                                                    Visibility="{Binding IsQuickPasswordVisible,
                                                        Converter={StaticResource BoolToVisibility}}" />
-                                        <!-- Password saved button (visible when password exists and not changing) -->
-                                        <Grid Grid.Row="2" Grid.Column="1" Margin="0,4"
-                                              Visibility="{Binding ShowQuickPasswordButton,
-                                                  Converter={StaticResource BoolToVisibility}}">
-                                            <ui:Button Content="Saved"
-                                                HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left"
-                                                Appearance="Secondary" FontSize="12"
-                                                Click="QuickPasswordChange_Click">
-                                                <ui:Button.Icon>
-                                                    <ui:SymbolIcon Symbol="LockClosed16" FontSize="12" />
-                                                </ui:Button.Icon>
-                                            </ui:Button>
-                                            <ui:Button Appearance="Transparent"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"
-                                                Width="24" Height="24"
-                                                Padding="0" Margin="0,0,2,0"
-                                                ToolTip="Clear password"
-                                                Click="QuickPasswordClear_Click">
-                                                <ui:SymbolIcon Symbol="Dismiss12" FontSize="10" />
-                                            </ui:Button>
-                                        </Grid>
+                                        <!-- Password saved button -->
+                                        <ui:Button Grid.Row="2" Grid.Column="1" Margin="0,4"
+                                            Content="Saved"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left"
+                                            Appearance="Secondary" FontSize="12"
+                                            Visibility="{Binding ShowQuickPasswordButton,
+                                                Converter={StaticResource BoolToVisibility}}"
+                                            Click="QuickPasswordChange_Click">
+                                            <ui:Button.Icon>
+                                                <ui:SymbolIcon Symbol="LockClosed16" FontSize="12" />
+                                            </ui:Button.Icon>
+                                        </ui:Button>
                                         <!-- Password field + cancel (visible when no password or changing) -->
                                         <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,4"
                                                     Visibility="{Binding ShowQuickPasswordField,

@@ -122,6 +122,8 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     [RelayCommand]
     private void StartPasswordChange()
     {
+        HasStoredPassword = false;
+        _password = string.Empty;
         IsChangingPassword = true;
         IsShowingPasswordOptions = false;
     }
