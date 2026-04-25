@@ -113,6 +113,15 @@ public partial class ConnectionEditorViewModel : ObservableValidator
         IsChangingPassword = true;
     }
 
+    [RelayCommand]
+    private void ClearPassword()
+    {
+        HasStoredPassword = false;
+        IsChangingPassword = false;
+        _password = string.Empty;
+        PasswordMismatchError = string.Empty;
+    }
+
     /// <summary>
     /// Validates that password and confirmation match when changing password.
     /// Called by code-behind before SetPassword.
@@ -174,7 +183,19 @@ public partial class ConnectionEditorViewModel : ObservableValidator
     /// this connection. Used by the dialog code-behind to show placeholder dots
     /// in the password field (matching the quick properties panel pattern).
     /// </summary>
-    public bool HasStoredPassword { get; private set; }
+    private bool _hasStoredPassword;
+    public bool HasStoredPassword
+    {
+        get => _hasStoredPassword;
+        private set
+        {
+            if (SetProperty(ref _hasStoredPassword, value))
+            {
+                OnPropertyChanged(nameof(ShowChangePasswordButton));
+                OnPropertyChanged(nameof(ShowPasswordFields));
+            }
+        }
+    }
 
     public void SetPassword(string password)
     {

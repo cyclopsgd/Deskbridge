@@ -100,21 +100,32 @@
                         PlaceholderText="username"
                         IsEnabled="{Binding IsCredentialFieldsEnabled}" Margin="{StaticResource FormFieldSpacing}" />
 
-                    <!-- Change Password button (visible for existing connections with stored credentials) -->
-                    <ui:Button Content="Change Password"
-                        Command="{Binding StartPasswordChangeCommand}"
-                        Visibility="{Binding ShowChangePasswordButton, Converter={StaticResource BoolToVisibility}}"
-                        HorizontalAlignment="Stretch"
-                        Appearance="Secondary"
-                        Margin="{StaticResource FormFieldSpacing}">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="ShieldKeyhole24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
+                    <!-- Password saved indicator (visible when password exists and not changing) -->
+                    <Grid Visibility="{Binding ShowChangePasswordButton, Converter={StaticResource BoolToVisibility}}"
+                          Margin="{StaticResource FormFieldSpacing}">
+                        <ui:Button Content="Password saved"
+                            Command="{Binding StartPasswordChangeCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Appearance="Secondary">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="LockClosed24" />
+                            </ui:Button.Icon>
+                        </ui:Button>
+                        <ui:Button Appearance="Transparent"
+                            Command="{Binding ClearPasswordCommand}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Width="28" Height="28"
+                            Padding="0" Margin="0,0,4,0"
+                            ToolTip="Clear password">
+                            <ui:SymbolIcon Symbol="Dismiss16" FontSize="12" />
+                        </ui:Button>
+                    </Grid>
 
                     <!-- Password entry fields (visible for new connections, or after clicking Change Password) -->
                     <StackPanel Visibility="{Binding ShowPasswordFields, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="New Password" Style="{StaticResource FieldLabelStyle}" />
+                        <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" />
                         <ui:PasswordBox x:Name="PasswordBox"
                             IsEnabled="{Binding IsCredentialFieldsEnabled}"
                             Margin="{StaticResource FormFieldSpacing}" />
