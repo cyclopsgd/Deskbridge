@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
-status: ready_to_plan
-stopped_at: Completed 18-02-PLAN.md
-last_updated: "2026-04-26T08:12:26.152Z"
+status: executing
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-04-26T12:23:16.711Z"
 last_activity: 2026-04-26
 progress:
-  total_phases: 24
+  total_phases: 25
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 2
-  percent: 4
+  total_plans: 5
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase --phase — 18
+**Current focus:** Phase 19 — savebatch-api
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Ready to plan
+Phase: 19 (savebatch-api) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -92,6 +92,7 @@ Progress: [███████░░░] 67%
 | Phase 10-tree-view-polish P02 | 2min | 2 tasks | 3 files |
 | Phase 18-settings-infrastructure P01 | 6min | 2 tasks | 4 files |
 | Phase 18-settings-infrastructure P02 | 4min | 2 tasks | 1 files |
+| Phase 19 P01 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,7 @@ Recent decisions affecting current work:
 - [Roadmap v1.3]: BenchmarkDotNet goes in separate Deskbridge.Benchmarks project (dev-only, not shipped)
 - [Roadmap v1.3]: Velopack uninstall hook cannot show UI -- headless context, must read settings.json via JsonDocument
 - IWindowStateService appended after Dispatcher? in TabHostManager ctor to preserve existing positional callers
+- SaveBatch accepts connections+groups for symmetry with DeleteBatch; UpdatedAt only on update path; caller-publishes event pattern
 
 ### Pending Todos
 
@@ -130,8 +132,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T08:12:26.146Z
-Stopped at: Completed 18-02-PLAN.md
-Resume file: .planning/phases/18-settings-infrastructure/18-03-PLAN.md
+Last session: 2026-04-26T12:23:16.704Z
+Stopped at: Completed 19-01-PLAN.md
+Resume file: .planning/phases/19-savebatch-api/19-02-PLAN.md
 
-**Planned Phase:** 18 (Settings Infrastructure) — 3 plans — 2026-04-26T07:46:03.503Z
+**Planned Phase:** 19 (SaveBatch API) — 2 plans — 2026-04-26T12:11:10.778Z
