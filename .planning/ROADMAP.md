@@ -453,3 +453,14 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
 | 23. Bulk Operations UX | v1.3 | 0/0 | Not started | - |
 | 24. Uninstall Cleanup | v1.3 | 0/0 | Not started | - |
+
+## Backlog
+
+### Phase 999.1: Resizable sidebar panel (BACKLOG)
+
+**Goal:** Replace fixed Width=240 sidebar with GridSplitter drag-to-resize. Needs airspace-safe implementation (GridSplitter can't overlap WindowsFormsHost/ActiveX viewport). MinWidth ~180, MaxWidth ~400.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
