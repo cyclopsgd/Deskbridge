@@ -222,9 +222,15 @@ public void ApplyBulkOperationsSettings(BulkOperationsRecord bulk)
 
 ### Pattern 4: TabHostManager Settings Injection
 **What:** Inject `IWindowStateService` into TabHostManager to read GDI threshold at construction time, replacing the `public const`.
+
+**Constructor parameter ordering (CRITICAL):** The new `IWindowStateService?` parameter MUST be appended AFTER the existing `Dispatcher? dispatcher = null` parameter. The existing test files (`TabHostManagerTests.cs`, `TabHostManagerLruTests.cs`) pass `Dispatcher.CurrentDispatcher` as the 6th positional argument. Inserting `IWindowStateService?` before `Dispatcher?` would cause the `Dispatcher` value to bind to the wrong parameter type, producing a compile error.
+
+**Fate of the `public const GdiWarningThreshold`:** D-06 says "the const becomes just the default fallback." Change visibility from `public const` to `private const int DefaultGdiWarningThreshold = 15` and use it as the fallback when `windowState` is null. This avoids breaking unknown external consumers while making the intent clear. `BulkOperationsRecord.Default.GdiWarningThreshold` also equals 15, providing a second fallback path.
+
 **Example:**
 ```csharp
 // TabHostManager constructor addition
+private const int DefaultGdiWarningThreshold = 15;  // was: public const int GdiWarningThreshold = 15
 private readonly int _gdiWarningThreshold;
 
 public TabHostManager(
@@ -233,8 +239,8 @@ public TabHostManager(
     IDisconnectPipeline disconnect,
     ISnackbarService snackbar,
     ILogger<TabHostManager> logger,
-    IWindowStateService? windowState = null,  // nullable for test compat
-    Dispatcher? dispatcher = null)
+    Dispatcher? dispatcher = null,
+    IWindowStateService? windowState = null)  // AFTER dispatcher to preserve positional callers
 {
     // ... existing assignments ...
     var settings = windowState?.LoadAsync().GetAwaiter().GetResult();
@@ -247,6 +253,7 @@ public TabHostManager(
 - **Separate persist method per property:** Don't create `PersistConfirmBeforeBulkOperations()` and `PersistGdiWarningThreshold()` separately. Both are in the same `BulkOperationsRecord`, so a single `PersistBulkOperationsSettings()` handles both (matches the existing pattern where `PersistSecuritySettings()` covers all three security props).
 - **Loading settings on every threshold check:** Don't call `LoadAsync()` inside `FireGdiWarningIfCrossingThreshold()`. Read the value once at construction. Mid-session changes take effect on next app restart (or next TabHostManager construction).
 - **Adding a SchemaVersion bump:** D-10 explicitly says no bump. Nullable properties with defaults handle backward compatibility.
+- **Inserting new ctor params before existing optional params:** Always append new optional parameters after existing ones. The test files use positional arguments; reordering breaks them silently at compile time.
 
 ## Don't Hand-Roll
 
@@ -294,6 +301,12 @@ public TabHostManager(
 **Why it happens:** Source-gen uses `JsonKnownNamingPolicy.CamelCase`, producing `uninstall.cleanUpOnUninstall`. Phase 24 must match this exactly.
 **How to avoid:** Pin the JSON property path now: `settings.json` will contain `"uninstall": { "cleanUpOnUninstall": true/false }`. Document this in research (here) and in the `UninstallRecord` doc comment.
 **Warning signs:** Phase 24 reads the value and always gets `false` despite user enabling the toggle.
+
+### Pitfall 7: TabHostManager Constructor Parameter Ordering
+**What goes wrong:** Existing test files pass `Dispatcher.CurrentDispatcher` as a positional argument to the TabHostManager constructor. If `IWindowStateService?` is inserted before `Dispatcher?`, the Dispatcher value binds to the wrong parameter, causing a compile error.
+**Why it happens:** C# optional parameters are resolved positionally. Both `TabHostManagerTests.BuildSut()` and `TabHostManagerLruTests.BuildSut()` use positional arguments.
+**How to avoid:** Append `IWindowStateService? windowState = null` AFTER `Dispatcher? dispatcher = null` in the constructor signature. Existing test callers continue to work without changes to their argument lists (they just don't pass `windowState`, which defaults to null).
+**Warning signs:** Compile errors in test files after the ctor change.
 
 ## Code Examples
 
@@ -458,13 +471,13 @@ This table consolidates every file that must change, for the planner to size tas
 |------|-------------|-------------|
 | `src/Deskbridge.Core/Settings/AppSettings.cs` | Add records + extend AppSettings | `BulkOperationsRecord`, `UninstallRecord`, new nullable props on `AppSettings` |
 | `src/Deskbridge.Core/Settings/AppSettingsContext.cs` | Add attributes | `[JsonSerializable(typeof(BulkOperationsRecord))]`, `[JsonSerializable(typeof(UninstallRecord))]` |
-| `src/Deskbridge.Core/Services/TabHostManager.cs` | Ctor change + field | Add `IWindowStateService?` param, `_gdiWarningThreshold` field, replace const usage, parameterize snackbar message |
+| `src/Deskbridge.Core/Services/TabHostManager.cs` | Ctor change + field | Add `IWindowStateService?` param (after Dispatcher?), `_gdiWarningThreshold` field, replace const with private const + field, parameterize snackbar message |
 | `src/Deskbridge/ViewModels/MainWindowViewModel.cs` | Add properties + methods | 3 new `[ObservableProperty]`, 2 persist methods, 2 apply methods, 2 snapshot properties |
 | `src/Deskbridge/MainWindow.xaml` | Add XAML sections | Bulk Operations card + Uninstall card; reorder DATA to position 4 |
 | `src/Deskbridge/MainWindow.xaml.cs` | OnSourceInitialized + TrySaveWindowState | Apply new settings on load; merge new settings on close |
-| `src/Deskbridge/App.xaml.cs` | DI registration | Pass `IWindowStateService` to `TabHostManager` ctor |
-| `tests/.../Tabs/TabHostManagerTests.cs` | Update ctor calls | Add `windowState` parameter to `BuildSut()` |
-| `tests/.../Tabs/TabHostManagerLruTests.cs` | Update ctor calls | Add `windowState` parameter to `BuildSut()` |
+| `src/Deskbridge/App.xaml.cs` | DI registration | Pass `IWindowStateService` to `TabHostManager` ctor (named param since it's after dispatcher) |
+| `tests/.../Tabs/TabHostManagerTests.cs` | Update ctor calls | Add `windowState` parameter to `BuildSut()` (existing positional args still work; just add named param) |
+| `tests/.../Tabs/TabHostManagerLruTests.cs` | Update ctor calls | Add `windowState` parameter to `BuildSut()` (same as above) |
 | `tests/.../Settings/BulkOperationsSettingsTests.cs` | NEW | Defaults, round-trip, null handling |
 | `tests/.../Settings/UninstallSettingsTests.cs` | NEW | Defaults, round-trip, null handling, JSON key path |
 
