@@ -78,22 +78,24 @@ public sealed class SaveBatchTests : IDisposable
     [Fact]
     public void SaveBatch_SetsUpdatedAtOnUpdatePath_NotOnInsert()
     {
-        // Arrange: save a connection, record its timestamps
+        // Arrange: save a connection individually
         var original = new ConnectionModel { Id = Guid.NewGuid(), Name = "Original" };
         _store.Save(original);
 
-        // Capture a pivot time between the individual Save and the upcoming SaveBatch
+        // Build both batch objects BEFORE the pivot so their default timestamps are earlier
+        var updateConn = new ConnectionModel { Id = original.Id, Name = "Updated" };
+        var insertConn = new ConnectionModel { Id = Guid.NewGuid(), Name = "Inserted" };
+
+        // Capture a pivot time between object creation and the SaveBatch call
         Thread.Sleep(15);
         var pivot = DateTime.UtcNow;
         Thread.Sleep(15);
 
         // Act: SaveBatch with same Id (update) + new Id (insert)
-        var updateConn = new ConnectionModel { Id = original.Id, Name = "Updated" };
-        var insertConn = new ConnectionModel { Id = Guid.NewGuid(), Name = "Inserted" };
-        var insertCreatedAt = insertConn.CreatedAt;
         _store.SaveBatch([updateConn, insertConn], []);
 
-        // Assert: updated item has UpdatedAt after pivot, inserted item has UpdatedAt before pivot
+        // Assert: updated item has UpdatedAt after pivot (set by SaveBatch),
+        // inserted item keeps its original UpdatedAt (before pivot)
         var updated = _store.GetById(updateConn.Id)!;
         var inserted = _store.GetById(insertConn.Id)!;
 

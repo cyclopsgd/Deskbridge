@@ -124,9 +124,44 @@ public sealed class JsonConnectionStore : IConnectionStore
         PersistAtomically();
     }
 
+    /// <summary>
+    /// Persists multiple connections and groups in a single atomic file write.
+    /// Upserts by Id -- existing items are updated, new items are added.
+    /// Groups are processed before connections to prevent transient orphans.
+    /// </summary>
+    /// <remarks>
+    /// Callers MUST publish <see cref="Core.Events.ConnectionDataChangedEvent"/>
+    /// after calling this method to notify the tree and other subscribers.
+    /// </remarks>
     public void SaveBatch(IEnumerable<ConnectionModel> connections, IEnumerable<ConnectionGroup> groups)
     {
-        throw new NotImplementedException();
+        // Phase 1: Upsert groups FIRST (Pitfall 3 -- groups before connections)
+        foreach (var group in groups)
+        {
+            var existing = _data.Groups.FindIndex(g => g.Id == group.Id);
+            if (existing >= 0)
+                _data.Groups[existing] = group;
+            else
+                _data.Groups.Add(group);
+        }
+
+        // Phase 2: Upsert connections (Pitfall 1 -- UpdatedAt only on update path)
+        foreach (var connection in connections)
+        {
+            var existing = _data.Connections.FindIndex(c => c.Id == connection.Id);
+            if (existing >= 0)
+            {
+                connection.UpdatedAt = DateTime.UtcNow;
+                _data.Connections[existing] = connection;
+            }
+            else
+            {
+                _data.Connections.Add(connection);
+            }
+        }
+
+        // Phase 3: Single atomic file write
+        PersistAtomically();
     }
 
     public void DeleteBatch(IEnumerable<Guid> connectionIds, IEnumerable<Guid> groupIds)
