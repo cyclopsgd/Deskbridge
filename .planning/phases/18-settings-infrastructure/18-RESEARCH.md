@@ -403,12 +403,12 @@ var updated = _loadedSettings with
 | A1 | AppSettingsContext source-gen walks the record tree for nullable properties without explicit per-type registration | Pitfall 1 | Serialization silently drops new properties. Mitigated by adding explicit [JsonSerializable] attributes as belt-and-suspenders. |
 | A2 | WPF-UI NumberBox clamps out-of-range values on LostFocus without custom validation code | Code Examples | NumberBox might allow out-of-range entry; would need manual clamping in VM setter. Mitigated by existing auto-lock timeout NumberBox working correctly with same pattern. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Mid-session GDI threshold changes**
    - What we know: TabHostManager reads threshold once at construction (startup). D-06 says "reads from AppSettings via DI."
    - What's unclear: Whether user expects the threshold change to take effect immediately or on restart.
-   - Recommendation: Document as "restart required" behavior. Injecting reactive settings adds complexity with no clear user need -- the threshold is a rarely-changed preference.
+   - RESOLVED: Read once at construction; mid-session changes apply on next restart. Documented as expected behavior. Injecting reactive settings adds complexity with no clear user need -- the threshold is a rarely-changed preference.
 
 ## Validation Architecture
 
