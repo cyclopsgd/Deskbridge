@@ -3,6 +3,7 @@ using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Core.Pipeline;
+using Deskbridge.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -29,9 +30,10 @@ namespace Deskbridge.Core.Services;
 /// </summary>
 public sealed class TabHostManager : ITabHostManager, IDisposable
 {
-    /// <summary>D-09: soft threshold where the UI Snackbar warns the user.
-    /// Centralised here so Phase 6 can promote it to a setting without touching consumers.</summary>
-    public const int GdiWarningThreshold = 15;
+    /// <summary>D-09: fallback threshold when no IWindowStateService is injected.</summary>
+    private const int DefaultGdiWarningThreshold = 15;
+
+    private readonly int _gdiWarningThreshold;
 
     /// <summary>D-16: bounded LRU for Ctrl+Shift+T reopen-last-closed.</summary>
     public const int LastClosedLruCapacity = 10;
@@ -58,7 +60,8 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         IDisconnectPipeline disconnect,
         ISnackbarService snackbar,
         ILogger<TabHostManager> logger,
-        Dispatcher? dispatcher = null)
+        Dispatcher? dispatcher = null,
+        IWindowStateService? windowState = null)
     {
         _bus = bus;
         _coordinator = coordinator;
@@ -66,6 +69,10 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _snackbar = snackbar;
         _logger = logger;
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
+
+        var settings = windowState?.LoadAsync().GetAwaiter().GetResult();
+        var bulk = settings?.BulkOperations ?? BulkOperationsRecord.Default;
+        _gdiWarningThreshold = bulk.GdiWarningThreshold;
 
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
@@ -202,7 +209,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _connections.Remove(connectionId);
 
         // D-09 re-arm: allow a future 14→15 crossing to warn again.
-        if (_hosts.Count < GdiWarningThreshold) _warned15 = false;
+        if (_hosts.Count < _gdiWarningThreshold) _warned15 = false;
 
         // D-16: push to LRU with dedupe.
         PushLru(connectionId);
@@ -358,14 +365,14 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         // D-09 + D-10: fire-once-per-crossing warning. Fires on the 14 → 15 crossing,
         // does NOT re-fire at 16/17/..., re-arms only when the count drops below 15.
         // Values (title/message/appearance/icon/timeout) locked by UI-SPEC §Snackbar.
-        if (!_warned15 && _hosts.Count == GdiWarningThreshold)
+        if (!_warned15 && _hosts.Count == _gdiWarningThreshold)
         {
             _warned15 = true;
             try
             {
                 _snackbar.Show(
                     "Approaching session limit",
-                    "15 active sessions reached — performance may degrade beyond this point.",
+                    $"{_gdiWarningThreshold} active sessions reached — performance may degrade beyond this point.",
                     ControlAppearance.Caution,
                     new SymbolIcon { Symbol = SymbolRegular.Warning24 },
                     TimeSpan.FromSeconds(6));
@@ -394,7 +401,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _connections.Remove(id);
 
         // D-09 re-arm: allow a future 14→15 crossing to warn again.
-        if (_hosts.Count < GdiWarningThreshold) _warned15 = false;
+        if (_hosts.Count < _gdiWarningThreshold) _warned15 = false;
 
         // D-16: push to LRU with dedupe.
         PushLru(id);
