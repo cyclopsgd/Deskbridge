@@ -201,6 +201,13 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 vm.ApplyAppearanceSettings(appearance);
                 vm.SetTextScaleCallback(ApplyTextScale);
                 ApplyTextScale(appearance.TextScale);
+
+                // Phase 18: apply bulk operations and uninstall settings
+                var bulkOps = _loadedSettings.BulkOperations ?? BulkOperationsRecord.Default;
+                vm.ApplyBulkOperationsSettings(bulkOps);
+
+                var uninstall = _loadedSettings.Uninstall ?? UninstallRecord.Default;
+                vm.ApplyUninstallSettings(uninstall);
             }
 
             // Phase 9 (D-02): apply persisted card expand/collapse state
@@ -343,12 +350,23 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 ?? _loadedSettings.Appearance
                 ?? AppearanceRecord.Default;
 
+            // Phase 18: capture bulk operations and uninstall settings
+            var bulkOps = vm?.CurrentBulkOperationsSettings
+                ?? _loadedSettings.BulkOperations
+                ?? BulkOperationsRecord.Default;
+
+            var uninstallSettings = vm?.CurrentUninstallSettings
+                ?? _loadedSettings.Uninstall
+                ?? UninstallRecord.Default;
+
             var updated = _loadedSettings with
             {
                 Window = new WindowStateRecord(x, y, w, h, isMaximized, sidebarOpen, sidebarWidth),
                 Security = security,
                 PropertiesPanel = propertiesPanel,
                 Appearance = appearance,
+                BulkOperations = bulkOps,
+                Uninstall = uninstallSettings,
             };
 
             _windowState.SaveAsync(updated).GetAwaiter().GetResult();

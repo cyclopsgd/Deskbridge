@@ -277,6 +277,28 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- Phase 18 Plan 18-03: BULK OPERATIONS section (D-04/D-05) -->
+                            <TextBlock Text="BULK OPERATIONS"
+                                       Style="{StaticResource SectionLabelStyle}"
+                                       Margin="0,16,0,4" />
+                            <Border Style="{StaticResource CardContainerStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Confirm before bulk operations"
+                                               Style="{StaticResource BodyStyle}" />
+                                    <ui:ToggleSwitch IsChecked="{Binding ConfirmBeforeBulkOperations}"
+                                                     Margin="0,4,0,12" />
+
+                                    <!-- Separator -->
+                                    <Border Style="{StaticResource SeparatorStyle}" />
+
+                                    <TextBlock Text="GDI handle warning threshold"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <ui:NumberBox Minimum="5" Maximum="30"
+                                                  Value="{Binding GdiWarningThreshold, UpdateSourceTrigger=LostFocus}"
+                                                  Margin="{StaticResource FormFieldSpacing}" />
+                                </StackPanel>
+                            </Border>
+
                             <!-- Phase 7 Plan 07-04: DATA section for import/export -->
                             <TextBlock Text="DATA"
                                        Style="{StaticResource SectionLabelStyle}"
@@ -295,6 +317,22 @@
                                                Icon="{ui:SymbolIcon ArrowExportLtr24}"
                                                HorizontalAlignment="Stretch"
                                                Click="ExportCsvButton_Click" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Phase 18 Plan 18-03: UNINSTALL section (D-07/D-08/D-09) -->
+                            <TextBlock Text="UNINSTALL"
+                                       Style="{StaticResource SectionLabelStyle}"
+                                       Margin="0,16,0,4" />
+                            <Border Style="{StaticResource CardContainerStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Clean up application data on uninstall"
+                                               Style="{StaticResource BodyStyle}" />
+                                    <ui:ToggleSwitch IsChecked="{Binding CleanUpOnUninstall}"
+                                                     Margin="0,4,0,4" />
+                                    <TextBlock Text="Removes connections, credentials, logs, and settings from %AppData% during uninstall."
+                                               Style="{StaticResource HintStyle}"
+                                               TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>
