@@ -5,6 +5,7 @@
 - **v1.0 Core** - Phases 1-7 (complete)
 - **v1.1 UI Polish** - Phases 8-12 (in progress)
 - **v1.2 Usability** - Phases 13-17 (planned)
+- **v1.3 Performance & Customization** - Phases 18-24 (planned)
 
 ## Phases
 
@@ -38,13 +39,26 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
-### v1.2 Usability
+<details>
+<summary>v1.2 Usability (Phases 13-17)</summary>
 
 - [ ] **Phase 13: Quick Fixes** - Certificate skip, logoff tab close, default credentials, import username fix, import double-click guard
 - [ ] **Phase 14: UX Improvements** - Password change button with confirmation, text scaling appearance setting
 - [ ] **Phase 15: Stability** - Bulk delete crash, tab switch black screen, TreeView virtualization for 100+ connections
 - [ ] **Phase 16: RDP Quality** - Resolution/DPI matching to reduce blur, grey VM border investigation
 - [ ] **Phase 17: Popout Window** - Detach tab into floating window and re-dock (stretch goal)
+
+</details>
+
+### v1.3 Performance & Customization
+
+- [ ] **Phase 18: Settings Infrastructure** - Dedicated settings page, bulk operation preferences, uninstall cleanup toggle
+- [ ] **Phase 19: SaveBatch API** - Single-persist batch write for IConnectionStore, unblocking import and bulk edit at scale
+- [ ] **Phase 20: Performance Baselines** - BenchmarkDotNet project with regression baselines for tree, search, and serialization
+- [ ] **Phase 21: Performance Optimizations** - Smooth 500+ connection tree, debounced search, async JSON load, group connection counts
+- [ ] **Phase 22: Large Import Handling** - Progress bar during import, stress test fixtures for 500+ and 1000+ connections
+- [ ] **Phase 23: Bulk Operations UX** - Group connect all, group disconnect all, multi-select bulk edit dialog
+- [ ] **Phase 24: Uninstall Cleanup** - Fix unconditional data delete in Velopack hook, respect user preference from settings
 
 ## Phase Details
 
@@ -257,6 +271,9 @@ Plans:
 
 </details>
 
+<details>
+<summary>v1.2 Usability (Phases 13-17)</summary>
+
 ### Phase 13: Quick Fixes
 **Goal**: The most common daily-use annoyances are eliminated -- connections stop nagging about certificates, dead sessions clean themselves up, stored credentials are used without prompts, and mRemoteNG imports work correctly
 **Depends on**: Phase 12 (v1.1 complete)
@@ -311,7 +328,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01-PLAN.md -- Resolution matching (viewport pixel measurement + DPI scale factors + SmartSizing=false) and dynamic resize (UpdateSessionDisplaySettings + debounced SizeChanged + SmartSizing fallback)
+- [x] 16-01-PLAN.md -- Resolution matching (viewport pixel measurement + DPI scale factors + SmartSizing=false) and dynamic resize (UpdateSessionDisplaySettings + debounced SizeChanged + SmartSizing fallback)
 
 ### Phase 17: Popout Window
 **Goal**: Users can detach an RDP session from the tab bar into its own floating window and bring it back, enabling multi-monitor workflows without losing tab management
@@ -323,13 +340,92 @@ Plans:
   3. Closing a popout window disconnects the RDP session cleanly without leaking GDI handles or COM objects
 **Plans**: TBD
 
+</details>
+
+### Phase 18: Settings Infrastructure
+**Goal**: Users have a dedicated settings page where they can configure bulk operation preferences and uninstall behavior, replacing the scattered settings controls with a proper categorized UI
+**Depends on**: Phase 17 (v1.2 complete)
+**Requirements**: SET-01, SET-02, SET-03
+**Success Criteria** (what must be TRUE):
+  1. User can navigate to a dedicated Settings page from the icon rail and see categorized sections (Appearance, Security, Bulk Operations, Uninstall)
+  2. User can configure bulk operation preferences: toggle "confirm before bulk connect" and adjust the GDI warning threshold
+  3. User can toggle a "Clean up application data on uninstall" preference (default: preserve data) and the setting persists across restarts
+**Plans**: 3 plans
+**UI hint**: yes
+
+Plans:
+- [ ] 18-01-PLAN.md -- Settings records (BulkOperationsRecord, UninstallRecord) + JSON source-gen + TDD tests
+- [ ] 18-02-PLAN.md -- TabHostManager DI: replace hardcoded GDI threshold with settings-driven value
+- [ ] 18-03-PLAN.md -- Settings panel UI: BULK OPERATIONS and UNINSTALL card sections + ViewModel wiring
+
+### Phase 19: SaveBatch API
+**Goal**: The data layer supports writing multiple connections in a single atomic file write, eliminating per-item write amplification that blocks large imports and bulk edits
+**Depends on**: Phase 18
+**Requirements**: IMP-04
+**Success Criteria** (what must be TRUE):
+  1. Developer can call SaveBatch with a list of connections and the entire collection is persisted in a single file write (not one write per connection)
+  2. A ConnectionDataChangedEvent is published after SaveBatch completes, ensuring the tree and search index stay in sync
+**Plans**: TBD
+
+### Phase 20: Performance Baselines
+**Goal**: Developers have reproducible benchmark infrastructure that measures tree building, search, and serialization performance at enterprise scale, providing a baseline for optimization work
+**Depends on**: Phase 18
+**Requirements**: PERF-04
+**Success Criteria** (what must be TRUE):
+  1. Developer can run `dotnet run --project Deskbridge.Benchmarks` and see BenchmarkDotNet results for BuildTree, Search, Load, and Save operations at 100, 200, 500, and 1000 connection counts
+  2. A test data generator produces deterministic connection datasets at configurable sizes with realistic group nesting
+  3. Baseline results are captured and can be compared against future runs to detect regressions
+**Plans**: TBD
+
+### Phase 21: Performance Optimizations
+**Goal**: Users with enterprise-scale connection lists (500+) experience smooth, lag-free interaction -- the tree scrolls without stutter, search updates instantly, startup does not freeze, and group sizes are visible at a glance
+**Depends on**: Phase 20
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-05
+**Success Criteria** (what must be TRUE):
+  1. User with 500+ connections can scroll the tree and expand/collapse groups without visible lag or stutter
+  2. User sees search results update without visible stutter when filtering 500+ connections (debounced input, cached index)
+  3. User sees the application start without UI freeze when loading a connections.json with 500+ entries (async JSON load on background thread)
+  4. User sees a connection count badge next to each group name in the tree (e.g., "Production (23)")
+**Plans**: TBD
+
+### Phase 22: Large Import Handling
+**Goal**: Users importing large mRemoteNG configurations (500+ connections) see progress feedback and experience fast, reliable imports backed by batch persistence
+**Depends on**: Phase 19, Phase 20
+**Requirements**: IMP-03, IMP-05
+**Success Criteria** (what must be TRUE):
+  1. User sees a progress bar during mRemoteNG import that updates as connections are processed, not a spinner with no indication of progress
+  2. Developer can run stress tests with 500+ and 1000+ connection XML fixtures that validate import correctness and measure performance against baselines
+**Plans**: TBD
+
+### Phase 23: Bulk Operations UX
+**Goal**: Users can perform group-level and multi-select operations efficiently -- connecting all servers in a group, disconnecting a group, or editing shared fields across multiple connections in one action
+**Depends on**: Phase 19, Phase 21
+**Requirements**: BULK-01, BULK-02, BULK-03
+**Success Criteria** (what must be TRUE):
+  1. User can right-click a group and select "Connect All" to open RDP sessions for every connection in the group, with a confirmation warning if the count exceeds the GDI limit threshold
+  2. User can right-click a group and select "Disconnect All" to close all active sessions in that group
+  3. User can select multiple connections and open a bulk edit dialog that shows shared/divergent field values with per-field enable checkboxes, applying changes to all selected connections on confirm
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 24: Uninstall Cleanup
+**Goal**: User data is preserved by default on uninstall, fixing the current bug where Velopack unconditionally deletes all application data from %AppData%
+**Depends on**: Phase 18
+**Requirements**: UNINST-01
+**Success Criteria** (what must be TRUE):
+  1. User who uninstalls Deskbridge with the default "preserve data" setting finds their %AppData%/Deskbridge folder intact after uninstall
+  2. User who explicitly enabled "Clean up application data on uninstall" in Settings sees the %AppData%/Deskbridge folder removed during uninstall
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
 - v1.1: 8 -> 9 -> 10 -> 11 -> 12
 - v1.2: 13 -> 14 / 15 / 16 (parallel) -> 17
+- v1.3: 18 -> 19 / 20 (parallel) -> 21 -> 22 / 23 (parallel after 19+20/21) -> 24 (after 18)
 
 Phase 14, 15, 16 can run in parallel after Phase 13. Phase 17 depends on 15 and 16 completing.
+Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Phase 22 depends on 19 and 20. Phase 23 depends on 19 and 21. Phase 24 depends only on Phase 18.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -348,5 +444,12 @@ Phase 14, 15, 16 can run in parallel after Phase 13. Phase 17 depends on 15 and 
 | 13. Quick Fixes | v1.2 | 2/2 | Complete    | 2026-04-22 |
 | 14. UX Improvements | v1.2 | 1/2 | Complete    | 2026-04-22 |
 | 15. Stability | v1.2 | 2/2 | Complete    | 2026-04-22 |
-| 16. RDP Quality | v1.2 | 0/1 | Not started | - |
+| 16. RDP Quality | v1.2 | 1/1 | Complete    | 2026-04-22 |
 | 17. Popout Window | v1.2 | 0/0 | Not started | - |
+| 18. Settings Infrastructure | v1.3 | 0/3 | Planning | - |
+| 19. SaveBatch API | v1.3 | 0/0 | Not started | - |
+| 20. Performance Baselines | v1.3 | 0/0 | Not started | - |
+| 21. Performance Optimizations | v1.3 | 0/0 | Not started | - |
+| 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
+| 23. Bulk Operations UX | v1.3 | 0/0 | Not started | - |
+| 24. Uninstall Cleanup | v1.3 | 0/0 | Not started | - |
