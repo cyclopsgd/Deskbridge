@@ -32,6 +32,8 @@ public sealed record AppSettings(
     UpdateSettingsRecord Update,
     PropertiesPanelRecord? PropertiesPanel = null,
     AppearanceRecord? Appearance = null,
+    BulkOperationsRecord? BulkOperations = null,
+    UninstallRecord? Uninstall = null,
     int SchemaVersion = 1)
 {
     /// <summary>Default-constructed settings — used as the fallback when <c>settings.json</c> is missing or invalid.</summary>
@@ -98,4 +100,29 @@ public sealed record PropertiesPanelRecord(
     bool IsCredentialsCardExpanded = true)
 {
     public static PropertiesPanelRecord Default { get; } = new();
+}
+
+/// <summary>
+/// Phase 18 (SET-01): bulk operations preferences. Controls whether a confirmation
+/// dialog is shown before multi-select operations and the GDI handle threshold for
+/// the warning snackbar. Null-coalesced to Default on load for backward compatibility
+/// with pre-Phase-18 settings.json files.
+/// </summary>
+public sealed record BulkOperationsRecord(
+    bool ConfirmBeforeBulkOperations = true,
+    int GdiWarningThreshold = 15)
+{
+    public static BulkOperationsRecord Default { get; } = new();
+}
+
+/// <summary>
+/// Phase 18 (SET-02): uninstall preferences. Controls whether %AppData% data
+/// is cleaned up when the app is uninstalled via Velopack. Read by the uninstall
+/// hook (Phase 24) using JsonDocument headless. Null-coalesced to Default on load
+/// for backward compatibility with pre-Phase-18 settings.json files.
+/// </summary>
+public sealed record UninstallRecord(
+    bool CleanUpOnUninstall = false)
+{
+    public static UninstallRecord Default { get; } = new();
 }

@@ -12,4 +12,6 @@ namespace Deskbridge.Core.Settings;
     WriteIndented = true,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(AppSettings))]
+[JsonSerializable(typeof(BulkOperationsRecord))]
+[JsonSerializable(typeof(UninstallRecord))]
 internal partial class AppSettingsContext : JsonSerializerContext { }
