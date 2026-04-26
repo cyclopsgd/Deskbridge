@@ -369,7 +369,7 @@ Plans:
 
 Plans:
 - [x] 19-01-PLAN.md -- SaveBatch API: IConnectionStore interface + JsonConnectionStore implementation + ConnectionDataChangedEvent + TDD tests
-- [ ] 19-02-PLAN.md -- Consumer migration: ImportWizardViewModel batch collection + ConnectionTreeViewModel event subscription
+- [x] 19-02-PLAN.md -- Consumer migration: ImportWizardViewModel batch collection + ConnectionTreeViewModel event subscription
 
 ### Phase 20: Performance Baselines
 **Goal**: Developers have reproducible benchmark infrastructure that measures tree building, search, and serialization performance at enterprise scale, providing a baseline for optimization work

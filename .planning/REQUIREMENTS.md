@@ -194,7 +194,8 @@ Deferred to future releases. Tracked but not in current roadmap.
 
 #### Import at Scale
 - [ ] **IMP-03**: User sees a progress bar during mRemoteNG import that updates as connections are processed
-- [ ] **IMP-04**: User's 500+ connection import completes via a single batch file write instead of one write per connection (SaveBatch API)
+- [x] **IMP-04
+**: User's 500+ connection import completes via a single batch file write instead of one write per connection (SaveBatch API)
 - [ ] **IMP-05**: Developer can stress test imports with 500+ and 1000+ connection XML fixtures that validate correctness and performance
 
 #### Settings & Customization
