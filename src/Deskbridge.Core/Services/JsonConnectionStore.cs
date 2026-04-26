@@ -124,6 +124,11 @@ public sealed class JsonConnectionStore : IConnectionStore
         PersistAtomically();
     }
 
+    public void SaveBatch(IEnumerable<ConnectionModel> connections, IEnumerable<ConnectionGroup> groups)
+    {
+        throw new NotImplementedException();
+    }
+
     public void DeleteBatch(IEnumerable<Guid> connectionIds, IEnumerable<Guid> groupIds)
     {
         // Remove groups first (they may orphan connections that are also in connectionIds)

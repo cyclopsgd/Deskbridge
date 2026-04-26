@@ -21,4 +21,10 @@ public record ConnectionClosedEvent(ConnectionModel Connection, DisconnectReason
 public record ReconnectingEvent(ConnectionModel Connection, int Attempt, TimeSpan Delay);
 public record CredentialRequestedEvent(ConnectionModel Connection);
 public record ConnectionImportedEvent(int Count, string Source);
+
+/// <summary>
+/// Published after a bulk data mutation (SaveBatch, DeleteBatch) completes.
+/// Subscribers should refresh their view of the connection store.
+/// </summary>
+public record ConnectionDataChangedEvent();
 public record SessionHealthUpdateEvent(Guid ConnectionId, int LatencyMs, ConnectionQuality Quality);
