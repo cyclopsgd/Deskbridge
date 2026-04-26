@@ -353,9 +353,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STAB-03 | Phase 16 | Pending |
 | STAB-04 | Phase 16 | Pending |
 | UX-03 | Phase 17 | Pending |
-| SET-01 | Phase 18 | Pending |
-| SET-02 | Phase 18 | Pending |
-| SET-03 | Phase 18 | Pending |
+| SET-01 | Phase 18 | Complete |
+| SET-02 | Phase 18 | Complete |
+| SET-03 | Phase 18 | Complete |
 | IMP-04 | Phase 19 | Pending |
 | PERF-04 | Phase 20 | Pending |
 | PERF-01 | Phase 21 | Pending |

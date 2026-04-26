@@ -354,9 +354,9 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 18-01-PLAN.md -- Settings records (BulkOperationsRecord, UninstallRecord) + JSON source-gen + TDD tests
-- [ ] 18-02-PLAN.md -- TabHostManager DI: replace hardcoded GDI threshold with settings-driven value
-- [ ] 18-03-PLAN.md -- Settings panel UI: BULK OPERATIONS and UNINSTALL card sections + ViewModel wiring
+- [x] 18-01-PLAN.md -- Settings records (BulkOperationsRecord, UninstallRecord) + JSON source-gen + TDD tests
+- [x] 18-02-PLAN.md -- TabHostManager DI: replace hardcoded GDI threshold with settings-driven value
+- [x] 18-03-PLAN.md -- Settings panel UI: BULK OPERATIONS and UNINSTALL card sections + ViewModel wiring
 
 ### Phase 19: SaveBatch API
 **Goal**: The data layer supports writing multiple connections in a single atomic file write, eliminating per-item write amplification that blocks large imports and bulk edits
@@ -446,7 +446,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 15. Stability | v1.2 | 2/2 | Complete    | 2026-04-22 |
 | 16. RDP Quality | v1.2 | 1/1 | Complete    | 2026-04-22 |
 | 17. Popout Window | v1.2 | 0/0 | Not started | - |
-| 18. Settings Infrastructure | v1.3 | 1/3 | In Progress | - |
+| 18. Settings Infrastructure | v1.3 | 3/3 | Complete    | 2026-04-26 |
 | 19. SaveBatch API | v1.3 | 0/0 | Not started | - |
 | 20. Performance Baselines | v1.3 | 0/0 | Not started | - |
 | 21. Performance Optimizations | v1.3 | 0/0 | Not started | - |
@@ -460,7 +460,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 
 **Goal:** Replace fixed Width=240 sidebar with GridSplitter drag-to-resize. Needs airspace-safe implementation (GridSplitter can't overlap WindowsFormsHost/ActiveX viewport). MinWidth ~180, MaxWidth ~400.
 **Requirements:** TBD
-**Plans:** 0 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
