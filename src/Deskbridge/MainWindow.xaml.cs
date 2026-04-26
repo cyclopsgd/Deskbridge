@@ -388,6 +388,7 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         // Scale offsets: Small = -2px, Default = 0, Large = +2px
         var offset = scale switch
         {
+            TextScale.Tiny => -4.0,
             TextScale.Small => -2.0,
             TextScale.Large => 2.0,
             _ => 0.0

@@ -3,9 +3,9 @@ namespace Deskbridge.Core.Settings;
 /// <summary>
 /// Phase 14 Plan 14-02 (UX-02): text scaling preference. Controls the font-size
 /// offset applied to all typography styles at runtime via DynamicResource keys.
-/// Small = -2px, Default = 0, Large = +2px relative to base sizes.
+/// Tiny = -4px, Small = -2px, Default = 0, Large = +2px relative to base sizes.
 /// </summary>
-public enum TextScale { Small, Default, Large }
+public enum TextScale { Small, Default, Large, Tiny }
 
 /// <summary>
 /// Phase 14 Plan 14-02 (UX-02): appearance preferences persisted in settings.json.

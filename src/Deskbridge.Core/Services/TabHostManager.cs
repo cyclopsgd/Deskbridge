@@ -209,7 +209,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _connections.Remove(connectionId);
 
         // D-09 re-arm: allow a future 14→15 crossing to warn again.
-        if (_hosts.Count < _gdiWarningThreshold) _warned15 = false;
+        if (_gdiWarningThreshold > 0 && _hosts.Count < _gdiWarningThreshold) _warned15 = false;
 
         // D-16: push to LRU with dedupe.
         PushLru(connectionId);
@@ -365,7 +365,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         // D-09 + D-10: fire-once-per-crossing warning. Fires on the 14 → 15 crossing,
         // does NOT re-fire at 16/17/..., re-arms only when the count drops below 15.
         // Values (title/message/appearance/icon/timeout) locked by UI-SPEC §Snackbar.
-        if (!_warned15 && _hosts.Count == _gdiWarningThreshold)
+        if (!_warned15 && _gdiWarningThreshold > 0 && _hosts.Count == _gdiWarningThreshold)
         {
             _warned15 = true;
             try
@@ -401,7 +401,7 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
         _connections.Remove(id);
 
         // D-09 re-arm: allow a future 14→15 crossing to warn again.
-        if (_hosts.Count < _gdiWarningThreshold) _warned15 = false;
+        if (_gdiWarningThreshold > 0 && _hosts.Count < _gdiWarningThreshold) _warned15 = false;
 
         // D-16: push to LRU with dedupe.
         PushLru(id);

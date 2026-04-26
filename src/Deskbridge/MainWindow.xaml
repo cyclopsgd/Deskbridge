@@ -214,8 +214,10 @@
                             bound via MainWindowViewModel.AutoLockTimeoutMinutes / LockOnMinimise
                             with persistence through IWindowStateService (Plan 06-02 NOTF-04).
                         -->
-                        <StackPanel Margin="{StaticResource PanelContentMargin}"
-                                    Visibility="{Binding IsSettingsActive, Converter={StaticResource BoolToVisibility}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Visibility="{Binding IsSettingsActive, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Margin="{StaticResource PanelContentMargin}">
 
                             <!-- Phase 14 Plan 14-02 (UX-02): Appearance section for text scaling -->
                             <TextBlock Text="APPEARANCE"
@@ -291,11 +293,18 @@
                                     <!-- Separator -->
                                     <Border Style="{StaticResource SeparatorStyle}" />
 
-                                    <TextBlock Text="GDI handle warning threshold"
+                                    <TextBlock Text="Session limit warning"
                                                Style="{StaticResource FieldLabelStyle}" />
-                                    <ui:NumberBox Minimum="5" Maximum="30"
-                                                  Value="{Binding GdiWarningThreshold, UpdateSourceTrigger=LostFocus}"
-                                                  Margin="{StaticResource FormFieldSpacing}" />
+                                    <ComboBox ItemsSource="{Binding SessionLimitOptions}"
+                                              SelectedValue="{Binding GdiWarningThreshold}"
+                                              SelectedValuePath="Value"
+                                              Margin="{StaticResource FormFieldSpacing}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding DisplayName}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
                                 </StackPanel>
                             </Border>
 
@@ -336,6 +345,7 @@
                                 </StackPanel>
                             </Border>
                         </StackPanel>
+                        </ScrollViewer>
                     </Grid>
                 </DockPanel>
             </Border>

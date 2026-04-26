@@ -19,6 +19,15 @@ public record TextScaleOption(TextScale Value, string DisplayName)
     public override string ToString() => DisplayName;
 }
 
+/// <summary>
+/// Phase 18: display wrapper for the session limit warning threshold ComboBox.
+/// Value 0 means "Off" (no warning).
+/// </summary>
+public record SessionLimitOption(int Value, string DisplayName)
+{
+    public override string ToString() => DisplayName;
+}
+
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ITabHostManager _tabHostManager;
@@ -105,9 +114,19 @@ public partial class MainWindowViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<TextScaleOption> TextScaleOptions { get; } = new[]
     {
+        new TextScaleOption(TextScale.Tiny, "Tiny"),
         new TextScaleOption(TextScale.Small, "Small"),
         new TextScaleOption(TextScale.Default, "Default"),
         new TextScaleOption(TextScale.Large, "Large"),
+    };
+
+    public IReadOnlyList<SessionLimitOption> SessionLimitOptions { get; } = new[]
+    {
+        new SessionLimitOption(0, "Off"),
+        new SessionLimitOption(15, "15 sessions"),
+        new SessionLimitOption(20, "20 sessions"),
+        new SessionLimitOption(25, "25 sessions"),
+        new SessionLimitOption(30, "30 sessions"),
     };
 
     /// <summary>
