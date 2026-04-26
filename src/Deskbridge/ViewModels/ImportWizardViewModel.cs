@@ -276,12 +276,16 @@ public partial class ImportWizardViewModel : ObservableObject
                     .Select(c => c.Hostname!),
                 StringComparer.OrdinalIgnoreCase);
 
+            // Accumulate all models for a single batch write at the end
+            var connectionsToSave = new List<ConnectionModel>();
+            var groupsToSave = new List<ConnectionGroup>();
+
             // First pass: create groups to maintain hierarchy
             var groupMap = new Dictionary<string, Guid>(); // path -> groupId
             var existingGroups = _store.GetGroups();
 
             // Flatten checked items and import
-            var flatItems = FlattenCheckedItems(PreviewItems, null, groupMap, existingGroups);
+            var flatItems = FlattenCheckedItems(PreviewItems, null, groupMap, existingGroups, groupsToSave);
 
             // Process duplicate resolution
             DuplicateItems.Clear();
@@ -311,7 +315,7 @@ public partial class ImportWizardViewModel : ObservableObject
                         // Append suffix to avoid conflict
                         var conn = CreateConnectionModel(item, groupId);
                         conn.Name = $"{conn.Name} (imported)";
-                        _store.Save(conn);
+                        connectionsToSave.Add(conn);
                         existingHostnames.Add(conn.Hostname!);
                         imported++;
                         renamed++;
@@ -332,7 +336,7 @@ public partial class ImportWizardViewModel : ObservableObject
                             existing.Protocol = item.Protocol.ToProtocol();
                             existing.GroupId = groupId;
                             existing.UpdatedAt = DateTime.UtcNow;
-                            _store.Save(existing);
+                            connectionsToSave.Add(existing);
                             imported++;
                             continue;
                         }
@@ -341,7 +345,7 @@ public partial class ImportWizardViewModel : ObservableObject
                     // Auto-rename if no explicit resolution
                     var autoConn = CreateConnectionModel(item, groupId);
                     autoConn.Name = $"{autoConn.Name} (imported)";
-                    _store.Save(autoConn);
+                    connectionsToSave.Add(autoConn);
                     existingHostnames.Add(autoConn.Hostname!);
                     imported++;
                     renamed++;
@@ -350,7 +354,7 @@ public partial class ImportWizardViewModel : ObservableObject
 
                 // No duplicate -- import directly
                 var newConn = CreateConnectionModel(item, groupId);
-                _store.Save(newConn);
+                connectionsToSave.Add(newConn);
                 if (!string.IsNullOrEmpty(hostname))
                     existingHostnames.Add(hostname);
                 imported++;
@@ -360,7 +364,11 @@ public partial class ImportWizardViewModel : ObservableObject
             SkippedCount = skipped;
             RenamedCount = renamed;
 
-            // Publish event and log audit
+            // Single atomic file write for all connections and groups
+            _store.SaveBatch(connectionsToSave, groupsToSave);
+
+            // Notify tree and other subscribers of bulk data change
+            _bus.Publish(new ConnectionDataChangedEvent());
             _bus.Publish(new ConnectionImportedEvent(imported, SelectedImporter.SourceName));
 
             await _audit.LogAsync(new AuditRecord(
@@ -404,7 +412,8 @@ public partial class ImportWizardViewModel : ObservableObject
         IEnumerable<ImportTreeItemViewModel> items,
         Guid? parentGroupId,
         Dictionary<string, Guid> groupMap,
-        IReadOnlyList<ConnectionGroup> existingGroups)
+        IReadOnlyList<ConnectionGroup> existingGroups,
+        List<ConnectionGroup> groupsToSave)
     {
         var result = new List<(ImportTreeItemViewModel, Guid?)>();
 
@@ -415,9 +424,9 @@ public partial class ImportWizardViewModel : ObservableObject
             if (item.Type == ImportNodeType.Container)
             {
                 // Create or reuse group
-                var groupId = EnsureGroup(item.Name, parentGroupId, groupMap, existingGroups);
+                var groupId = EnsureGroup(item.Name, parentGroupId, groupMap, existingGroups, groupsToSave);
                 // Recurse into children
-                result.AddRange(FlattenCheckedItems(item.Children, groupId, groupMap, existingGroups));
+                result.AddRange(FlattenCheckedItems(item.Children, groupId, groupMap, existingGroups, groupsToSave));
             }
             else
             {
@@ -432,7 +441,8 @@ public partial class ImportWizardViewModel : ObservableObject
         string name,
         Guid? parentGroupId,
         Dictionary<string, Guid> groupMap,
-        IReadOnlyList<ConnectionGroup> existingGroups)
+        IReadOnlyList<ConnectionGroup> existingGroups,
+        List<ConnectionGroup> groupsToSave)
     {
         var key = $"{parentGroupId}|{name}";
         if (groupMap.TryGetValue(key, out var existingId))
@@ -453,7 +463,7 @@ public partial class ImportWizardViewModel : ObservableObject
             Name = name,
             ParentGroupId = parentGroupId,
         };
-        _store.SaveGroup(group);
+        groupsToSave.Add(group);
         groupMap[key] = group.Id;
         return group.Id;
     }

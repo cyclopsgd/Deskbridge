@@ -279,9 +279,9 @@ public class ImportWizardViewModelTests
 
     // ---------------------------------------------------------------- Test 9
 
-    // Test 9: NextStep from step 3 imports selected connections to store
+    // Test 9: NextStep from step 3 imports selected connections via SaveBatch
     [Fact]
-    public async Task ImportSelected_CallsStoreSaveForEachCheckedConnection()
+    public async Task ImportSelected_CallsSaveBatchWithAllCheckedConnections()
     {
         var importResult = BuildStandardImportResult();
         var importer = BuildMockImporter(importResult);
@@ -295,8 +295,12 @@ public class ImportWizardViewModelTests
 
         await vm.ImportSelectedAsync();
 
-        // 3 connections all checked by default -> store.Save called 3 times
-        store.Received(3).Save(Arg.Any<ConnectionModel>());
+        // 3 connections all checked by default -> SaveBatch called once with 3 connections
+        store.Received(1).SaveBatch(
+            Arg.Is<IEnumerable<ConnectionModel>>(c => c.Count() == 3),
+            Arg.Any<IEnumerable<ConnectionGroup>>());
+        // No per-item Save calls
+        store.DidNotReceive().Save(Arg.Any<ConnectionModel>());
     }
 
     // ---------------------------------------------------------------- Test 10
@@ -311,8 +315,8 @@ public class ImportWizardViewModelTests
         var store = Substitute.For<IConnectionStore>();
         store.GetAll().Returns([]);
         store.GetGroups().Returns([]);
-        store.When(s => s.Save(Arg.Any<ConnectionModel>()))
-             .Do(ci => capturedConnections.Add(ci.Arg<ConnectionModel>()));
+        store.When(s => s.SaveBatch(Arg.Any<IEnumerable<ConnectionModel>>(), Arg.Any<IEnumerable<ConnectionGroup>>()))
+             .Do(ci => capturedConnections.AddRange(ci.Arg<IEnumerable<ConnectionModel>>()));
         var vm = BuildViewModel(importer, store: store);
 
         using var stream = EmptyStream();
