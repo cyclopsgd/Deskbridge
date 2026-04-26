@@ -62,6 +62,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _eventBus.Subscribe<TabStateChangedEvent>(this, OnTabStateChanged);
         _eventBus.Subscribe<TabClosedEvent>(this, OnTabClosed);
         _eventBus.Subscribe<ConnectionClosedEvent>(this, OnConnectionClosed);
+
+        // Phase 19 (IMP-04): refresh tree after bulk data mutations (SaveBatch, DeleteBatch)
+        _eventBus.Subscribe<ConnectionDataChangedEvent>(this, OnDataChanged);
     }
 
     // Data
@@ -380,6 +383,16 @@ public partial class ConnectionTreeViewModel : ObservableObject
                 SelectedConnectionState = null;
             }
         });
+    }
+
+    /// <summary>
+    /// Phase 19 (IMP-04): Refresh the tree after any bulk data mutation
+    /// (SaveBatch, DeleteBatch). Marshals to UI thread since the event
+    /// may originate from a background import task.
+    /// </summary>
+    private void OnDataChanged(ConnectionDataChangedEvent _)
+    {
+        SetOnUiThread(() => RefreshTree());
     }
 
     private static void SetOnUiThread(Action action)
