@@ -247,7 +247,8 @@
                                 <StackPanel>
                                     <!-- Require Password/PIN toggle -->
                                     <TextBlock Text="Require password/PIN"
-                                               Style="{StaticResource BodyStyle}" />
+                                               Style="{StaticResource BodyStyle}"
+                                               TextWrapping="Wrap" />
                                     <ui:ToggleSwitch IsChecked="{Binding RequireMasterPassword}"
                                                      Margin="0,4,0,12" />
 
@@ -262,7 +263,8 @@
                                                       Value="{Binding AutoLockTimeoutMinutes, UpdateSourceTrigger=LostFocus}"
                                                       Margin="{StaticResource FormFieldSpacing}" />
                                         <TextBlock Text="Lock on minimise"
-                                                   Style="{StaticResource BodyStyle}" />
+                                                   Style="{StaticResource BodyStyle}"
+                                                   TextWrapping="Wrap" />
                                         <ui:ToggleSwitch IsChecked="{Binding LockOnMinimise}"
                                                          Margin="0,4,0,12" />
 
@@ -286,7 +288,8 @@
                             <Border Style="{StaticResource CardContainerStyle}">
                                 <StackPanel>
                                     <TextBlock Text="Confirm before bulk operations"
-                                               Style="{StaticResource BodyStyle}" />
+                                               Style="{StaticResource BodyStyle}"
+                                               TextWrapping="Wrap" />
                                     <ui:ToggleSwitch IsChecked="{Binding ConfirmBeforeBulkOperations}"
                                                      Margin="0,4,0,12" />
 
@@ -336,7 +339,8 @@
                             <Border Style="{StaticResource CardContainerStyle}">
                                 <StackPanel>
                                     <TextBlock Text="Clean up application data on uninstall"
-                                               Style="{StaticResource BodyStyle}" />
+                                               Style="{StaticResource BodyStyle}"
+                                               TextWrapping="Wrap" />
                                     <ui:ToggleSwitch IsChecked="{Binding CleanUpOnUninstall}"
                                                      Margin="0,4,0,4" />
                                     <TextBlock Text="Removes connections, credentials, logs, and settings from %AppData% during uninstall."
