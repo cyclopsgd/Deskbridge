@@ -539,6 +539,119 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnAutoLockTimeoutMinutesChanged(int value) => PersistSecuritySettings();
     partial void OnLockOnMinimiseChanged(bool value) => PersistSecuritySettings();
 
+    // ----------------------------------------------------------- Phase 18 Plan 18-03: Bulk Operations settings
+
+    /// <summary>
+    /// Phase 18 (D-04): confirm before bulk operations. Two-way bound to the
+    /// Settings panel ToggleSwitch. Default on.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ConfirmBeforeBulkOperations { get; set; } = true;
+
+    /// <summary>
+    /// Phase 18 (D-05): GDI handle warning threshold. Two-way bound to the
+    /// Settings panel NumberBox (range 5-30). Default 15.
+    /// </summary>
+    [ObservableProperty]
+    public partial int GdiWarningThreshold { get; set; } = 15;
+
+    /// <summary>
+    /// Phase 18 (D-08): clean up application data on uninstall. Two-way bound
+    /// to the Settings panel ToggleSwitch. Default off (preserve data).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool CleanUpOnUninstall { get; set; }
+
+    partial void OnConfirmBeforeBulkOperationsChanged(bool value) => PersistBulkOperationsSettings();
+    partial void OnGdiWarningThresholdChanged(int value) => PersistBulkOperationsSettings();
+    partial void OnCleanUpOnUninstallChanged(bool value) => PersistUninstallSettings();
+
+    /// <summary>
+    /// Phase 18 (D-11): persists bulk operations settings to settings.json.
+    /// Same async-void fire-and-forget pattern as <see cref="PersistSecuritySettings"/>.
+    /// </summary>
+    private async void PersistBulkOperationsSettings()
+    {
+        if (_suppressPersist) return;
+        if (_windowState is null) return;
+        try
+        {
+            var current = await _windowState.LoadAsync().ConfigureAwait(false);
+            var updated = current with { BulkOperations = CurrentBulkOperationsSettings };
+            await _windowState.SaveAsync(updated).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to persist bulk operations settings");
+        }
+    }
+
+    /// <summary>
+    /// Phase 18 (D-11): persists uninstall settings to settings.json.
+    /// Same async-void fire-and-forget pattern as <see cref="PersistSecuritySettings"/>.
+    /// </summary>
+    private async void PersistUninstallSettings()
+    {
+        if (_suppressPersist) return;
+        if (_windowState is null) return;
+        try
+        {
+            var current = await _windowState.LoadAsync().ConfigureAwait(false);
+            var updated = current with { Uninstall = CurrentUninstallSettings };
+            await _windowState.SaveAsync(updated).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to persist uninstall settings");
+        }
+    }
+
+    /// <summary>
+    /// Phase 18: applies loaded bulk operations settings to the VM without
+    /// triggering persistence (same suppress pattern as <see cref="ApplySecuritySettings"/>).
+    /// Called from MainWindow.OnSourceInitialized.
+    /// </summary>
+    public void ApplyBulkOperationsSettings(BulkOperationsRecord bulk)
+    {
+        ArgumentNullException.ThrowIfNull(bulk);
+        _suppressPersist = true;
+        try
+        {
+            ConfirmBeforeBulkOperations = bulk.ConfirmBeforeBulkOperations;
+            GdiWarningThreshold = bulk.GdiWarningThreshold;
+        }
+        finally
+        {
+            _suppressPersist = false;
+        }
+    }
+
+    /// <summary>
+    /// Phase 18: applies loaded uninstall settings to the VM without
+    /// triggering persistence. Called from MainWindow.OnSourceInitialized.
+    /// </summary>
+    public void ApplyUninstallSettings(UninstallRecord uninstall)
+    {
+        ArgumentNullException.ThrowIfNull(uninstall);
+        _suppressPersist = true;
+        try
+        {
+            CleanUpOnUninstall = uninstall.CleanUpOnUninstall;
+        }
+        finally
+        {
+            _suppressPersist = false;
+        }
+    }
+
+    /// <summary>Snapshot of the current bulk operations preferences for MainWindow.OnClosing persistence.</summary>
+    public BulkOperationsRecord CurrentBulkOperationsSettings =>
+        new(ConfirmBeforeBulkOperations: ConfirmBeforeBulkOperations, GdiWarningThreshold: GdiWarningThreshold);
+
+    /// <summary>Snapshot of the current uninstall preferences for MainWindow.OnClosing persistence.</summary>
+    public UninstallRecord CurrentUninstallSettings =>
+        new(CleanUpOnUninstall: CleanUpOnUninstall);
+
     private async void PersistSecuritySettings()
     {
         if (_suppressPersist) return;
