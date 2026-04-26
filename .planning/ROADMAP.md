@@ -365,7 +365,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Developer can call SaveBatch with a list of connections and the entire collection is persisted in a single file write (not one write per connection)
   2. A ConnectionDataChangedEvent is published after SaveBatch completes, ensuring the tree and search index stay in sync
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 19-01-PLAN.md -- SaveBatch API: IConnectionStore interface + JsonConnectionStore implementation + ConnectionDataChangedEvent + TDD tests
+- [ ] 19-02-PLAN.md -- Consumer migration: ImportWizardViewModel batch collection + ConnectionTreeViewModel event subscription
 
 ### Phase 20: Performance Baselines
 **Goal**: Developers have reproducible benchmark infrastructure that measures tree building, search, and serialization performance at enterprise scale, providing a baseline for optimization work
@@ -447,7 +451,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 16. RDP Quality | v1.2 | 1/1 | Complete    | 2026-04-22 |
 | 17. Popout Window | v1.2 | 0/0 | Not started | - |
 | 18. Settings Infrastructure | v1.3 | 3/3 | Complete    | 2026-04-26 |
-| 19. SaveBatch API | v1.3 | 0/0 | Not started | - |
+| 19. SaveBatch API | v1.3 | 0/2 | Not started | - |
 | 20. Performance Baselines | v1.3 | 0/0 | Not started | - |
 | 21. Performance Optimizations | v1.3 | 0/0 | Not started | - |
 | 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
