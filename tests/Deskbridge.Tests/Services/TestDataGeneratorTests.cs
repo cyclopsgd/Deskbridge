@@ -24,7 +24,9 @@ public sealed class TestDataGeneratorTests
         var (connections1, _) = TestDataGenerator.Generate(100, 42);
         var (connections2, _) = TestDataGenerator.Generate(100, 99);
 
-        connections1.Select(c => c.Id).Should().NotBeEquivalentTo(connections2.Select(c => c.Id));
+        var ids1 = connections1.Select(c => c.Id).ToList();
+        var ids2 = connections2.Select(c => c.Id).ToList();
+        ids1.SequenceEqual(ids2).Should().BeFalse("different seeds should produce different Ids");
     }
 
     [Theory]
