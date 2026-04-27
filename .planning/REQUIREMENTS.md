@@ -189,7 +189,8 @@ Deferred to future releases. Tracked but not in current roadmap.
 - [ ] **PERF-01**: User experiences smooth scrolling and expand/collapse in the connection tree with 500+ connections without lag or stutter
 - [ ] **PERF-02**: User sees search results update without visible stutter when filtering 500+ connections (debounced input with cached index)
 - [ ] **PERF-03**: User sees the application start without UI freeze when loading a connections.json with 500+ entries (async JSON load)
-- [ ] **PERF-04**: Developer can run BenchmarkDotNet regression baselines for BuildTree, Search, Load/Save at 100/200/500/1000 connections
+- [x] **PERF-04
+**: Developer can run BenchmarkDotNet regression baselines for BuildTree, Search, Load/Save at 100/200/500/1000 connections
 - [ ] **PERF-05**: User sees a connection count badge next to each group name in the tree (e.g., "Production (23)")
 
 #### Import at Scale

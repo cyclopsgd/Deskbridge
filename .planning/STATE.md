@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
-status: planning
-stopped_at: Phase 20 context gathered
-last_updated: "2026-04-27T16:55:55.633Z"
-last_activity: 2026-04-26
+status: executing
+stopped_at: Completed 20-01-PLAN.md
+last_updated: "2026-04-27T18:32:06.084Z"
+last_activity: 2026-04-27
 progress:
   total_phases: 25
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_plans: 8
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 19 — savebatch-api
+**Current focus:** Phase 20 — performance-baselines
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-26
+Phase: 20 (performance-baselines) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-04-27
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -95,6 +95,7 @@ Progress: [██████████] 100%
 | Phase 18-settings-infrastructure P02 | 4min | 2 tasks | 1 files |
 | Phase 19 P01 | 6min | 2 tasks | 4 files |
 | Phase 19 P02 | 7min | 2 tasks | 3 files |
+| Phase 20 P01 | 7min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,7 @@ Recent decisions affecting current work:
 - IWindowStateService appended after Dispatcher? in TabHostManager ctor to preserve existing positional callers
 - SaveBatch accepts connections+groups for symmetry with DeleteBatch; UpdatedAt only on update path; caller-publishes event pattern
 - ConnectionDataChangedEvent published before ConnectionImportedEvent to ensure tree refresh before toast
+- ConnectionNode is lightweight (no Port/Username/Domain/CredentialMode); ViewModel mapper uses connectionLookup to populate from original ConnectionModel
 
 ### Pending Todos
 
@@ -135,8 +137,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 20 context gathered
-Resume file: --resume-file
+Last session: 2026-04-27T18:32:06.076Z
+Stopped at: Completed 20-01-PLAN.md
+Resume file: None
 
-**Planned Phase:** 19 (SaveBatch API) — 2 plans — 2026-04-26T12:11:10.778Z
+**Planned Phase:** 20 (Performance Baselines) — 3 plans — 2026-04-27T18:14:18.829Z
