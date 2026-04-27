@@ -338,7 +338,12 @@ Plans:
   1. User can right-click a tab (or use a keyboard shortcut) to detach it into a standalone floating window that shows the live RDP session
   2. User can drag the floating window back to the tab bar (or use a menu/shortcut) to re-dock it as a tab, resuming normal tabbed operation
   3. Closing a popout window disconnects the RDP session cleanly without leaking GDI handles or COM objects
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 
 </details>
 
@@ -379,7 +384,12 @@ Plans:
   1. Developer can run `dotnet run --project Deskbridge.Benchmarks` and see BenchmarkDotNet results for BuildTree, Search, Load, and Save operations at 100, 200, 500, and 1000 connection counts
   2. A test data generator produces deterministic connection datasets at configurable sizes with realistic group nesting
   3. Baseline results are captured and can be compared against future runs to detect regressions
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 
 ### Phase 21: Performance Optimizations
 **Goal**: Users with enterprise-scale connection lists (500+) experience smooth, lag-free interaction -- the tree scrolls without stutter, search updates instantly, startup does not freeze, and group sizes are visible at a glance
@@ -390,7 +400,12 @@ Plans:
   2. User sees search results update without visible stutter when filtering 500+ connections (debounced input, cached index)
   3. User sees the application start without UI freeze when loading a connections.json with 500+ entries (async JSON load on background thread)
   4. User sees a connection count badge next to each group name in the tree (e.g., "Production (23)")
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 
 ### Phase 22: Large Import Handling
 **Goal**: Users importing large mRemoteNG configurations (500+ connections) see progress feedback and experience fast, reliable imports backed by batch persistence
@@ -399,7 +414,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User sees a progress bar during mRemoteNG import that updates as connections are processed, not a spinner with no indication of progress
   2. Developer can run stress tests with 500+ and 1000+ connection XML fixtures that validate import correctness and measure performance against baselines
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 
 ### Phase 23: Bulk Operations UX
 **Goal**: Users can perform group-level and multi-select operations efficiently -- connecting all servers in a group, disconnecting a group, or editing shared fields across multiple connections in one action
@@ -409,7 +429,12 @@ Plans:
   1. User can right-click a group and select "Connect All" to open RDP sessions for every connection in the group, with a confirmation warning if the count exceeds the GDI limit threshold
   2. User can right-click a group and select "Disconnect All" to close all active sessions in that group
   3. User can select multiple connections and open a bulk edit dialog that shows shared/divergent field values with per-field enable checkboxes, applying changes to all selected connections on confirm
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 **UI hint**: yes
 
 ### Phase 24: Uninstall Cleanup
@@ -419,7 +444,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User who uninstalls Deskbridge with the default "preserve data" setting finds their %AppData%/Deskbridge folder intact after uninstall
   2. User who explicitly enabled "Clean up application data on uninstall" in Settings sees the %AppData%/Deskbridge folder removed during uninstall
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 
 ## Progress
 
@@ -452,7 +482,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 17. Popout Window | v1.2 | 0/0 | Not started | - |
 | 18. Settings Infrastructure | v1.3 | 3/3 | Complete    | 2026-04-26 |
 | 19. SaveBatch API | v1.3 | 2/2 | Complete    | 2026-04-26 |
-| 20. Performance Baselines | v1.3 | 0/0 | Not started | - |
+| 20. Performance Baselines | v1.3 | 0/3 | Planned | - |
 | 21. Performance Optimizations | v1.3 | 0/0 | Not started | - |
 | 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
 | 23. Bulk Operations UX | v1.3 | 0/0 | Not started | - |
