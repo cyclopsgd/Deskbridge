@@ -359,7 +359,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SET-02 | Phase 18 | Complete |
 | SET-03 | Phase 18 | Complete |
 | IMP-04 | Phase 19 | Complete |
-| PERF-04 | Phase 20 | Pending |
+| PERF-04 | Phase 20 | Complete |
 | PERF-01 | Phase 21 | Pending |
 | PERF-02 | Phase 21 | Pending |
 | PERF-03 | Phase 21 | Pending |

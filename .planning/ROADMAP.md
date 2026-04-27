@@ -52,9 +52,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.3 Performance & Customization
 
-- [ ] **Phase 18: Settings Infrastructure** - Dedicated settings page, bulk operation preferences, uninstall cleanup toggle
-- [ ] **Phase 19: SaveBatch API** - Single-persist batch write for IConnectionStore, unblocking import and bulk edit at scale
-- [ ] **Phase 20: Performance Baselines** - BenchmarkDotNet project with regression baselines for tree, search, and serialization
+- [x] **Phase 18: Settings Infrastructure** - Dedicated settings page, bulk operation preferences, uninstall cleanup toggle
+- [x] **Phase 19: SaveBatch API** - Single-persist batch write for IConnectionStore, unblocking import and bulk edit at scale
+- [x] **Phase 20: Performance Baselines** - BenchmarkDotNet project with regression baselines for tree, search, and serialization
 - [ ] **Phase 21: Performance Optimizations** - Smooth 500+ connection tree, debounced search, async JSON load, group connection counts
 - [ ] **Phase 22: Large Import Handling** - Progress bar during import, stress test fixtures for 500+ and 1000+ connections
 - [ ] **Phase 23: Bulk Operations UX** - Group connect all, group disconnect all, multi-select bulk edit dialog
@@ -387,9 +387,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
-- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
-- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
+- [x] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [x] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [x] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 
 ### Phase 21: Performance Optimizations
 **Goal**: Users with enterprise-scale connection lists (500+) experience smooth, lag-free interaction -- the tree scrolls without stutter, search updates instantly, startup does not freeze, and group sizes are visible at a glance
@@ -482,7 +482,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 17. Popout Window | v1.2 | 0/0 | Not started | - |
 | 18. Settings Infrastructure | v1.3 | 3/3 | Complete    | 2026-04-26 |
 | 19. SaveBatch API | v1.3 | 2/2 | Complete    | 2026-04-26 |
-| 20. Performance Baselines | v1.3 | 0/3 | Planned | - |
+| 20. Performance Baselines | v1.3 | 3/3 | Complete    | 2026-04-27 |
 | 21. Performance Optimizations | v1.3 | 0/0 | Not started | - |
 | 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
 | 23. Bulk Operations UX | v1.3 | 0/0 | Not started | - |
