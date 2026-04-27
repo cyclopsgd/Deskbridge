@@ -341,9 +341,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
-- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
-- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
+- [x] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
+- [x] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
+- [x] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
 
 </details>
 
@@ -494,7 +494,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 
 **Goal:** Replace fixed Width=240 sidebar with GridSplitter drag-to-resize. Needs airspace-safe implementation (GridSplitter can't overlap WindowsFormsHost/ActiveX viewport). MinWidth ~180, MaxWidth ~400.
 **Requirements:** TBD
-**Plans:** 2/2 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
