@@ -15,6 +15,9 @@ artifacts/
 TestResults/
 *.trx
 
+# BenchmarkDotNet (may be created at repo root by dotnet run)
+BenchmarkDotNet.Artifacts/
+
 # OS
 Thumbs.db
 Desktop.ini
