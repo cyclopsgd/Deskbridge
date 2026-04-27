@@ -1,5 +1,5 @@
-using System.Collections.ObjectModel;
-using Deskbridge.ViewModels;
+using Deskbridge.Core.Models;
+using Deskbridge.Core.Services;
 
 namespace Deskbridge.Tests.ViewModels;
 
@@ -9,35 +9,35 @@ public sealed class TreeDepthTests
     [Fact]
     public void RootLevelItems_HaveDepthZero()
     {
-        var items = new ObservableCollection<TreeItemViewModel>
+        var connections = new List<ConnectionModel>
         {
-            new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "Root1" },
-            new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "Root2" },
+            new() { Id = Guid.NewGuid(), Name = "Root1", Hostname = "h1" },
+            new() { Id = Guid.NewGuid(), Name = "Root2", Hostname = "h2" },
         };
 
-        ConnectionTreeViewModel.AssignDepths(items, 0);
+        var result = ConnectionTreeBuilder.Build(connections, []);
 
-        items[0].Depth.Should().Be(0);
-        items[1].Depth.Should().Be(0);
+        result[0].Depth.Should().Be(0);
+        result[1].Depth.Should().Be(0);
     }
 
     [Fact]
     public void ItemsInTopLevelGroup_HaveDepthOne()
     {
-        var group = new GroupTreeItemViewModel
+        var groupId = Guid.NewGuid();
+        var groups = new List<ConnectionGroup>
         {
-            Id = Guid.NewGuid(),
-            Name = "Group1",
-            Children = new ObservableCollection<TreeItemViewModel>
-            {
-                new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "Child1" },
-                new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "Child2" },
-            }
+            new() { Id = groupId, Name = "Group1" },
         };
-        var items = new ObservableCollection<TreeItemViewModel> { group };
+        var connections = new List<ConnectionModel>
+        {
+            new() { Id = Guid.NewGuid(), Name = "Child1", Hostname = "h1", GroupId = groupId },
+            new() { Id = Guid.NewGuid(), Name = "Child2", Hostname = "h2", GroupId = groupId },
+        };
 
-        ConnectionTreeViewModel.AssignDepths(items, 0);
+        var result = ConnectionTreeBuilder.Build(connections, groups);
 
+        var group = result[0].Should().BeOfType<GroupNode>().Subject;
         group.Depth.Should().Be(0);
         group.Children[0].Depth.Should().Be(1);
         group.Children[1].Depth.Should().Be(1);
@@ -46,57 +46,64 @@ public sealed class TreeDepthTests
     [Fact]
     public void ItemsNestedThreeLevelsDeep_HaveDepthThree()
     {
-        var deepConn = new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "Deep" };
-        var level2Group = new GroupTreeItemViewModel
-        {
-            Id = Guid.NewGuid(),
-            Name = "Level2",
-            Children = new ObservableCollection<TreeItemViewModel>
-            {
-                new GroupTreeItemViewModel
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Level3",
-                    Children = new ObservableCollection<TreeItemViewModel> { deepConn }
-                }
-            }
-        };
-        var level1Group = new GroupTreeItemViewModel
-        {
-            Id = Guid.NewGuid(),
-            Name = "Level1",
-            Children = new ObservableCollection<TreeItemViewModel> { level2Group }
-        };
-        var items = new ObservableCollection<TreeItemViewModel> { level1Group };
+        var level1Id = Guid.NewGuid();
+        var level2Id = Guid.NewGuid();
+        var level3Id = Guid.NewGuid();
 
-        ConnectionTreeViewModel.AssignDepths(items, 0);
+        var groups = new List<ConnectionGroup>
+        {
+            new() { Id = level1Id, Name = "Level1" },
+            new() { Id = level2Id, Name = "Level2", ParentGroupId = level1Id },
+            new() { Id = level3Id, Name = "Level3", ParentGroupId = level2Id },
+        };
+        var connections = new List<ConnectionModel>
+        {
+            new() { Id = Guid.NewGuid(), Name = "Deep", Hostname = "deep", GroupId = level3Id },
+        };
 
-        level1Group.Depth.Should().Be(0);
-        level2Group.Depth.Should().Be(1);
-        ((GroupTreeItemViewModel)level2Group.Children[0]).Depth.Should().Be(2);
-        deepConn.Depth.Should().Be(3);
+        var result = ConnectionTreeBuilder.Build(connections, groups);
+
+        var level1 = result[0].Should().BeOfType<GroupNode>().Subject;
+        level1.Depth.Should().Be(0);
+
+        var level2 = level1.Children[0].Should().BeOfType<GroupNode>().Subject;
+        level2.Depth.Should().Be(1);
+
+        var level3 = level2.Children[0].Should().BeOfType<GroupNode>().Subject;
+        level3.Depth.Should().Be(2);
+
+        var deep = level3.Children[0].Should().BeOfType<ConnectionNode>().Subject;
+        deep.Depth.Should().Be(3);
     }
 
     [Fact]
     public void AfterReassignment_DepthValuesAreRecomputed()
     {
-        var conn = new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "Movable" };
-        var group = new GroupTreeItemViewModel
+        // Build with connection inside a group (depth 1)
+        var groupId = Guid.NewGuid();
+        var connId = Guid.NewGuid();
+        var groups = new List<ConnectionGroup>
         {
-            Id = Guid.NewGuid(),
-            Name = "Group1",
-            Children = new ObservableCollection<TreeItemViewModel> { conn }
+            new() { Id = groupId, Name = "Group1" },
         };
-        var items = new ObservableCollection<TreeItemViewModel> { group };
+        var connections = new List<ConnectionModel>
+        {
+            new() { Id = connId, Name = "Movable", Hostname = "h1", GroupId = groupId },
+        };
 
-        // First assignment: conn at depth 1
-        ConnectionTreeViewModel.AssignDepths(items, 0);
-        conn.Depth.Should().Be(1);
+        var result1 = ConnectionTreeBuilder.Build(connections, groups);
+        var group1 = result1[0].Should().BeOfType<GroupNode>().Subject;
+        group1.Children[0].Depth.Should().Be(1);
 
-        // Move conn to root level and reassign
-        group.Children.Clear();
-        items.Add(conn);
-        ConnectionTreeViewModel.AssignDepths(items, 0);
+        // Rebuild with same connection at root level (no GroupId)
+        var connectionsAtRoot = new List<ConnectionModel>
+        {
+            new() { Id = connId, Name = "Movable", Hostname = "h1", GroupId = null },
+        };
+
+        var result2 = ConnectionTreeBuilder.Build(connectionsAtRoot, groups);
+        // Group is empty, connection is at root
+        var conn = result2.OfType<ConnectionNode>().First(c => c.Id == connId);
         conn.Depth.Should().Be(0);
     }
 
@@ -112,40 +119,45 @@ public sealed class TreeDepthTests
         // Group C (depth 0)
         //   Connection C1 (depth 1)
 
-        var connRoot = new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "Root" };
-        var connA1 = new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "A1" };
-        var connB1 = new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "B1" };
-        var connC1 = new ConnectionTreeItemViewModel { Id = Guid.NewGuid(), Name = "C1" };
+        var groupAId = Guid.NewGuid();
+        var groupBId = Guid.NewGuid();
+        var groupCId = Guid.NewGuid();
 
-        var groupB = new GroupTreeItemViewModel
+        var groups = new List<ConnectionGroup>
         {
-            Id = Guid.NewGuid(),
-            Name = "GroupB",
-            Children = new ObservableCollection<TreeItemViewModel> { connB1 }
+            new() { Id = groupAId, Name = "GroupA", SortOrder = 1 },
+            new() { Id = groupBId, Name = "GroupB", ParentGroupId = groupAId, SortOrder = 1 },
+            new() { Id = groupCId, Name = "GroupC", SortOrder = 2 },
         };
-        var groupA = new GroupTreeItemViewModel
+        var connections = new List<ConnectionModel>
         {
-            Id = Guid.NewGuid(),
-            Name = "GroupA",
-            Children = new ObservableCollection<TreeItemViewModel> { connA1, groupB }
-        };
-        var groupC = new GroupTreeItemViewModel
-        {
-            Id = Guid.NewGuid(),
-            Name = "GroupC",
-            Children = new ObservableCollection<TreeItemViewModel> { connC1 }
+            new() { Id = Guid.NewGuid(), Name = "Root", Hostname = "root", SortOrder = 0 },
+            new() { Id = Guid.NewGuid(), Name = "A1", Hostname = "a1", GroupId = groupAId, SortOrder = 0 },
+            new() { Id = Guid.NewGuid(), Name = "B1", Hostname = "b1", GroupId = groupBId },
+            new() { Id = Guid.NewGuid(), Name = "C1", Hostname = "c1", GroupId = groupCId },
         };
 
-        var items = new ObservableCollection<TreeItemViewModel> { connRoot, groupA, groupC };
+        var result = ConnectionTreeBuilder.Build(connections, groups);
 
-        ConnectionTreeViewModel.AssignDepths(items, 0);
+        // Root level: Root conn (sort=0), GroupA (sort=1), GroupC (sort=2)
+        result[0].Should().BeOfType<ConnectionNode>().Which.Depth.Should().Be(0);
 
-        connRoot.Depth.Should().Be(0);
+        var groupA = result[1].Should().BeOfType<GroupNode>().Subject;
         groupA.Depth.Should().Be(0);
-        connA1.Depth.Should().Be(1);
+
+        var a1 = groupA.Children[0].Should().BeOfType<ConnectionNode>().Subject;
+        a1.Depth.Should().Be(1);
+
+        var groupB = groupA.Children[1].Should().BeOfType<GroupNode>().Subject;
         groupB.Depth.Should().Be(1);
-        connB1.Depth.Should().Be(2);
+
+        var b1 = groupB.Children[0].Should().BeOfType<ConnectionNode>().Subject;
+        b1.Depth.Should().Be(2);
+
+        var groupC = result[2].Should().BeOfType<GroupNode>().Subject;
         groupC.Depth.Should().Be(0);
-        connC1.Depth.Should().Be(1);
+
+        var c1 = groupC.Children[0].Should().BeOfType<ConnectionNode>().Subject;
+        c1.Depth.Should().Be(1);
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
+using Deskbridge.Core.Services;
 using Deskbridge.Core.Settings;
 using Deskbridge.Dialogs;
 using Deskbridge.Protocols.Rdp;
@@ -421,101 +422,12 @@ public partial class ConnectionTreeViewModel : ObservableObject
         var connections = _connectionStore.GetAll();
         var groups = _connectionStore.GetGroups();
 
-        // Build group lookup: GroupId -> GroupTreeItemViewModel
-        var groupMap = new Dictionary<Guid, GroupTreeItemViewModel>();
-        foreach (var group in groups)
-        {
-            groupMap[group.Id] = new GroupTreeItemViewModel
-            {
-                Id = group.Id,
-                Name = group.Name,
-                ParentGroupId = group.ParentGroupId,
-                SortOrder = group.SortOrder,
-                IsExpanded = true,
-                HasCredentials = _credentialService.HasGroupCredentials(group.Id)
-            };
-        }
+        // Build a lookup so the mapper can populate Port/Username/Domain/CredentialMode
+        // from the original ConnectionModel (ConnectionNode only carries Id/Name/Hostname/GroupId/SortOrder/Depth)
+        var connectionLookup = connections.ToDictionary(c => c.Id);
 
-        // Build connection ViewModels
-        var connectionVms = new List<ConnectionTreeItemViewModel>();
-        foreach (var conn in connections)
-        {
-            connectionVms.Add(new ConnectionTreeItemViewModel
-            {
-                Id = conn.Id,
-                Name = conn.Name,
-                Hostname = conn.Hostname,
-                Port = conn.Port,
-                Username = conn.Username,
-                Domain = conn.Domain,
-                CredentialMode = conn.CredentialMode,
-                GroupId = conn.GroupId,
-                SortOrder = conn.SortOrder
-            });
-        }
-
-        // Nest groups into parent groups. Detect cycles (hand-edited JSON with
-        // A.Parent=A or A->B->A loops) by walking each group's parent chain
-        // before deciding its placement. A group participating in a cycle is
-        // promoted to root so it remains reachable in the UI.
-        var rootItems = new ObservableCollection<TreeItemViewModel>();
-        foreach (var kvp in groupMap)
-        {
-            var groupVm = kvp.Value;
-            bool participatesInCycle = false;
-            if (groupVm.ParentGroupId is not null)
-            {
-                var visited = new HashSet<Guid> { groupVm.Id };
-                var cursor = groupVm.ParentGroupId;
-                while (cursor is not null)
-                {
-                    if (!visited.Add(cursor.Value))
-                    {
-                        participatesInCycle = true;
-                        Serilog.Log.Warning("Cycle detected in group parent chain at {GroupId}; promoting to root", groupVm.Id);
-                        break;
-                    }
-                    if (!groupMap.TryGetValue(cursor.Value, out var next))
-                        break;
-                    cursor = next.ParentGroupId;
-                }
-            }
-
-            if (!participatesInCycle
-                && groupVm.ParentGroupId is not null
-                && groupMap.TryGetValue(groupVm.ParentGroupId.Value, out var parentGroup))
-            {
-                parentGroup.Children.Add(groupVm);
-            }
-            else
-            {
-                rootItems.Add(groupVm);
-            }
-        }
-
-        // Place connections into their groups or root
-        foreach (var connVm in connectionVms)
-        {
-            if (connVm.GroupId is not null && groupMap.TryGetValue(connVm.GroupId.Value, out var parentGroup))
-            {
-                parentGroup.Children.Add(connVm);
-            }
-            else
-            {
-                rootItems.Add(connVm);
-            }
-        }
-
-        // Sort siblings by SortOrder ascending (groups and connections sort alongside each other).
-        // Tiebreaker on Name keeps deterministic ordering when SortOrder values collide (e.g. zero-init).
-        SortSiblings(rootItems);
-        foreach (var kvp in groupMap)
-        {
-            SortSiblings(kvp.Value.Children);
-        }
-
-        // STAB-05: Compute depth from group hierarchy so converters don't walk the visual tree
-        AssignDepths(rootItems, 0);
+        var tree = ConnectionTreeBuilder.Build(connections, groups);
+        var rootItems = MapToViewModels(tree, connectionLookup);
 
         _fullTree = rootItems;
         RootItems = new ObservableCollection<TreeItemViewModel>(rootItems);
@@ -529,38 +441,54 @@ public partial class ConnectionTreeViewModel : ObservableObject
         }
     }
 
-    private static void SortSiblings(ObservableCollection<TreeItemViewModel> siblings)
+    private ObservableCollection<TreeItemViewModel> MapToViewModels(
+        IReadOnlyList<TreeNode> nodes,
+        IReadOnlyDictionary<Guid, ConnectionModel> connectionLookup)
     {
-        var sorted = siblings
-            .OrderBy(GetSortOrder)
-            .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        siblings.Clear();
-        foreach (var item in sorted)
-            siblings.Add(item);
-    }
-
-    /// <summary>
-    /// STAB-05: Recursively assign depth values to all items in the tree.
-    /// Internal + static so unit tests can exercise it via InternalsVisibleTo.
-    /// </summary>
-    internal static void AssignDepths(IEnumerable<TreeItemViewModel> items, int depth)
-    {
-        foreach (var item in items)
+        var result = new ObservableCollection<TreeItemViewModel>();
+        foreach (var node in nodes)
         {
-            item.Depth = depth;
-            if (item is GroupTreeItemViewModel group)
-                AssignDepths(group.Children, depth + 1);
+            switch (node)
+            {
+                case GroupNode g:
+                    var groupVm = new GroupTreeItemViewModel
+                    {
+                        Id = g.Id,
+                        Name = g.Name,
+                        ParentGroupId = g.ParentGroupId,
+                        SortOrder = g.SortOrder,
+                        IsExpanded = true,
+                        HasCredentials = _credentialService.HasGroupCredentials(g.Id),
+                        Depth = g.Depth
+                    };
+                    foreach (var child in MapToViewModels(g.Children, connectionLookup))
+                        groupVm.Children.Add(child);
+                    result.Add(groupVm);
+                    break;
+                case ConnectionNode c:
+                    var connVm = new ConnectionTreeItemViewModel
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        Hostname = c.Hostname,
+                        GroupId = c.GroupId,
+                        SortOrder = c.SortOrder,
+                        Depth = c.Depth
+                    };
+                    // Populate fields not carried by ConnectionNode from the original model
+                    if (connectionLookup.TryGetValue(c.Id, out var model))
+                    {
+                        connVm.Port = model.Port;
+                        connVm.Username = model.Username;
+                        connVm.Domain = model.Domain;
+                        connVm.CredentialMode = model.CredentialMode;
+                    }
+                    result.Add(connVm);
+                    break;
+            }
         }
+        return result;
     }
-
-    private static int GetSortOrder(TreeItemViewModel item) => item switch
-    {
-        ConnectionTreeItemViewModel c => c.SortOrder,
-        GroupTreeItemViewModel g => g.SortOrder,
-        _ => 0
-    };
 
     // --- Search filter ---
 
