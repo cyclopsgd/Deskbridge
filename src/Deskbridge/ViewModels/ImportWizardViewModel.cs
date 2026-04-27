@@ -363,6 +363,7 @@ public partial class ImportWizardViewModel : ObservableObject
             ImportedCount = imported;
             SkippedCount = skipped;
             RenamedCount = renamed;
+            OnPropertyChanged(nameof(ImportSummary));
 
             // Single atomic file write for all connections and groups
             _store.SaveBatch(connectionsToSave, groupsToSave);
