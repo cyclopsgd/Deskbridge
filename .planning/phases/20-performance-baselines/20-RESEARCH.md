@@ -114,34 +114,43 @@ dotnet add tests/Deskbridge.Benchmarks/Deskbridge.Benchmarks.csproj package Benc
   - initial-results.json (git-tracked)
 ```
 
+### Files Modified by This Phase
+
+This phase is NOT purely greenfield. In addition to new files, it modifies existing code:
+- **`src/Deskbridge/ViewModels/ConnectionTreeViewModel.cs`** -- `BuildTree()` refactored to delegate to `ConnectionTreeBuilder.Build()` and map results to ViewModels. The `SortSiblings()` and `AssignDepths()` internal helpers move to the builder.
+- **`tests/Deskbridge.Tests/ViewModels/TreeDepthTests.cs`** -- 6 calls to `ConnectionTreeViewModel.AssignDepths()` via `InternalsVisibleTo`. These tests must be rewritten to test `ConnectionTreeBuilder` directly (the public Core API) since `AssignDepths` moves out of the ViewModel. [VERIFIED: grep found 6 calls in TreeDepthTests.cs]
+
 ### Recommended Project Structure
 ```
 tests/
-├── Deskbridge.Benchmarks/
-│   ├── Deskbridge.Benchmarks.csproj
-│   ├── Program.cs                    # BenchmarkSwitcher entry point
-│   ├── Config/
-│   │   └── BenchmarkConfig.cs        # Custom ManualConfig
-│   ├── Benchmarks/
-│   │   ├── TreeBuildBenchmarks.cs    # BuildTree parameterized
-│   │   ├── SearchBenchmarks.cs       # Search parameterized
-│   │   ├── StoreBenchmarks.cs        # Load, Save, SaveBatch, DeleteBatch
-│   │   └── FilterBenchmarks.cs       # GetByFilter parameterized
-│   ├── baseline/
-│   │   └── .gitkeep                  # Initial results committed here
-│   └── .gitignore                    # Ignore BenchmarkDotNet.Artifacts/
-├── Deskbridge.Tests/
-│   └── (existing)
-└── uat/
-    └── (existing)
++-- Deskbridge.Benchmarks/
+|   +-- Deskbridge.Benchmarks.csproj
+|   +-- Program.cs                    # BenchmarkSwitcher entry point
+|   +-- Config/
+|   |   +-- BenchmarkConfig.cs        # Custom ManualConfig
+|   +-- Benchmarks/
+|   |   +-- TreeBuildBenchmarks.cs    # BuildTree parameterized
+|   |   +-- SearchBenchmarks.cs       # Search parameterized
+|   |   +-- StoreBenchmarks.cs        # Load, Save, SaveBatch, DeleteBatch
+|   |   +-- FilterBenchmarks.cs       # GetByFilter parameterized
+|   +-- baseline/
+|   |   +-- .gitkeep                  # Initial results committed here
+|   +-- .gitignore                    # Ignore BenchmarkDotNet.Artifacts/
++-- Deskbridge.Tests/
+|   +-- (existing)
++-- uat/
+    +-- (existing)
 
 src/
-└── Deskbridge.Core/
-    ├── Services/
-    │   ├── ConnectionTreeBuilder.cs  # NEW: pure tree-building logic
-    │   └── TestDataGenerator.cs      # NEW: deterministic data generation
-    └── Models/
-        └── TreeNode.cs               # NEW: pure tree result types
++-- Deskbridge.Core/
+|   +-- Services/
+|   |   +-- ConnectionTreeBuilder.cs  # NEW: pure tree-building logic
+|   |   +-- TestDataGenerator.cs      # NEW: deterministic data generation
+|   +-- Models/
+|       +-- TreeNode.cs               # NEW: pure tree result types
++-- Deskbridge/
+    +-- ViewModels/
+        +-- ConnectionTreeViewModel.cs  # MODIFIED: BuildTree() delegates to builder
 ```
 
 ### Pattern 1: Extracted Tree Builder (D-03)
@@ -213,6 +222,8 @@ var tree = ConnectionTreeBuilder.Build(connections, groups);
 var rootItems = MapToViewModels(tree); // Maps TreeNode -> *TreeItemViewModel, applies HasCredentials
 ```
 
+**Existing test migration:** `tests/Deskbridge.Tests/ViewModels/TreeDepthTests.cs` contains 6 calls to `ConnectionTreeViewModel.AssignDepths()` exposed via `InternalsVisibleTo("Deskbridge.Tests")`. When `AssignDepths` and sort logic move to `ConnectionTreeBuilder`, these tests MUST be rewritten to test the new builder's public API directly. The planner should include this as an explicit task within the tree-extraction wave, not defer it.
+
 ### Pattern 2: Deterministic Test Data Generator
 
 **What:** Seeded random generator producing enterprise-realistic connection datasets.
@@ -258,6 +269,8 @@ Key design decisions:
 | SaveBatch | Yes | `[IterationSetup]` -- reseed store state before each iteration |
 | DeleteBatch | Yes | `[IterationSetup]` -- reseed store state before each iteration |
 
+**Critical: Benchmark method must only contain the operation being measured.** For mutating benchmarks, `[IterationSetup]` creates and loads a fresh store instance stored as a class field. The `[Benchmark]` method then calls only the single operation on that pre-loaded store. Do NOT create a new store or call `Load()` inside the benchmark method -- that conflates construction/loading cost with the operation cost.
+
 ```csharp
 // Source: BenchmarkDotNet docs - setup-and-cleanup.md + parameterization.md
 [MemoryDiagnoser]
@@ -272,6 +285,7 @@ public class StoreBenchmarks
     private string _filePath = null!;
     private IReadOnlyList<ConnectionModel> _connections = null!;
     private IReadOnlyList<ConnectionGroup> _groups = null!;
+    private JsonConnectionStore _store = null!;
 
     [GlobalSetup]
     public void GlobalSetup()
@@ -288,27 +302,41 @@ public class StoreBenchmarks
     [IterationSetup(Target = nameof(Save))]
     public void SetupForSave()
     {
-        // Write fresh baseline file so Save measures single-connection upsert cost
-        var store = new JsonConnectionStore(_filePath);
-        store.Load(); // fresh empty
-        store.SaveBatch(_connections, _groups); // seed with data
+        // Create fresh store seeded with full dataset
+        _store = new JsonConnectionStore(_filePath);
+        _store.Load();
+        _store.SaveBatch(_connections, _groups);
     }
 
     [Benchmark]
     public void Save()
     {
-        var store = new JsonConnectionStore(_filePath);
-        store.Load();
-        // Save a modified connection (upsert)
-        var modified = _connections[0]; // same Id = update path
-        store.Save(modified);
+        // Only the Save operation is timed -- store is pre-loaded in IterationSetup
+        _store.Save(_connections[0]);
+    }
+
+    [IterationSetup(Target = nameof(DeleteBatch))]
+    public void SetupForDelete()
+    {
+        // Create fresh store seeded with full dataset
+        _store = new JsonConnectionStore(_filePath);
+        _store.Load();
+        _store.SaveBatch(_connections, _groups);
+    }
+
+    [Benchmark]
+    public void DeleteBatch()
+    {
+        // Only the DeleteBatch operation is timed
+        var idsToDelete = _connections.Take(ConnectionCount / 10).Select(c => c.Id);
+        _store.DeleteBatch(idsToDelete, []);
     }
 
     [GlobalCleanup]
     public void GlobalCleanup()
     {
         if (Directory.Exists(_tempDir))
-            Directory.DeleteRecursively(_tempDir);
+            Directory.Delete(_tempDir, recursive: true);
     }
 }
 ```
@@ -330,6 +358,7 @@ BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
 
 ### Anti-Patterns to Avoid
 - **Benchmarking in Debug mode:** BenchmarkDotNet requires Release configuration. Running in Debug produces misleading results and BDN warns/aborts.
+- **Including setup work in benchmark body:** Mutating benchmarks must do `new + Load + seed` in `[IterationSetup]`, NOT in the `[Benchmark]` method. Otherwise you measure construction + loading + the actual operation, making results useless for isolating operation cost.
 - **Shared mutable state across iterations:** Save/Delete benchmarks MUST reseed state via `[IterationSetup]`, not reuse modified state from previous iteration.
 - **Benchmarking ViewModel directly:** The ViewModel depends on `ICredentialService`, `ObservableCollection`, and WPF binding infrastructure. Benchmark the extracted pure logic only.
 - **Non-deterministic data:** Using `Random()` without a fixed seed makes results incomparable across runs. Always pass explicit seed.
@@ -376,6 +405,12 @@ BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
 **Why it happens:** Creating a `.csproj` doesn't automatically register it in `Deskbridge.sln`.
 **How to avoid:** Run `dotnet sln add tests/Deskbridge.Benchmarks/Deskbridge.Benchmarks.csproj` after creating the project.
 **Warning signs:** "Project not found" errors when running from solution context.
+
+### Pitfall 6: Existing Test Breakage from Tree Extraction
+**What goes wrong:** `tests/Deskbridge.Tests/ViewModels/TreeDepthTests.cs` has 6 calls to `ConnectionTreeViewModel.AssignDepths()` via `InternalsVisibleTo`. After extraction, `AssignDepths` no longer exists on the ViewModel.
+**Why it happens:** D-03 moves tree-building logic (including depth assignment and sorting) from the ViewModel to `ConnectionTreeBuilder` in Core.
+**How to avoid:** Rewrite `TreeDepthTests.cs` to test `ConnectionTreeBuilder` directly using its public API. Do this in the same wave as the extraction, not deferred.
+**Warning signs:** `Deskbridge.Tests` compilation failure after tree extraction -- `AssignDepths` method not found.
 
 ## Code Examples
 
@@ -468,7 +503,7 @@ public class TreeBuildBenchmarks
 }
 ```
 
-### Mutating Benchmark (DeleteBatch)
+### Mutating Benchmark (Store Operations)
 
 ```csharp
 using BenchmarkDotNet.Attributes;
@@ -487,7 +522,7 @@ public class StoreBenchmarks
     private string _filePath = null!;
     private IReadOnlyList<ConnectionModel> _connections = null!;
     private IReadOnlyList<ConnectionGroup> _groups = null!;
-    private Guid[] _idsToDelete = null!;
+    private JsonConnectionStore _store = null!;
 
     [GlobalSetup]
     public void GlobalSetup()
@@ -499,25 +534,74 @@ public class StoreBenchmarks
         var (connections, groups) = TestDataGenerator.Generate(ConnectionCount);
         _connections = connections;
         _groups = groups;
-        // Delete ~10% of connections in batch
-        _idsToDelete = connections.Take(ConnectionCount / 10).Select(c => c.Id).ToArray();
     }
+
+    // --- Load: read-only, uses pre-written file ---
+
+    [IterationSetup(Target = nameof(Load))]
+    public void SetupForLoad()
+    {
+        // Write file with full dataset; Load benchmark reads it
+        var seedStore = new JsonConnectionStore(_filePath);
+        seedStore.Load();
+        seedStore.SaveBatch(_connections, _groups);
+    }
+
+    [Benchmark]
+    public void Load()
+    {
+        // Only Load() is timed -- file was pre-written in IterationSetup
+        var store = new JsonConnectionStore(_filePath);
+        store.Load();
+    }
+
+    // --- Save: mutating, single connection upsert ---
+
+    [IterationSetup(Target = nameof(Save))]
+    public void SetupForSave()
+    {
+        _store = new JsonConnectionStore(_filePath);
+        _store.Load();
+        _store.SaveBatch(_connections, _groups);
+    }
+
+    [Benchmark]
+    public void Save()
+    {
+        // Only Save() is timed -- store is pre-loaded
+        _store.Save(_connections[0]);
+    }
+
+    // --- SaveBatch: mutating, full batch write ---
+
+    [IterationSetup(Target = nameof(SaveBatch))]
+    public void SetupForSaveBatch()
+    {
+        _store = new JsonConnectionStore(_filePath);
+        _store.Load();
+    }
+
+    [Benchmark]
+    public void SaveBatch()
+    {
+        _store.SaveBatch(_connections, _groups);
+    }
+
+    // --- DeleteBatch: mutating, 10% deletion ---
 
     [IterationSetup(Target = nameof(DeleteBatch))]
     public void SetupForDelete()
     {
-        // Reseed file with full dataset before each iteration
-        var store = new JsonConnectionStore(_filePath);
-        store.Load();
-        store.SaveBatch(_connections, _groups);
+        _store = new JsonConnectionStore(_filePath);
+        _store.Load();
+        _store.SaveBatch(_connections, _groups);
     }
 
     [Benchmark]
     public void DeleteBatch()
     {
-        var store = new JsonConnectionStore(_filePath);
-        store.Load();
-        store.DeleteBatch(_idsToDelete, []);
+        var idsToDelete = _connections.Take(ConnectionCount / 10).Select(c => c.Id);
+        _store.DeleteBatch(idsToDelete, []);
     }
 
     [GlobalCleanup]
@@ -555,7 +639,7 @@ BenchmarkDotNet.Artifacts/
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | BenchmarkDotNet 0.15.8 runs cleanly on `net10.0-windows` with `UseWPF=true` inherited from Directory.Build.props | Standard Stack | Build failure -- would need to override TFM or isolate from Directory.Build.props |
+| A1 | BenchmarkDotNet 0.15.8 runs cleanly on `net10.0-windows` with `UseWPF=true` inherited from Directory.Build.props | Standard Stack | Build failure -- would need to override TFM or isolate from Directory.Build.props. Planner should add a verification step (build + dry-run a hello-world benchmark) as the first task. |
 | A2 | `Directory.Delete(_tempDir, recursive: true)` in GlobalCleanup is sufficient (no file locking from BDN forked processes) | Code Examples | Temp files leak on disk -- harmless but messy |
 
 ## Open Questions
@@ -599,15 +683,17 @@ BenchmarkDotNet.Artifacts/
 | PERF-04d | ConnectionTreeBuilder.Build produces correct tree structure | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~TreeBuilder" -c Release` | No -- Wave 0 |
 | PERF-04e | ConnectionTreeBuilder.Build detects cycles | unit | Same as above | No -- Wave 0 |
 | PERF-04f | Benchmark project builds and runs | smoke | `dotnet run --project tests/Deskbridge.Benchmarks -c Release -- --filter '*TreeBuild*' --job dry` | No -- Wave 0 |
+| PERF-04g | Existing TreeDepthTests pass after migration to builder API | regression | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~TreeDepth" -c Release` | Yes -- needs rewrite |
 
 ### Sampling Rate
-- **Per task commit:** `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~TestDataGenerator OR FullyQualifiedName~TreeBuilder" -c Release`
+- **Per task commit:** `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~TestDataGenerator OR FullyQualifiedName~TreeBuilder OR FullyQualifiedName~TreeDepth" -c Release`
 - **Per wave merge:** `dotnet test tests/Deskbridge.Tests -c Release`
 - **Phase gate:** Full test suite green + benchmark dry-run completes without error
 
 ### Wave 0 Gaps
 - [ ] `tests/Deskbridge.Tests/Services/TestDataGeneratorTests.cs` -- covers PERF-04a/b/c
 - [ ] `tests/Deskbridge.Tests/Services/ConnectionTreeBuilderTests.cs` -- covers PERF-04d/e
+- [ ] Rewrite `tests/Deskbridge.Tests/ViewModels/TreeDepthTests.cs` -- covers PERF-04g (test ConnectionTreeBuilder public API instead of VM internals)
 - [ ] Benchmark project scaffold (`tests/Deskbridge.Benchmarks/`) -- covers PERF-04f
 
 ## Security Domain
@@ -632,7 +718,7 @@ This phase has no security surface -- it creates dev-only benchmark infrastructu
 **Confidence breakdown:**
 - Standard stack: HIGH -- BenchmarkDotNet 0.15.8 verified on NuGet, .NET 10 support confirmed in release notes
 - Architecture: HIGH -- Extraction pattern directly informed by reading existing BuildTree() code (lines 419-556)
-- Pitfalls: HIGH -- Derived from understanding actual code (mutating store methods, Directory.Build.props inheritance)
+- Pitfalls: HIGH -- Derived from understanding actual code (mutating store methods, Directory.Build.props inheritance, existing test dependencies)
 
 **Research date:** 2026-04-27
 **Valid until:** 2026-05-27 (stable domain, unlikely to change)
