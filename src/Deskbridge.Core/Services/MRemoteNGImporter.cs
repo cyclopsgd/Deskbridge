@@ -79,6 +79,7 @@ public class MRemoteNGImporter : IConnectionImporter
         var username = NullIfEmpty(el.Attribute("Username")?.Value);
         var domain = NullIfEmpty(el.Attribute("Domain")?.Value);
         var description = NullIfEmpty(el.Attribute("Description")?.Value);
+        var inheritsCredentials = ParseInherits(el.Attribute("Inheritance")?.Value);
 
         // Password attribute is EXPLICITLY SKIPPED -- never read, stored, or logged (MIG-03)
 
@@ -91,7 +92,28 @@ public class MRemoteNGImporter : IConnectionImporter
         return new ImportedNode(
             name, nodeType, hostname, port,
             username, domain, protocol, description,
+            inheritsCredentials,
             children);
+    }
+
+    /// <summary>
+    /// Parse the mRemoteNG <c>Inheritance</c> attribute (comma-separated tokens).
+    /// Returns true if either <c>Username</c> or <c>Password</c> appears in the token list.
+    /// Empty/missing/<c>None</c> -> false.
+    /// </summary>
+    private static bool ParseInherits(string? inheritance)
+    {
+        if (string.IsNullOrWhiteSpace(inheritance)) return false;
+
+        var tokens = inheritance.Split(
+            ',',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var t in tokens)
+        {
+            if (t.Equals("Username", StringComparison.OrdinalIgnoreCase)) return true;
+            if (t.Equals("Password", StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
 
     private static Protocol MapProtocol(string? value) => value switch

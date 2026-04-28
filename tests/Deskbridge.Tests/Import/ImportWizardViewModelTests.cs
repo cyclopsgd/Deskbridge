@@ -36,9 +36,10 @@ public class ImportWizardViewModelTests
             Domain: null,
             Protocol: Protocol.Rdp,
             Description: null,
+            InheritsCredentials: false,
             Children: [
-                new ImportedNode("Server A1", ImportNodeType.Connection, "a1.local", 3389, "admin", "DOM", Protocol.Rdp, null, []),
-                new ImportedNode("Server A2", ImportNodeType.Connection, "a2.local", 3389, "admin", "DOM", Protocol.Rdp, null, [])
+                new ImportedNode("Server A1", ImportNodeType.Connection, "a1.local", 3389, "admin", "DOM", Protocol.Rdp, null, false, []),
+                new ImportedNode("Server A2", ImportNodeType.Connection, "a2.local", 3389, "admin", "DOM", Protocol.Rdp, null, false, [])
             ]);
 
         var containerB = new ImportedNode(
@@ -50,8 +51,9 @@ public class ImportWizardViewModelTests
             Domain: null,
             Protocol: Protocol.Rdp,
             Description: null,
+            InheritsCredentials: false,
             Children: [
-                new ImportedNode("Server B1", ImportNodeType.Connection, "b1.local", 3389, "user", null, Protocol.Rdp, null, [])
+                new ImportedNode("Server B1", ImportNodeType.Connection, "b1.local", 3389, "user", null, Protocol.Rdp, null, false, [])
             ]);
 
         return new ImportResult(
