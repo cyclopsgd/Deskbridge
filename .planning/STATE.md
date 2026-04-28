@@ -140,6 +140,7 @@ None yet.
 | 260428-oga | Fix mRemoteNG import default CredentialMode (always Own — inherit parser stripped after refinement) | 2026-04-28 | c59c23a | [260428-oga](./quick/260428-oga-fix-mremoteng-import-default-credentialm/) |
 | 260428-q3k | Fix right-click context menu parent-context for New Connection / New Group (sibling/child instead of root) | 2026-04-28 | 17bc0ef | [260428-q3k](./quick/260428-q3k-fix-right-click-context-menu-parent-cont/) |
 | 260428-sdu | Align RDP DesktopWidth/Height to multiple of 8 (fixes "An internal error" connect failures + likely black-screen bug) + log extended disconnect reason | 2026-04-28 | 0ed934b | [260428-sdu](./quick/260428-sdu-align-rdp-desktopwidth-height-to-multipl/) |
+| rdp-black-screen-v2 | Debug: RDP black viewport post-connect — H2 confirmed (Phase 16 `_rdp.Dock=DockStyle.Fill` collapsed WFH to 0×0). Fix: removed Dock=Fill. Verified with user repro. | 2026-04-28 | f953308 | [rdp-black-screen-v2-RESOLVED](./debug/rdp-black-screen-v2-RESOLVED.md) |
 
 ### Blockers/Concerns
 
