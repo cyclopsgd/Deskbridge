@@ -135,9 +135,7 @@ public sealed class RdpHostControl : IProtocolHost
         // "not sited" despite the WFH being parented. Matches the canonical sequence used
         // by Plan 04-01's RdpSmokeHost via AxSiting.SiteAndConfigure (step 1).
         _host.Child = _rdp;
-        // STAB-04: ensure the AxHost child fills the WFH completely — eliminates grey
-        // border caused by DPI rounding mismatch between WPF DIPs and WinForms pixels.
-        _rdp.Dock = System.Windows.Forms.DockStyle.Fill;
+        // Note: AxHost.Dock intentionally NOT set — DockStyle.Fill caused WindowsFormsHost.MeasureOverride to receive GetPreferredSize=0×0, collapsing the host to 0x0 (debug session rdp-black-screen-v2).
     }
 
     public Task ConnectAsync(ConnectionContext context)
