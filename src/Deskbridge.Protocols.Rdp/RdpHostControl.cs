@@ -394,31 +394,6 @@ public sealed class RdpHostControl : IProtocolHost
             try { _rdp.OnDisconnected += OnDisconnectedAfterConnectHandler; } catch { }
         }
         _loginTcs?.TrySetResult(true);
-
-        // [DIAG rdp-black-screen-v2] Site 3 — capture the AxHost's reported state at the
-        // exact moment OnLoginComplete fires. Each property read is wrapped in its own
-        // try/catch because COM properties can throw if the control is racing teardown.
-        // Strip post-fix.
-        try
-        {
-            var handle = IntPtr.Zero;
-            var desktopWidth = -1;
-            var desktopHeight = -1;
-            var isConnected = false;
-            try { if (_rdp is not null) handle = _rdp.Handle; } catch { }
-            try { if (_rdp is not null) desktopWidth = _rdp.DesktopWidth; } catch { }
-            try { if (_rdp is not null) desktopHeight = _rdp.DesktopHeight; } catch { }
-            try { if (_rdp is not null) isConnected = _rdp.Connected != 0; } catch { }
-
-            _logger.LogInformation(
-                "[DIAG/OnLoginComplete] rdp-black-screen-v2 Handle=0x{Handle:X} DesktopWidth={DW} DesktopHeight={DH} IsConnected={IsConn} ConnId={ConnId}",
-                handle.ToInt64(), desktopWidth, desktopHeight, isConnected, ConnectionId);
-        }
-        catch (Exception ex)
-        {
-            // Best-effort: never let the diag log abort OnLoginComplete.
-            _logger.LogDebug("[DIAG/OnLoginComplete] capture threw (non-fatal): {ExceptionType}", ex.GetType().Name);
-        }
     }
 
     private void OnDisconnectedDuringConnect(object? sender, IMsTscAxEvents_OnDisconnectedEvent e)

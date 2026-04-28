@@ -1,9 +1,7 @@
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Windows.Forms.Integration;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Threading;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
@@ -469,10 +467,6 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
 
             _airspace.RegisterHost(rdp.Host, ViewportSnapshot);
 
-            // [DIAG rdp-black-screen-v2] Site 1 — capture HWND/WFH/HostContainer/Window
-            // state immediately after airspace registration. Strip post-fix.
-            LogHwndDiagnostics("post-register", rdp);
-
             // STAB-03: Measure viewport physical pixels and pass to RdpHostControl
             // so RdpConnectionConfigurator sets DesktopWidth/Height to match.
             // Must happen AFTER UpdateLayout (so ViewportGrid has final dimensions)
@@ -483,15 +477,6 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 ? ViewportMeasurement.GetDpiPercent(ct.TransformToDevice.M11)
                 : 100.0;
             rdp.SetViewportDimensions(vpWidth, vpHeight, dpiPercent);
-
-            // [DIAG rdp-black-screen-v2] Site 2 — fire-and-forget delayed measurement.
-            // 500ms after mount, by which time OnLoginComplete has typically fired and
-            // the AxHost's first WM_PAINT should have landed. Strip post-fix.
-            _ = Dispatcher.BeginInvoke(new Action(async () =>
-            {
-                await Task.Delay(500);
-                LogHwndDiagnostics("t+500ms", rdp);
-            }), DispatcherPriority.Background);
 
             // TabHostManager's OnHostMounted handler runs via the same coordinator
             // event and publishes TabSwitchedEvent(previous, thisHost). OnTabSwitched
@@ -1098,143 +1083,5 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             }
             vm.IsMasterPasswordConfigured = _masterPasswordService.IsMasterPasswordSet();
         }
-    }
-
-    // =========================================================================
-    // [DIAG rdp-black-screen-v2] Temporary instrumentation for the post-connect
-    // black-viewport investigation. Every member in this region is tagged for
-    // grep-and-remove once H1-H6 is decided. DO NOT depend on these from
-    // production code paths.
-    // =========================================================================
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetParent(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-    private struct RECT
-    {
-        public int Left, Top, Right, Bottom;
-    }
-
-    /// <summary>
-    /// [DIAG rdp-black-screen-v2] Captures HWND parent chain, AxHost ClientRect/WindowRect,
-    /// WFH state, HostContainer state, and Window state into a single Serilog Information
-    /// entry tagged <c>[DIAG/{site}]</c>. Each capture block is wrapped in its own try/catch
-    /// so one failed COM/HWND read does not suppress the others. Strip post-fix.
-    /// </summary>
-    private void LogHwndDiagnostics(string site, RdpHostControl rdp)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"[DIAG/{site}] rdp-black-screen-v2 capture");
-
-        // --- HWND state: parent chain + ClientRect + WindowRect ---
-        try
-        {
-            var axHwnd = rdp.Host.Child?.Handle ?? IntPtr.Zero;
-            sb.AppendLine($"  AxHost.Handle = 0x{axHwnd.ToInt64():X}");
-
-            IntPtr windowHwnd;
-            try { windowHwnd = new WindowInteropHelper(this).Handle; }
-            catch (Exception ex) { windowHwnd = IntPtr.Zero; sb.AppendLine($"  WindowInteropHelper threw: {ex.GetType().Name}"); }
-            sb.AppendLine($"  Window.Handle = 0x{windowHwnd.ToInt64():X}");
-
-            // Walk parent chain via GetParent until null or matches the Window HWND.
-            var depth = 0;
-            var current = axHwnd;
-            var tracesBack = false;
-            const int maxDepth = 32;
-            while (current != IntPtr.Zero && depth < maxDepth)
-            {
-                if (current == windowHwnd) { tracesBack = true; break; }
-                current = GetParent(current);
-                depth++;
-            }
-            sb.AppendLine($"  parentChainDepth = {depth}");
-            sb.AppendLine($"  axTracesBackToWindow = {tracesBack}");
-
-            if (axHwnd != IntPtr.Zero)
-            {
-                try
-                {
-                    if (GetClientRect(axHwnd, out var cr))
-                        sb.AppendLine($"  GetClientRect = ({cr.Left},{cr.Top})-({cr.Right},{cr.Bottom}) [{cr.Right - cr.Left}x{cr.Bottom - cr.Top}]");
-                    else
-                        sb.AppendLine("  GetClientRect = false");
-                }
-                catch (Exception ex) { sb.AppendLine($"  GetClientRect threw: {ex.GetType().Name}"); }
-
-                try
-                {
-                    if (GetWindowRect(axHwnd, out var wr))
-                        sb.AppendLine($"  GetWindowRect = ({wr.Left},{wr.Top})-({wr.Right},{wr.Bottom}) [{wr.Right - wr.Left}x{wr.Bottom - wr.Top}]");
-                    else
-                        sb.AppendLine("  GetWindowRect = false");
-                }
-                catch (Exception ex) { sb.AppendLine($"  GetWindowRect threw: {ex.GetType().Name}"); }
-            }
-        }
-        catch (Exception ex) { sb.AppendLine($"  [HWND block] threw: {ex.GetType().Name}: {ex.Message}"); }
-
-        // --- WFH state ---
-        try
-        {
-            var wfh = rdp.Host;
-            sb.AppendLine($"  WFH.ActualWidth = {wfh.ActualWidth}");
-            sb.AppendLine($"  WFH.ActualHeight = {wfh.ActualHeight}");
-            sb.AppendLine($"  WFH.IsVisible = {wfh.IsVisible}");
-            sb.AppendLine($"  WFH.Visibility = {wfh.Visibility}");
-            sb.AppendLine($"  WFH.IsEnabled = {wfh.IsEnabled}");
-            sb.AppendLine($"  WFH.Tag = {wfh.Tag ?? (object)"<null>"}");
-        }
-        catch (Exception ex) { sb.AppendLine($"  [WFH block] threw: {ex.GetType().Name}: {ex.Message}"); }
-
-        // --- HostContainer state ---
-        try
-        {
-            sb.AppendLine($"  HostContainer.ActualWidth = {HostContainer.ActualWidth}");
-            sb.AppendLine($"  HostContainer.ActualHeight = {HostContainer.ActualHeight}");
-            sb.AppendLine($"  HostContainer.IsVisible = {HostContainer.IsVisible}");
-            sb.AppendLine($"  HostContainer.Visibility = {HostContainer.Visibility}");
-            sb.AppendLine($"  HostContainer.Children.Count = {HostContainer.Children.Count}");
-            for (int i = 0; i < HostContainer.Children.Count; i++)
-            {
-                try
-                {
-                    var c = HostContainer.Children[i];
-                    var typeName = c.GetType().Name;
-                    var tag = (c is FrameworkElement fe) ? (fe.Tag?.ToString() ?? "<null>") : "<n/a>";
-                    var vis = (c is UIElement ue) ? ue.Visibility.ToString() : "<n/a>";
-                    var enabled = (c is UIElement ue2) ? ue2.IsEnabled.ToString() : "<n/a>";
-                    sb.AppendLine($"    child[{i}] type={typeName} tag={tag} vis={vis} enabled={enabled}");
-                }
-                catch (Exception ex) { sb.AppendLine($"    child[{i}] threw: {ex.GetType().Name}"); }
-            }
-        }
-        catch (Exception ex) { sb.AppendLine($"  [HostContainer block] threw: {ex.GetType().Name}: {ex.Message}"); }
-
-        // --- Window state ---
-        try
-        {
-            sb.AppendLine($"  Window.ActualWidth = {ActualWidth}");
-            sb.AppendLine($"  Window.ActualHeight = {ActualHeight}");
-            sb.AppendLine($"  Window.IsVisible = {IsVisible}");
-            try
-            {
-                var ps = System.Windows.PresentationSource.FromVisual(this);
-                sb.AppendLine($"  PresentationSource = {(ps is null ? "<null>" : "non-null")}");
-                sb.AppendLine($"  PresentationSource.RootVisual = {(ps?.RootVisual is null ? "<null>" : "non-null")}");
-            }
-            catch (Exception ex) { sb.AppendLine($"  PresentationSource threw: {ex.GetType().Name}"); }
-        }
-        catch (Exception ex) { sb.AppendLine($"  [Window block] threw: {ex.GetType().Name}: {ex.Message}"); }
-
-        Serilog.Log.Information(sb.ToString());
     }
 }
