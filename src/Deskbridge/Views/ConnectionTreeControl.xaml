@@ -42,10 +42,12 @@
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
                       InputGestureText="Ctrl+N"
-                      Command="{Binding NewConnectionCommand}" />
+                      Command="{Binding NewConnectionCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext.GroupId, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <MenuItem Header="New Group"
                       Icon="{ui:SymbolIcon FolderAdd24}"
-                      Command="{Binding NewGroupCommand}" />
+                      Command="{Binding NewGroupCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext.GroupId, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
             <MenuItem Header="Delete"
                       Icon="{ui:SymbolIcon Delete24}"
@@ -67,7 +69,8 @@
                       CommandParameter="{Binding PlacementTarget.DataContext.Id, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <MenuItem Header="New Group"
                       Icon="{ui:SymbolIcon FolderAdd24}"
-                      Command="{Binding NewGroupCommand}" />
+                      Command="{Binding NewGroupCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext.Id, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
             <MenuItem Header="Move to..."
                       Icon="{ui:SymbolIcon ArrowMove24}" />

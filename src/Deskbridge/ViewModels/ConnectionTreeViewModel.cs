@@ -737,7 +737,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task NewGroupAsync()
+    private async Task NewGroupAsync(Guid? parentGroupId = null)
     {
         if (_isDialogOpen) return;
 
@@ -753,6 +753,13 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
             var vm = _serviceProvider.GetRequiredService<GroupEditorViewModel>();
             vm.Initialize();
+
+            // Pre-select the parent group when invoked from a connection or group context menu.
+            // Mirrors NewConnectionAsync(Guid? defaultGroupId) at line 686-707.
+            if (parentGroupId is not null)
+            {
+                vm.ParentGroupId = parentGroupId;
+            }
 
             var dialog = new GroupEditorDialog(host, vm);
 
