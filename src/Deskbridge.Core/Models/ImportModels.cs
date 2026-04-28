@@ -11,7 +11,6 @@ public record ImportedNode(
     string? Domain,
     Protocol Protocol,
     string? Description,
-    bool InheritsCredentials,
     IReadOnlyList<ImportedNode> Children);
 
 public record ImportResult(

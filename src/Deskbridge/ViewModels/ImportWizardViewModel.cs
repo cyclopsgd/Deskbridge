@@ -247,7 +247,6 @@ public partial class ImportWizardViewModel : ObservableObject
             Username = node.Username,
             Domain = node.Domain,
             Port = node.Port,
-            InheritsCredentials = node.InheritsCredentials,
             IsChecked = node.Protocol == Protocol.Rdp || node.Type == ImportNodeType.Container,
         };
         foreach (var child in node.Children)
@@ -404,25 +403,11 @@ public partial class ImportWizardViewModel : ObservableObject
             Domain = item.Domain,
             Protocol = item.Protocol.ToProtocol(),
             GroupId = groupId,
-            // MIG-03: passwords are never imported. CredentialMode is derived so users with
-            // group-level credentials in mRemoteNG don't get a prompt on every connect.
-            CredentialMode = ResolveCredentialMode(item.InheritsCredentials, groupId),
+            // MIG-03: passwords never imported. Default to Own — user fills via editor or quick properties.
+            CredentialMode = CredentialMode.Own,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
-    }
-
-    /// <summary>
-    /// Resolve the imported credential mode (260428-oga):
-    /// 1. Source XML <c>Inheritance</c> flag wins -> Inherit.
-    /// 2. Imported under a group -> Inherit (group default).
-    /// 3. Top-level standalone import -> Own (no prompt unless user clears credentials).
-    /// </summary>
-    private static CredentialMode ResolveCredentialMode(bool inheritsCredentials, Guid? groupId)
-    {
-        if (inheritsCredentials) return CredentialMode.Inherit;
-        if (groupId is not null) return CredentialMode.Inherit;
-        return CredentialMode.Own;
     }
 
     private List<(ImportTreeItemViewModel Item, Guid? GroupId)> FlattenCheckedItems(
@@ -526,7 +511,6 @@ public partial class ImportTreeItemViewModel : ObservableObject
     public string? Username { get; init; }
     public string? Domain { get; init; }
     public int Port { get; init; } = 3389;
-    public bool InheritsCredentials { get; init; }
 
     public bool IsSupported => Protocol == Protocol.Rdp || Type == ImportNodeType.Container;
     public ObservableCollection<ImportTreeItemViewModel> Children { get; } = [];

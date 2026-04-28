@@ -36,10 +36,9 @@ public class ImportWizardViewModelTests
             Domain: null,
             Protocol: Protocol.Rdp,
             Description: null,
-            InheritsCredentials: false,
             Children: [
-                new ImportedNode("Server A1", ImportNodeType.Connection, "a1.local", 3389, "admin", "DOM", Protocol.Rdp, null, false, []),
-                new ImportedNode("Server A2", ImportNodeType.Connection, "a2.local", 3389, "admin", "DOM", Protocol.Rdp, null, false, [])
+                new ImportedNode("Server A1", ImportNodeType.Connection, "a1.local", 3389, "admin", "DOM", Protocol.Rdp, null, []),
+                new ImportedNode("Server A2", ImportNodeType.Connection, "a2.local", 3389, "admin", "DOM", Protocol.Rdp, null, [])
             ]);
 
         var containerB = new ImportedNode(
@@ -51,9 +50,8 @@ public class ImportWizardViewModelTests
             Domain: null,
             Protocol: Protocol.Rdp,
             Description: null,
-            InheritsCredentials: false,
             Children: [
-                new ImportedNode("Server B1", ImportNodeType.Connection, "b1.local", 3389, "user", null, Protocol.Rdp, null, false, [])
+                new ImportedNode("Server B1", ImportNodeType.Connection, "b1.local", 3389, "user", null, Protocol.Rdp, null, [])
             ]);
 
         return new ImportResult(
@@ -305,13 +303,14 @@ public class ImportWizardViewModelTests
         store.DidNotReceive().Save(Arg.Any<ConnectionModel>());
     }
 
-    // ---------------------------------------------------------------- Test 10 (rewritten for 260428-oga)
+    // ---------------------------------------------------------------- Test 10 (revised for 260428-oga refinement)
 
-    // Test 10 / Test G: Import resolves CredentialMode based on grouping and Inheritance flag.
-    // BuildStandardImportResult places all connections under a container, all with InheritsCredentials=false
-    // -> all should resolve to CredentialMode.Inherit (group default).
+    // Test 10: Imported connections always resolve to CredentialMode.Own.
+    // MIG-03 means passwords are never imported; group-level credentials are not migrated either,
+    // so the inheritance parser was removed and every imported connection defaults to Own.
+    // BuildStandardImportResult places connections under containers; placement no longer affects mode.
     [Fact]
-    public async Task ImportSelected_AssignsInheritOrOwnPerGroupingAndInheritanceFlag()
+    public async Task ImportSelected_GroupedConnections_AlwaysResolveToOwn()
     {
         var importResult = BuildStandardImportResult();
         var importer = BuildMockImporter(importResult);
@@ -329,17 +328,17 @@ public class ImportWizardViewModelTests
 
         capturedConnections.Should().NotBeEmpty();
         capturedConnections.Should().AllSatisfy(c =>
-            c.CredentialMode.Should().Be(CredentialMode.Inherit,
-                "BuildStandardImportResult places all connections under a container -> Inherit by default"));
+            c.CredentialMode.Should().Be(CredentialMode.Own,
+                "all imported connections default to Own — passwords and group credentials are not migrated"));
     }
 
-    // Test H: top-level connection (no group) with InheritsCredentials=false -> CredentialMode.Own
+    // Top-level imported connection -> CredentialMode.Own
     [Fact]
-    public async Task ImportSelected_TopLevelNoInheritFlag_ResolvesToOwn()
+    public async Task ImportSelected_TopLevelConnection_ResolvesToOwn()
     {
         var importResult = new ImportResult(
             RootNodes: [
-                new ImportedNode("Solo", ImportNodeType.Connection, "solo.local", 3389, "u", null, Protocol.Rdp, null, false, [])
+                new ImportedNode("Solo", ImportNodeType.Connection, "solo.local", 3389, "u", null, Protocol.Rdp, null, [])
             ],
             TotalConnections: 1,
             TotalFolders: 0);
@@ -358,75 +357,7 @@ public class ImportWizardViewModelTests
 
         captured.Should().HaveCount(1);
         captured[0].CredentialMode.Should().Be(CredentialMode.Own,
-            "top-level connection with no Inheritance flag owns its credentials");
-    }
-
-    // Test I: top-level connection (no group) with InheritsCredentials=true -> CredentialMode.Inherit
-    [Fact]
-    public async Task ImportSelected_TopLevelWithInheritFlag_ResolvesToInherit()
-    {
-        var importResult = new ImportResult(
-            RootNodes: [
-                new ImportedNode("SoloInherits", ImportNodeType.Connection, "solo.local", 3389, "u", null, Protocol.Rdp, null, true, [])
-            ],
-            TotalConnections: 1,
-            TotalFolders: 0);
-        var importer = BuildMockImporter(importResult);
-        var captured = new List<ConnectionModel>();
-        var store = Substitute.For<IConnectionStore>();
-        store.GetAll().Returns([]);
-        store.GetGroups().Returns([]);
-        store.When(s => s.SaveBatch(Arg.Any<IEnumerable<ConnectionModel>>(), Arg.Any<IEnumerable<ConnectionGroup>>()))
-             .Do(ci => captured.AddRange(ci.Arg<IEnumerable<ConnectionModel>>()));
-        var vm = BuildViewModel(importer, store: store);
-
-        using var stream = EmptyStream();
-        await vm.ParseFromStreamAsync(stream);
-        await vm.ImportSelectedAsync();
-
-        captured.Should().HaveCount(1);
-        captured[0].CredentialMode.Should().Be(CredentialMode.Inherit,
-            "Inheritance flag wins over the no-group branch");
-    }
-
-    // Test J: grouped connection with InheritsCredentials=true -> CredentialMode.Inherit
-    [Fact]
-    public async Task ImportSelected_GroupedWithInheritFlag_ResolvesToInherit()
-    {
-        var importResult = new ImportResult(
-            RootNodes: [
-                new ImportedNode(
-                    Name: "Group",
-                    Type: ImportNodeType.Container,
-                    Hostname: null,
-                    Port: 0,
-                    Username: null,
-                    Domain: null,
-                    Protocol: Protocol.Rdp,
-                    Description: null,
-                    InheritsCredentials: false,
-                    Children: [
-                        new ImportedNode("Inheritor", ImportNodeType.Connection, "inh.local", 3389, "u", null, Protocol.Rdp, null, true, [])
-                    ])
-            ],
-            TotalConnections: 1,
-            TotalFolders: 1);
-        var importer = BuildMockImporter(importResult);
-        var captured = new List<ConnectionModel>();
-        var store = Substitute.For<IConnectionStore>();
-        store.GetAll().Returns([]);
-        store.GetGroups().Returns([]);
-        store.When(s => s.SaveBatch(Arg.Any<IEnumerable<ConnectionModel>>(), Arg.Any<IEnumerable<ConnectionGroup>>()))
-             .Do(ci => captured.AddRange(ci.Arg<IEnumerable<ConnectionModel>>()));
-        var vm = BuildViewModel(importer, store: store);
-
-        using var stream = EmptyStream();
-        await vm.ParseFromStreamAsync(stream);
-        await vm.ImportSelectedAsync();
-
-        captured.Should().HaveCount(1);
-        captured[0].CredentialMode.Should().Be(CredentialMode.Inherit,
-            "grouped connection with Inheritance flag still resolves to Inherit");
+            "top-level imported connection always defaults to Own");
     }
 
     // ---------------------------------------------------------------- Test 11
