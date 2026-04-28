@@ -137,7 +137,7 @@ None yet.
 | 260421-props | Match properties panel background to side panel theme, soften gradient border, remove GridSplitter line | 2026-04-21 | c099061 | - |
 | 260425-pwd | Rework password field UX: layered "Password saved" -> "Clear password" -> text fields, quick properties states, cancel support | 2026-04-25 | bcbd1f2 | - |
 | 260425-c3v | Disable Save button and show "Hostname is required" error when hostname empty | 2026-04-25 | 885dcec | - |
-| 260428-oga | Fix mRemoteNG import default CredentialMode (Inherit/Own based on Inheritance attr + group context) | 2026-04-28 | a0db055 | [260428-oga](./quick/260428-oga-fix-mremoteng-import-default-credentialm/) |
+| 260428-oga | Fix mRemoteNG import default CredentialMode (always Own — inherit parser stripped after refinement) | 2026-04-28 | c59c23a | [260428-oga](./quick/260428-oga-fix-mremoteng-import-default-credentialm/) |
 
 ### Blockers/Concerns
 
