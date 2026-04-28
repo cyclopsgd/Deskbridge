@@ -1,4 +1,3 @@
-<!-- [diag rdp-black-screen-v2 H7 test] WindowBackdropType set to None to test Mica regression hypothesis. Revert to "Mica" if test confirms Mica is not the cause. -->
 <ui:FluentWindow x:Class="Deskbridge.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -10,7 +9,7 @@
     Icon="Assets/app.ico"
     Width="1100" Height="700"
     ExtendsContentIntoTitleBar="True"
-    WindowBackdropType="None"
+    WindowBackdropType="Mica"
     WindowCornerPreference="Round"
     WindowStartupLocation="CenterScreen">
 
