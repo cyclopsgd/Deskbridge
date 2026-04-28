@@ -5,7 +5,7 @@ milestone_name: Performance & Customization
 status: planning
 stopped_at: Phase 21 context updated
 last_updated: "2026-04-28T06:34:25.624Z"
-last_activity: 2026-04-27
+last_activity: 2026-04-28 - Completed quick task 260428-oga: Fix mRemoteNG import default CredentialMode
 progress:
   total_phases: 25
   completed_phases: 3
@@ -137,6 +137,7 @@ None yet.
 | 260421-props | Match properties panel background to side panel theme, soften gradient border, remove GridSplitter line | 2026-04-21 | c099061 | - |
 | 260425-pwd | Rework password field UX: layered "Password saved" -> "Clear password" -> text fields, quick properties states, cancel support | 2026-04-25 | bcbd1f2 | - |
 | 260425-c3v | Disable Save button and show "Hostname is required" error when hostname empty | 2026-04-25 | 885dcec | - |
+| 260428-oga | Fix mRemoteNG import default CredentialMode (Inherit/Own based on Inheritance attr + group context) | 2026-04-28 | a0db055 | [260428-oga](./quick/260428-oga-fix-mremoteng-import-default-credentialm/) |
 
 ### Blockers/Concerns
 
