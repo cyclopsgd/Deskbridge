@@ -96,12 +96,20 @@ public static class ViewportMeasurement
     }
 
     /// <summary>
-    /// Clamps a pixel dimension to the RDP-valid range [200, 8192].
+    /// Clamps a pixel dimension to the RDP-valid range [200, 8192] and aligns it DOWN
+    /// to the nearest multiple of 8. The Microsoft RDP protocol requires desktop
+    /// dimensions to be a multiple of 4; many servers and codecs additionally require
+    /// a multiple of 8. Sending a non-aligned value with SmartSizing=false causes
+    /// mstscax.dll to abort the handshake with discReason=1 (DR_Local). Aligning here
+    /// fixes both the initial-connect path (<see cref="RdpConnectionConfigurator.Apply"/>)
+    /// and the dynamic-resize path (<c>RdpHostControl.UpdateResolution</c>) with a
+    /// single change. Already-aligned values pass through unchanged; non-aligned values
+    /// lose at most 7 pixels (e.g. 924 -> 920, 716 -> 712, 1366 -> 1360).
     /// <para><b>T-16-01:</b> Prevents out-of-range values from reaching the COM
     /// ActiveX control's <c>DesktopWidth</c>/<c>DesktopHeight</c> properties.</para>
     /// </summary>
     public static int ClampDesktopDimension(int value)
     {
-        return Math.Clamp(value, MinDimension, MaxDimension);
+        return Math.Clamp(value, MinDimension, MaxDimension) & ~7;
     }
 }

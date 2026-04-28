@@ -408,6 +408,9 @@ public sealed class RdpHostControl : IProtocolHost
             try { describe = _rdp.GetErrorDescription; } catch { }
         }
         var human = DisconnectReasonClassifier.Describe(e.discReason, extended, describe);
+        _logger.LogWarning(
+            "Connect failed during handshake: discReason={DiscReason} extended={Extended} reason={Reason}",
+            e.discReason, extended, human);
         _loginTcs?.TrySetException(new RdpConnectFailedException(e.discReason, human));
     }
 
