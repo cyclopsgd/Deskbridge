@@ -379,6 +379,27 @@
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        VerticalAlignment="Center" />
 
+                            <!-- Phase 21 (PERF-05): recursive connection-count badge. Hidden when count == 0
+                                 per UI-SPEC. Binds to GroupTreeItemViewModel.ConnectionCount; binding refreshes
+                                 on tree rebuild (BuildTree replaces RootItems). -->
+                            <TextBlock Text="{Binding ConnectionCount, StringFormat='({0})'}"
+                                       FontSize="12"
+                                       FontWeight="Regular"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Margin="4,0,0,0"
+                                       VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ConnectionCount}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
                             <ui:SymbolIcon Symbol="Key24" FontSize="12"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            Margin="4,0,0,0"
