@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
 status: executing
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-05-02T07:37:32.300Z"
+stopped_at: Completed 21-03-PLAN.md
+last_updated: "2026-05-02T07:44:54.747Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 ## Current Position
 
 Phase: 21 (performance-optimizations) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-05-02
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -101,6 +101,7 @@ Progress: [████████░░] 83%
 | Phase 20 P03 | 12min | 2 tasks | 11 files |
 | Phase 21 P01 | 4min | 2 tasks tasks | 1 files files |
 | Phase 21 P02 | 7min | 2 tasks tasks | 12 files files |
+| Phase 21 P03 | 4min | 2 tasks tasks | 5 files files |
 
 ## Accumulated Context
 
@@ -124,6 +125,9 @@ Recent decisions affecting current work:
 - Phase 21 PERF-01/PERF-05 implemented as pure-XAML changes in ConnectionTreeControl.xaml — reused existing GroupTreeItemViewModel.ConnectionCount (no caching, no converter, no VM change) and inline DataTrigger for hide-when-zero per UI-SPEC
 - Phase 21 PERF-02 IDebouncer abstraction (Schedule/Cancel) over delegate — explicit two-method interface makes Cancel testable independently for D-02 clear-search bypass; transient lifetime (per-consumer DispatcherTimer)
 - FakeDebouncer test double (Schedule counter + manual Fire) lets xUnit.v3 deterministically assert trailing-fire debounce contract without pumping a Dispatcher (DispatcherTimer is not pump-able under xUnit.v3)
+- Phase 21 PERF-03 LoadAsync = Task.Run(Load) one-line dispatch shim; sync Load() retained for benchmarks/tests per D-06 (not [Obsolete], not removed)
+- App.OnStartup is async void; awaited LoadAsync placed after BuildServiceProvider and before MigrateFromTermsrv to preserve existing post-load order (D-04/D-05)
+- IConnectionStore DI factory simplified to sp => new JsonConnectionStore() — load moves entirely out of DI graph construction
 
 ### Pending Todos
 
@@ -153,8 +157,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-02T07:37:32.292Z
-Stopped at: Completed 21-02-PLAN.md
+Last session: 2026-05-02T07:44:54.740Z
+Stopped at: Completed 21-03-PLAN.md
 Resume file: None
 
 **Planned Phase:** 21 (performance-optimizations) — 4 plans — 2026-05-02T07:09:33.678Z

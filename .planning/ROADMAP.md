@@ -405,7 +405,7 @@ Plans:
 Plans:
 - [x] 21-01-PLAN.md -- Tree XAML polish: VirtualizingPanel.ScrollUnit="Pixel" for smooth scrolling + inline (N) count badge in group rows (PERF-01, PERF-05)
 - [x] 21-02-PLAN.md -- Search debounce TDD: IDebouncer abstraction + 250ms DispatcherTimer + clear-search bypass (PERF-02)
-- [ ] 21-03-PLAN.md -- Async startup load TDD: JsonConnectionStore.LoadAsync + async OnStartup with awaited load before MainWindow.Show (PERF-03)
+- [x] 21-03-PLAN.md -- Async startup load TDD: JsonConnectionStore.LoadAsync + async OnStartup with awaited load before MainWindow.Show (PERF-03)
 - [ ] 21-04-PLAN.md -- Performance regression validation: BuildTree benchmark vs Phase 20 baseline + manual UAT (cross-cutting)
 
 ### Phase 22: Large Import Handling
@@ -484,7 +484,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 18. Settings Infrastructure | v1.3 | 3/3 | Complete    | 2026-04-26 |
 | 19. SaveBatch API | v1.3 | 2/2 | Complete    | 2026-04-26 |
 | 20. Performance Baselines | v1.3 | 3/3 | Complete    | 2026-04-27 |
-| 21. Performance Optimizations | v1.3 | 2/4 | In Progress | - |
+| 21. Performance Optimizations | v1.3 | 3/4 | In Progress | - |
 | 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
 | 23. Bulk Operations UX | v1.3 | 0/0 | Not started | - |
 | 24. Uninstall Cleanup | v1.3 | 0/0 | Not started | - |
