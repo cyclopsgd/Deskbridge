@@ -336,6 +336,7 @@
 
         <!-- TreeView (Row 1) -->
         <Grid Grid.Row="1" ContextMenu="{StaticResource EmptyAreaContextMenu}">
+            <!-- Phase 21 (PERF-01): per-pixel scrolling for smoother wheel/trackpad gestures. -->
             <TreeView x:Name="ConnectionTree"
                       ItemsSource="{Binding RootItems}"
                       ItemContainerStyle="{StaticResource FullRowTreeViewItemStyle}"
@@ -343,6 +344,7 @@
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       VirtualizingPanel.IsVirtualizing="True"
                       VirtualizingPanel.VirtualizationMode="Recycling"
+                      VirtualizingPanel.ScrollUnit="Pixel"
                       ScrollViewer.CanContentScroll="True"
                       BorderThickness="0"
                       Background="Transparent"
