@@ -400,12 +400,13 @@ Plans:
   2. User sees search results update without visible stutter when filtering 500+ connections (debounced input, cached index)
   3. User sees the application start without UI freeze when loading a connections.json with 500+ entries (async JSON load on background thread)
   4. User sees a connection count badge next to each group name in the tree (e.g., "Production (23)")
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
-- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
-- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
+- [ ] 21-01-PLAN.md -- Tree XAML polish: VirtualizingPanel.ScrollUnit="Pixel" for smooth scrolling + inline (N) count badge in group rows (PERF-01, PERF-05)
+- [ ] 21-02-PLAN.md -- Search debounce TDD: IDebouncer abstraction + 250ms DispatcherTimer + clear-search bypass (PERF-02)
+- [ ] 21-03-PLAN.md -- Async startup load TDD: JsonConnectionStore.LoadAsync + async OnStartup with awaited load before MainWindow.Show (PERF-03)
+- [ ] 21-04-PLAN.md -- Performance regression validation: BuildTree benchmark vs Phase 20 baseline + manual UAT (cross-cutting)
 
 ### Phase 22: Large Import Handling
 **Goal**: Users importing large mRemoteNG configurations (500+ connections) see progress feedback and experience fast, reliable imports backed by batch persistence
