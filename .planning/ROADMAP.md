@@ -484,7 +484,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 18. Settings Infrastructure | v1.3 | 3/3 | Complete    | 2026-04-26 |
 | 19. SaveBatch API | v1.3 | 2/2 | Complete    | 2026-04-26 |
 | 20. Performance Baselines | v1.3 | 3/3 | Complete    | 2026-04-27 |
-| 21. Performance Optimizations | v1.3 | 4/4 | In Progress | - |
+| 21. Performance Optimizations | v1.3 | 4/4 | Complete    | 2026-05-02 |
 | 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
 | 23. Bulk Operations UX | v1.3 | 0/0 | Not started | - |
 | 24. Uninstall Cleanup | v1.3 | 0/0 | Not started | - |
@@ -495,7 +495,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 
 **Goal:** Replace fixed Width=240 sidebar with GridSplitter drag-to-resize. Needs airspace-safe implementation (GridSplitter can't overlap WindowsFormsHost/ActiveX viewport). MinWidth ~180, MaxWidth ~400.
 **Requirements:** TBD
-**Plans:** 3/3 plans complete
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
