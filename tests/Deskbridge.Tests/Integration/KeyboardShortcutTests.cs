@@ -5,6 +5,7 @@ using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Core.Services;
 using Deskbridge.Protocols.Rdp;
+using Deskbridge.Tests.Fakes;
 using Deskbridge.ViewModels;
 using Wpf.Ui;
 
@@ -50,7 +51,7 @@ public sealed class KeyboardShortcutTests
         var tree = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider, bus, tabHostManager,
-            new AirspaceSwapper());
+            new AirspaceSwapper(), new FakeDebouncer());
 
         var ids = Enumerable.Range(0, initialTabs).Select(_ => Guid.NewGuid()).ToArray();
         var models = Enumerable.Range(0, initialTabs)

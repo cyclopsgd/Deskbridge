@@ -32,6 +32,12 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private readonly ITabHostManager _tabHostManager;
     private readonly AirspaceSwapper _airspace;
 
+    /// <summary>
+    /// Phase 21 (PERF-02): debouncer for SearchText filtering. Production uses
+    /// DispatcherTimerDebouncer (250ms); tests inject a FakeDebouncer.
+    /// </summary>
+    private readonly IDebouncer _searchDebouncer;
+
     // Cached full tree for restoring after search filter clears
     private ObservableCollection<TreeItemViewModel> _fullTree = [];
 
@@ -47,7 +53,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
         IServiceProvider serviceProvider,
         IEventBus eventBus,
         ITabHostManager tabHostManager,
-        AirspaceSwapper airspace)
+        AirspaceSwapper airspace,
+        IDebouncer debouncer)
     {
         _connectionStore = connectionStore;
         _connectionQuery = connectionQuery;
@@ -58,6 +65,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _eventBus = eventBus;
         _tabHostManager = tabHostManager;
         _airspace = airspace;
+        _searchDebouncer = debouncer;
 
         // Phase 9 (PROP-02): subscribe to connection state events for status dot
         _eventBus.Subscribe<TabStateChangedEvent>(this, OnTabStateChanged);
@@ -492,7 +500,31 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
     // --- Search filter ---
 
+    /// <summary>
+    /// Phase 21 (PERF-02): debounce gate. Empty/whitespace bypasses the debounce
+    /// and restores the tree synchronously (D-02). Non-empty input schedules the
+    /// filter via the injected <see cref="IDebouncer"/> so rapid keystrokes
+    /// coalesce into a single trailing-fire filter call (D-01 / D-03 = 250ms).
+    /// </summary>
     partial void OnSearchTextChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _searchDebouncer.Cancel();
+            ApplySearchFilter(value);
+            return;
+        }
+        var snapshot = value;
+        _searchDebouncer.Schedule(() => ApplySearchFilter(snapshot));
+    }
+
+    /// <summary>
+    /// Phase 21 (PERF-02): extracted filter body. Called synchronously for the
+    /// clear-search path and via the trailing-fire debounce closure for non-empty
+    /// search text. Pure VM-side work — no Dispatcher marshal needed because
+    /// the production debouncer's Tick already fires on the UI thread.
+    /// </summary>
+    private void ApplySearchFilter(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {

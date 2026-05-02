@@ -2,6 +2,7 @@ using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
 using Deskbridge.Protocols.Rdp;
+using Deskbridge.Tests.Fakes;
 using Deskbridge.ViewModels;
 using Wpf.Ui;
 
@@ -35,7 +36,7 @@ public sealed class SwitchToExistingTabTests
 
         var sut = new ConnectionTreeViewModel(
             store, query, creds, dialogs, snackbar, provider, bus, tab,
-            new AirspaceSwapper());
+            new AirspaceSwapper(), new FakeDebouncer());
 
         return (sut, bus, tab, store);
     }

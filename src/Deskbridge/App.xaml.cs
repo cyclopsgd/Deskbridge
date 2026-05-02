@@ -420,6 +420,9 @@ public partial class App : Application
         services.AddTransient<Func<Dialogs.ChangePasswordDialog>>(sp =>
             () => sp.GetRequiredService<Dialogs.ChangePasswordDialog>());
 
+        // Phase 21 (PERF-02): per-consumer debouncer for SearchText filtering.
+        services.AddTransient<IDebouncer, DispatcherTimerDebouncer>();
+
         services.AddSingleton<ViewModels.ConnectionTreeViewModel>();
         services.AddTransient<ViewModels.ConnectionEditorViewModel>();
         services.AddTransient<ViewModels.GroupEditorViewModel>();

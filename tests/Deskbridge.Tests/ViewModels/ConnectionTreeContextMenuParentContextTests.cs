@@ -5,6 +5,7 @@ using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Services;
 using Deskbridge.Protocols.Rdp;
+using Deskbridge.Tests.Fakes;
 using Deskbridge.ViewModels;
 using Wpf.Ui;
 
@@ -200,7 +201,7 @@ public sealed class ConnectionTreeContextMenuParentContextTests
         var sut = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider,
-            bus, tabHostManager, new AirspaceSwapper());
+            bus, tabHostManager, new AirspaceSwapper(), new FakeDebouncer());
 
         sut.NewGroupCommand.Should().BeAssignableTo<IRelayCommand<Guid?>>(
             "NewGroupAsync must accept Guid? parentGroupId so the source-generated " +

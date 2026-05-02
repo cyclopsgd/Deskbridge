@@ -4,6 +4,7 @@ using Deskbridge.Core.Models;
 using Deskbridge.Core.Services;
 using Deskbridge.Core.Settings;
 using Deskbridge.Protocols.Rdp;
+using Deskbridge.Tests.Fakes;
 using Deskbridge.ViewModels;
 using NSubstitute;
 using Wpf.Ui;
@@ -29,7 +30,7 @@ public class ConnectionTreeStateTrackingTests
         _sut = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider,
-            _bus, tabHostManager, new AirspaceSwapper());
+            _bus, tabHostManager, new AirspaceSwapper(), new FakeDebouncer());
     }
 
     // --- SelectedConnectionState tracking ---
