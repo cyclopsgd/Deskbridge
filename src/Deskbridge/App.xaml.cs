@@ -32,7 +32,7 @@ public partial class App : Application
     /// </summary>
     internal IServiceProvider? Services => _serviceProvider;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -64,10 +64,25 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
+        // Phase 21 (PERF-03): load connections off the UI thread before MainWindow is shown.
+        // Sync Load() retained on JsonConnectionStore for benchmarks and tests; this awaited
+        // path is the production startup load. Existing post-load steps (credential migration,
+        // pipeline wiring, eager singletons, MainWindow.Show) run AFTER this await — order
+        // preserved per D-04/D-05/D-06.
+        try
+        {
+            var connectionStore = _serviceProvider.GetRequiredService<IConnectionStore>();
+            await connectionStore.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Failed to load connections during startup");
+        }
+
         // Credential Guard fix: migrate legacy TERMSRV/* entries to DESKBRIDGE/CONN/* targets.
         // One-time idempotent migration -- skips connections that already have new-format credentials.
-        // Must run after IConnectionStore.Load() (which happens in the factory lambda above)
-        // and before any connection attempts.
+        // Must run after IConnectionStore.LoadAsync() above (previously sync Load() inside the
+        // factory lambda) and before any connection attempts.
         var credService = _serviceProvider.GetRequiredService<ICredentialService>();
         if (credService is WindowsCredentialService winCredService)
         {
@@ -198,12 +213,9 @@ public partial class App : Application
         // ---- end Phase 4 ----
 
         // Connection persistence and credentials
-        services.AddSingleton<IConnectionStore>(sp =>
-        {
-            var store = new JsonConnectionStore();
-            store.Load();
-            return store;
-        });
+        // Phase 21 (PERF-03): factory just constructs — Load() moved out of DI graph
+        // construction and into the awaited LoadAsync() call in OnStartup (D-04).
+        services.AddSingleton<IConnectionStore>(sp => new JsonConnectionStore());
         services.AddSingleton<ICredentialService, WindowsCredentialService>();
         services.AddSingleton<IConnectionQuery>(sp =>
             new ConnectionQueryService(sp.GetRequiredService<IConnectionStore>()));

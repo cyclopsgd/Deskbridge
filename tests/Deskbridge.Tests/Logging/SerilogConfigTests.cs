@@ -71,8 +71,15 @@ public sealed class SerilogConfigTests
         var appCs = File.ReadAllText(
             Path.Combine(solutionRoot, "src", "Deskbridge", "App.xaml.cs"));
 
+        // Phase 21 (PERF-03): OnStartup is now `async void` to await JsonConnectionStore.LoadAsync
+        // before MainWindow.Show. Match either the legacy sync signature or the async one.
         var onStartupIdx = appCs.IndexOf(
-            "protected override void OnStartup", StringComparison.Ordinal);
+            "protected override async void OnStartup", StringComparison.Ordinal);
+        if (onStartupIdx < 0)
+        {
+            onStartupIdx = appCs.IndexOf(
+                "protected override void OnStartup", StringComparison.Ordinal);
+        }
         var attachIdx = appCs.IndexOf(
             "CrashHandler.InstallDispatcherHook", onStartupIdx, StringComparison.Ordinal);
         var showIdx = appCs.IndexOf(

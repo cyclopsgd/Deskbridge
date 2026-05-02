@@ -64,6 +64,13 @@ public sealed class JsonConnectionStore : IConnectionStore
         }
     }
 
+    /// <summary>
+    /// Phase 21 (PERF-03): async load wrapper. Dispatches sync Load() to the threadpool
+    /// via Task.Run so file I/O + JSON parse run off the calling (UI) thread. Sync Load()
+    /// remains the canonical implementation; this is purely a dispatch shim per D-06.
+    /// </summary>
+    public Task LoadAsync() => Task.Run(Load);
+
     public IReadOnlyList<ConnectionModel> GetAll() => _data.Connections.AsReadOnly();
 
     public ConnectionModel? GetById(Guid id) =>
