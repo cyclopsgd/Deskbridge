@@ -132,6 +132,7 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 - [PIN entry dialog edges clipped at startup](todos/pending/2026-05-02-pin-entry-dialog-edges-clipped-at-startup.md) — UI (surfaced during Phase 21 UAT)
+- [Text size changer inconsistent — folder quick panel always too big](todos/pending/2026-05-02-text-size-changer-inconsistent-in-folder-quick-panel.md) — UI (surfaced during Phase 21 UAT)
 
 ### Quick Tasks Completed
 
