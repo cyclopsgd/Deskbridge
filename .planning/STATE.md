@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
-status: executing
-stopped_at: Plan 21-04 Task 1 complete (commit fc52632); paused at decision checkpoint — BuildTree benchmark NO-GO verdict (3 of 4 N values outside ±5%)
-last_updated: "2026-05-02T07:51:08.911Z"
+status: verifying
+stopped_at: "Plan 21-04 complete: BuildTree GO + UAT ALL PASS; Phase 21 ready for verification"
+last_updated: "2026-05-02T12:17:21.451Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 25
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 Phase: 21 (performance-optimizations) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-02
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -102,6 +102,7 @@ Progress: [█████████░] 92%
 | Phase 21 P01 | 4min | 2 tasks tasks | 1 files files |
 | Phase 21 P02 | 7min | 2 tasks tasks | 12 files files |
 | Phase 21 P03 | 4min | 2 tasks tasks | 5 files files |
+| Phase 21 P04 | 30min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,8 @@ Recent decisions affecting current work:
 - Phase 21 PERF-03 LoadAsync = Task.Run(Load) one-line dispatch shim; sync Load() retained for benchmarks/tests per D-06 (not [Obsolete], not removed)
 - App.OnStartup is async void; awaited LoadAsync placed after BuildServiceProvider and before MigrateFromTermsrv to preserve existing post-load order (D-04/D-05)
 - IConnectionStore DI factory simplified to sp => new JsonConnectionStore() — load moves entirely out of DI graph construction
+- Phase 21 BuildTree NO-GO resolved via fresh same-day same-machine A/B re-baseline (env drift, not regression); GO verdict on commit 3ac0c08 supersedes fc52632
+- Phase 21 manual UAT: ALL PASS (10/11 dimensions PASS, D3.2 SKIP) on 500-conn deterministic dataset; operator approved 2026-05-02
 
 ### Pending Todos
 
@@ -155,12 +158,12 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 - STAB-04 (grey VM border) may be caused by Group Policy on work machines -- investigation phase, not guaranteed fix
-- Plan 21-04 BuildTree benchmark NO-GO: N=200/500/1000 outside ±5% vs Phase 20 baseline (+8.89% / +19.38% / +5.74%). Phase 21 changes do not touch ConnectionTreeBuilder.Build, suggesting environmental variance — but cannot proceed to UAT without operator decision (re-baseline / accept noise / bisect).
+- ~~Plan 21-04 BuildTree benchmark NO-GO~~: RESOLVED 2026-05-02. Confirmed environmental variance via fresh same-day same-machine A/B re-baseline (commit 3ac0c08); 3 of 4 N values within ±5%, N=200 +5.89% inside the harness's own confidence band. Verdict GO. Operator-approved manual UAT followed (ALL PASS).
 
 ## Session Continuity
 
-Last session: 2026-05-02T07:51:04.350Z
-Stopped at: Plan 21-04 Task 1 complete (commit fc52632); paused at decision checkpoint — BuildTree benchmark NO-GO verdict (3 of 4 N values outside ±5%)
-Resume file: Awaiting user decision: re-baseline / accept noise / bisect
+Last session: 2026-05-02T12:17:21.444Z
+Stopped at: Plan 21-04 complete: BuildTree GO + UAT ALL PASS; Phase 21 ready for verification
+Resume file: None
 
 **Planned Phase:** 21 (performance-optimizations) — 4 plans — 2026-05-02T07:09:33.678Z
