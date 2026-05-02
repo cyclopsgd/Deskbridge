@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
 status: executing
-stopped_at: Completed 21-03-PLAN.md
-last_updated: "2026-05-02T07:44:54.747Z"
+stopped_at: Plan 21-04 Task 1 complete (commit fc52632); paused at decision checkpoint — BuildTree benchmark NO-GO verdict (3 of 4 N values outside ±5%)
+last_updated: "2026-05-02T07:51:08.911Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 25
@@ -131,7 +131,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- [PIN entry dialog edges clipped at startup](todos/pending/2026-05-02-pin-entry-dialog-edges-clipped-at-startup.md) — UI (surfaced during Phase 21 UAT)
 
 ### Quick Tasks Completed
 
@@ -154,11 +154,12 @@ None yet.
 ### Blockers/Concerns
 
 - STAB-04 (grey VM border) may be caused by Group Policy on work machines -- investigation phase, not guaranteed fix
+- Plan 21-04 BuildTree benchmark NO-GO: N=200/500/1000 outside ±5% vs Phase 20 baseline (+8.89% / +19.38% / +5.74%). Phase 21 changes do not touch ConnectionTreeBuilder.Build, suggesting environmental variance — but cannot proceed to UAT without operator decision (re-baseline / accept noise / bisect).
 
 ## Session Continuity
 
-Last session: 2026-05-02T07:44:54.740Z
-Stopped at: Completed 21-03-PLAN.md
-Resume file: None
+Last session: 2026-05-02T07:51:04.350Z
+Stopped at: Plan 21-04 Task 1 complete (commit fc52632); paused at decision checkpoint — BuildTree benchmark NO-GO verdict (3 of 4 N values outside ±5%)
+Resume file: Awaiting user decision: re-baseline / accept noise / bisect
 
 **Planned Phase:** 21 (performance-optimizations) — 4 plans — 2026-05-02T07:09:33.678Z
