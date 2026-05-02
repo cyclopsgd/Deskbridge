@@ -186,12 +186,14 @@ Deferred to future releases. Tracked but not in current roadmap.
 ### v1.3 -- Performance & Customization
 
 #### Performance & Optimization
-- [ ] **PERF-01**: User experiences smooth scrolling and expand/collapse in the connection tree with 500+ connections without lag or stutter
+- [x] **PERF-01
+**: User experiences smooth scrolling and expand/collapse in the connection tree with 500+ connections without lag or stutter
 - [ ] **PERF-02**: User sees search results update without visible stutter when filtering 500+ connections (debounced input with cached index)
 - [ ] **PERF-03**: User sees the application start without UI freeze when loading a connections.json with 500+ entries (async JSON load)
 - [x] **PERF-04
 **: Developer can run BenchmarkDotNet regression baselines for BuildTree, Search, Load/Save at 100/200/500/1000 connections
-- [ ] **PERF-05**: User sees a connection count badge next to each group name in the tree (e.g., "Production (23)")
+- [x] **PERF-05
+**: User sees a connection count badge next to each group name in the tree (e.g., "Production (23)")
 
 #### Import at Scale
 - [ ] **IMP-03**: User sees a progress bar during mRemoteNG import that updates as connections are processed

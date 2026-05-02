@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
-status: planning
-stopped_at: Phase 21 UI-SPEC approved
-last_updated: "2026-05-02T07:09:33.685Z"
-last_activity: 2026-04-27
+status: executing
+stopped_at: Completed 21-01-PLAN.md
+last_updated: "2026-05-02T07:28:56.862Z"
+last_activity: 2026-05-02
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 12
-  completed_plans: 8
-  percent: 67
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 20 — performance-baselines
+**Current focus:** Phase 21 — performance-optimizations
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-27
+Phase: 21 (performance-optimizations) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-05-02
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -99,6 +99,7 @@ Progress: [██████████] 100%
 | Phase 20 P01 | 7min | 2 tasks | 5 files |
 | Phase 20 P02 | 8min | 2 tasks | 2 files |
 | Phase 20 P03 | 12min | 2 tasks | 11 files |
+| Phase 21 P01 | 4min | 2 tasks tasks | 1 files files |
 
 ## Accumulated Context
 
@@ -119,6 +120,7 @@ Recent decisions affecting current work:
 - BenchmarkDotNet version managed via CPM (Directory.Packages.props) -- consistent with project convention
 - Used --job short for baseline capture: real measurements with acceptable CI, completes within time budget
 - StoreBenchmarks uses targeted IterationSetup per operation for file-state isolation between iterations
+- Phase 21 PERF-01/PERF-05 implemented as pure-XAML changes in ConnectionTreeControl.xaml — reused existing GroupTreeItemViewModel.ConnectionCount (no caching, no converter, no VM change) and inline DataTrigger for hide-when-zero per UI-SPEC
 
 ### Pending Todos
 
@@ -148,8 +150,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 21 UI-SPEC approved
-Resume file: --resume-file
+Last session: 2026-05-02T07:28:56.855Z
+Stopped at: Completed 21-01-PLAN.md
+Resume file: None
 
 **Planned Phase:** 21 (performance-optimizations) — 4 plans — 2026-05-02T07:09:33.678Z
