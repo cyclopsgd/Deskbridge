@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
 status: executing
-stopped_at: Completed 21-01-PLAN.md
-last_updated: "2026-05-02T07:28:56.862Z"
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-05-02T07:37:32.300Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 ## Current Position
 
 Phase: 21 (performance-optimizations) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-05-02
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -100,6 +100,7 @@ Progress: [████████░░] 75%
 | Phase 20 P02 | 8min | 2 tasks | 2 files |
 | Phase 20 P03 | 12min | 2 tasks | 11 files |
 | Phase 21 P01 | 4min | 2 tasks tasks | 1 files files |
+| Phase 21 P02 | 7min | 2 tasks tasks | 12 files files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - Used --job short for baseline capture: real measurements with acceptable CI, completes within time budget
 - StoreBenchmarks uses targeted IterationSetup per operation for file-state isolation between iterations
 - Phase 21 PERF-01/PERF-05 implemented as pure-XAML changes in ConnectionTreeControl.xaml — reused existing GroupTreeItemViewModel.ConnectionCount (no caching, no converter, no VM change) and inline DataTrigger for hide-when-zero per UI-SPEC
+- Phase 21 PERF-02 IDebouncer abstraction (Schedule/Cancel) over delegate — explicit two-method interface makes Cancel testable independently for D-02 clear-search bypass; transient lifetime (per-consumer DispatcherTimer)
+- FakeDebouncer test double (Schedule counter + manual Fire) lets xUnit.v3 deterministically assert trailing-fire debounce contract without pumping a Dispatcher (DispatcherTimer is not pump-able under xUnit.v3)
 
 ### Pending Todos
 
@@ -150,8 +153,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-02T07:28:56.855Z
-Stopped at: Completed 21-01-PLAN.md
+Last session: 2026-05-02T07:37:32.292Z
+Stopped at: Completed 21-02-PLAN.md
 Resume file: None
 
 **Planned Phase:** 21 (performance-optimizations) — 4 plans — 2026-05-02T07:09:33.678Z
