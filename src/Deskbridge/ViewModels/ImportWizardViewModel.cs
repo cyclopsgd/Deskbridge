@@ -5,12 +5,19 @@ using CommunityToolkit.Mvvm.Input;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Models;
+using Wpf.Ui.Controls;
 
 namespace Deskbridge.ViewModels;
 
 /// <summary>
 /// Phase 7 Plan 07-04 (MIG-02): Multi-step import wizard state management.
 /// 4-step flow: source selection, file picker, tree preview with checkboxes, confirm.
+///
+/// Phase 22 Plan 22-02 (IMP-03 / D-02 / D-03 / D-06 / D-07 / D-15): refactored to
+/// delegate the prepare loop to <see cref="IImportExecutor"/>. The VM now owns the
+/// determinate-progress observable surface (<c>IsImportWriteInProgress</c>,
+/// <c>TotalToImport</c>, <c>ImportedCount</c>), surfaces per-row failures via
+/// <c>Failures</c>, and computes the Step 4 InfoBar Severity / Title.
 /// </summary>
 public partial class ImportWizardViewModel : ObservableObject
 {
@@ -18,6 +25,7 @@ public partial class ImportWizardViewModel : ObservableObject
     private readonly IConnectionStore _store;
     private readonly IEventBus _bus;
     private readonly IAuditLogger _audit;
+    private readonly IImportExecutor _executor;
 
     /// <summary>
     /// Delegate for opening a file dialog. Injected for testability --
@@ -25,22 +33,41 @@ public partial class ImportWizardViewModel : ObservableObject
     /// </summary>
     private readonly Func<string, string?>? _fileBrowser;
 
+    /// <summary>
+    /// Phase 22 (D-06 fix-forward): each parse run creates a fresh CTS so the
+    /// importer receives a non-default CancellationToken. Re-issuing a parse
+    /// cancels the previous CTS first.
+    /// </summary>
+    private CancellationTokenSource? _parseCts;
+
     public ImportWizardViewModel(
         IReadOnlyList<IConnectionImporter> importers,
         IConnectionStore store,
         IEventBus bus,
         IAuditLogger audit,
+        IImportExecutor executor,
         Func<string, string?>? fileBrowser = null)
     {
         _importers = importers;
         _store = store;
         _bus = bus;
         _audit = audit;
+        _executor = executor;
         _fileBrowser = fileBrowser;
 
         AvailableImporters = importers;
         if (importers.Count > 0)
             SelectedImporter = importers[0];
+
+        // Phase 22 (UI-SPEC §"Severity Selection Rule"): keep the Step 4 InfoBar
+        // computed properties in sync with bulk-loaded failures.
+        Failures.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(FailedCount));
+            OnPropertyChanged(nameof(ImportSeverity));
+            OnPropertyChanged(nameof(ImportTitleText));
+            OnPropertyChanged(nameof(ImportSummary));
+        };
     }
 
     // ---------------------------------------------------------------- observable state
@@ -74,13 +101,34 @@ public partial class ImportWizardViewModel : ObservableObject
     public partial bool IsProcessing { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ImportSummary))]
+    [NotifyPropertyChangedFor(nameof(ImportSeverity))]
+    [NotifyPropertyChangedFor(nameof(ImportTitleText))]
     public partial int ImportedCount { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ImportSummary))]
     public partial int SkippedCount { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ImportSummary))]
     public partial int RenamedCount { get; set; }
+
+    /// <summary>
+    /// Phase 22 (IMP-03 / D-15): true while <see cref="IImportExecutor.PrepareAsync"/>
+    /// is running on the thread pool. Drives the determinate progress overlay
+    /// (vs. parse-phase ProgressRing) and the Cancel-button-disabled contract (D-05).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsImportWriteInProgress { get; set; }
+
+    /// <summary>
+    /// Phase 22 (IMP-03): denominator of the determinate ProgressBar. Set on the
+    /// UI thread BEFORE <c>Task.Run</c> so the bar appears at full extent the
+    /// instant the overlay flips on (RESEARCH P6).
+    /// </summary>
+    [ObservableProperty]
+    public partial int TotalToImport { get; set; }
 
     // ---------------------------------------------------------------- computed
 
@@ -89,6 +137,14 @@ public partial class ImportWizardViewModel : ObservableObject
     public ObservableCollection<ImportTreeItemViewModel> PreviewItems { get; } = [];
 
     public ObservableCollection<DuplicateItemViewModel> DuplicateItems { get; } = [];
+
+    /// <summary>
+    /// Phase 22 (D-15): per-row import failures bulk-loaded from the executor.
+    /// Bound to the failure-list ItemsControl on Step 4 (UI-SPEC §"Failure List").
+    /// </summary>
+    public ObservableCollection<FailedImport> Failures { get; } = [];
+
+    public int FailedCount => Failures.Count;
 
     public bool CanGoNext => CurrentStep switch
     {
@@ -114,8 +170,36 @@ public partial class ImportWizardViewModel : ObservableObject
     public bool IsStep3 => CurrentStep == 3;
     public bool IsStep4 => CurrentStep == 4;
 
+    /// <summary>
+    /// Phase 22 (UI-SPEC §"InfoBar copy"): three-branch summary text.
+    ///   Success: "Imported N connection(s). S skipped, R renamed."
+    ///   Partial failure: "Imported N connection(s). S skipped, R renamed, F failed."
+    ///   Total failure: "Import failed. F of T connections could not be saved. See log for details."
+    /// </summary>
     public string ImportSummary =>
-        $"Imported {ImportedCount} connection(s). {SkippedCount} skipped, {RenamedCount} renamed.";
+        FailedCount == 0
+            ? $"Imported {ImportedCount} connection(s). {SkippedCount} skipped, {RenamedCount} renamed."
+            : ImportedCount == 0
+                ? $"Import failed. {FailedCount} of {TotalToImport} connections could not be saved. See log for details."
+                : $"Imported {ImportedCount} connection(s). {SkippedCount} skipped, {RenamedCount} renamed, {FailedCount} failed.";
+
+    /// <summary>
+    /// Phase 22 (UI-SPEC §"Severity Selection Rule"): deterministic InfoBar severity
+    /// driven by FailedCount + ImportedCount. No user-controlled input feeds the rule.
+    /// </summary>
+    public InfoBarSeverity ImportSeverity =>
+        Failures.Count == 0
+            ? InfoBarSeverity.Success
+            : ImportedCount == 0
+                ? InfoBarSeverity.Error
+                : InfoBarSeverity.Warning;
+
+    public string ImportTitleText =>
+        Failures.Count == 0
+            ? "Import Complete"
+            : ImportedCount == 0
+                ? "Import Failed"
+                : "Import Completed with Errors";
 
     // ---------------------------------------------------------------- commands
 
@@ -175,10 +259,17 @@ public partial class ImportWizardViewModel : ObservableObject
 
         IsProcessing = true;
         ErrorMessage = null;
+
+        // Phase 22 (D-06 fix-forward at line 181): cancel any prior parse and
+        // thread a fresh CT into ParseAsync.
+        _parseCts?.Cancel();
+        _parseCts?.Dispose();
+        _parseCts = new CancellationTokenSource();
+
         try
         {
             using var stream = File.OpenRead(FilePath);
-            var result = await SelectedImporter.ParseAsync(stream);
+            var result = await SelectedImporter.ParseAsync(stream, _parseCts.Token);
             ParseResult = result;
             BuildPreviewTree(result.RootNodes);
             CurrentStep = 3;
@@ -206,9 +297,16 @@ public partial class ImportWizardViewModel : ObservableObject
 
         IsProcessing = true;
         ErrorMessage = null;
+
+        // Phase 22 (D-06 fix-forward at line 211): cancel any prior parse and
+        // thread a fresh CT into ParseAsync.
+        _parseCts?.Cancel();
+        _parseCts?.Dispose();
+        _parseCts = new CancellationTokenSource();
+
         try
         {
-            var result = await SelectedImporter.ParseAsync(stream);
+            var result = await SelectedImporter.ParseAsync(stream, _parseCts.Token);
             ParseResult = result;
             BuildPreviewTree(result.RootNodes);
             CurrentStep = 3;
@@ -258,216 +356,154 @@ public partial class ImportWizardViewModel : ObservableObject
 
     // ---------------------------------------------------------------- import
 
+    /// <summary>
+    /// Phase 22 Plan 22-02 (IMP-03 / D-02 / D-03 / D-06 / D-07): refactored to
+    /// delegate the prepare loop to <see cref="IImportExecutor"/>. Pattern
+    /// (RESEARCH P2 + P6 + P8 option c):
+    ///
+    /// 1. Build <see cref="ImportRequest"/> on the UI thread (cheap walk).
+    /// 2. Set <c>TotalToImport</c> + flip <c>IsImportWriteInProgress</c> BEFORE Task.Run.
+    /// 3. Construct <see cref="Progress{T}"/> on the UI thread to capture the
+    ///    DispatcherSynchronizationContext (auto-marshals progress callbacks).
+    /// 4. Run <see cref="IImportExecutor.PrepareAsync"/> on the thread pool
+    ///    (D-06: prepare is non-cancellable in this phase).
+    /// 5. Bulk-load failures on the UI thread.
+    /// 6. <see cref="IConnectionStore.SaveBatch"/> exactly ONCE (D-02).
+    /// 7. Fatal exception → SaveBatch NOT called; user stays on Step 3 (D-07).
+    /// </summary>
     internal async Task ImportSelectedAsync()
     {
         if (SelectedImporter is null || IsProcessing) return;
 
         IsProcessing = true;
-        var imported = 0;
-        var skipped = 0;
-        var renamed = 0;
+        ErrorMessage = null;
 
         try
         {
-            var existingConnections = _store.GetAll();
-            var existingHostnames = new HashSet<string>(
-                existingConnections
-                    .Where(c => !string.IsNullOrEmpty(c.Hostname))
-                    .Select(c => c.Hostname!),
-                StringComparer.OrdinalIgnoreCase);
-
-            // Accumulate all models for a single batch write at the end
-            var connectionsToSave = new List<ConnectionModel>();
-            var groupsToSave = new List<ConnectionGroup>();
-
-            // First pass: create groups to maintain hierarchy
-            var groupMap = new Dictionary<string, Guid>(); // path -> groupId
+            // 1. Build request on UI thread (cheap)
+            var checkedNodes = ToImportedNodes(PreviewItems);
+            var existingConns = _store.GetAll();
             var existingGroups = _store.GetGroups();
+            var resolutions = DuplicateItems
+                .Select(d => new DuplicateResolution(d.Hostname, d.Action))
+                .ToList();
+            var request = new ImportRequest(
+                checkedNodes,
+                existingConns,
+                existingGroups,
+                resolutions);
 
-            // Flatten checked items and import
-            var flatItems = FlattenCheckedItems(PreviewItems, null, groupMap, existingGroups, groupsToSave);
+            // 2. Set denominator + flip write flag BEFORE Task.Run
+            TotalToImport = CountConnections(checkedNodes);
+            IsImportWriteInProgress = true;
+            ImportedCount = 0;
+            SkippedCount = 0;
+            RenamedCount = 0;
+            Failures.Clear();
 
-            // Process duplicate resolution
-            DuplicateItems.Clear();
-
-            foreach (var (item, groupId) in flatItems)
+            // 3. Construct Progress<int> on UI thread (RESEARCH P6 — captures
+            //    DispatcherSynchronizationContext so callbacks marshal automatically).
+            //
+            //    A flag captured by the lambda decides whether a callback is
+            //    still allowed to mutate ImportedCount. Once we set this flag to
+            //    false (after Task.Run returns), any callback that has been
+            //    queued by Progress<int>.Report but not yet dequeued — possible
+            //    when there's no DispatcherSynchronizationContext, e.g. parallel
+            //    xUnit runs — short-circuits and cannot overwrite the final
+            //    count with a stale processed-count.
+            var progressActive = new[] { true };
+            var progress = new Progress<int>(n =>
             {
-                if (item.Type != ImportNodeType.Connection) continue;
-                if (!item.Protocol.IsSupported()) continue;
+                if (System.Threading.Volatile.Read(ref progressActive[0]))
+                    ImportedCount = n;
+            });
 
-                var hostname = item.Hostname;
+            // 4. Run prepare loop on thread pool (D-06: prepare is non-cancellable)
+            var result = await Task.Run(
+                () => _executor.PrepareAsync(request, progress, CancellationToken.None),
+                CancellationToken.None);
 
-                // Check for duplicates
-                if (!string.IsNullOrEmpty(hostname) && existingHostnames.Contains(hostname))
-                {
-                    // Check if user has resolved this duplicate
-                    var resolution = DuplicateItems.FirstOrDefault(d =>
-                        string.Equals(d.Hostname, hostname, StringComparison.OrdinalIgnoreCase));
+            // 5a. Disable progress-callback writes BEFORE assigning final counts.
+            //     Volatile.Write ensures the flag flip is visible to any worker
+            //     thread that may dequeue a stale callback after this point.
+            System.Threading.Volatile.Write(ref progressActive[0], false);
 
-                    if (resolution is not null && resolution.Action == DuplicateAction.Skip)
-                    {
-                        skipped++;
-                        continue;
-                    }
+            // 5b. Bulk-load failures on UI thread (P8 option c)
+            foreach (var f in result.Failures)
+                Failures.Add(f);
 
-                    if (resolution is not null && resolution.Action == DuplicateAction.Rename)
-                    {
-                        // Append suffix to avoid conflict
-                        var conn = CreateConnectionModel(item, groupId);
-                        conn.Name = $"{conn.Name} (imported)";
-                        connectionsToSave.Add(conn);
-                        existingHostnames.Add(conn.Hostname!);
-                        imported++;
-                        renamed++;
-                        continue;
-                    }
-
-                    if (resolution is not null && resolution.Action == DuplicateAction.Overwrite)
-                    {
-                        // Find and update existing
-                        var existing = existingConnections.FirstOrDefault(c =>
-                            string.Equals(c.Hostname, hostname, StringComparison.OrdinalIgnoreCase));
-                        if (existing is not null)
-                        {
-                            existing.Name = item.Name;
-                            existing.Port = item.Port;
-                            existing.Username = item.Username;
-                            existing.Domain = item.Domain;
-                            existing.Protocol = item.Protocol.ToProtocol();
-                            existing.GroupId = groupId;
-                            existing.UpdatedAt = DateTime.UtcNow;
-                            connectionsToSave.Add(existing);
-                            imported++;
-                            continue;
-                        }
-                    }
-
-                    // Auto-rename if no explicit resolution
-                    var autoConn = CreateConnectionModel(item, groupId);
-                    autoConn.Name = $"{autoConn.Name} (imported)";
-                    connectionsToSave.Add(autoConn);
-                    existingHostnames.Add(autoConn.Hostname!);
-                    imported++;
-                    renamed++;
-                    continue;
-                }
-
-                // No duplicate -- import directly
-                var newConn = CreateConnectionModel(item, groupId);
-                connectionsToSave.Add(newConn);
-                if (!string.IsNullOrEmpty(hostname))
-                    existingHostnames.Add(hostname);
-                imported++;
-            }
-
-            ImportedCount = imported;
-            SkippedCount = skipped;
-            RenamedCount = renamed;
+            ImportedCount = result.ImportedCount;
+            SkippedCount = result.SkippedCount;
+            RenamedCount = result.RenamedCount;
             OnPropertyChanged(nameof(ImportSummary));
 
-            // Single atomic file write for all connections and groups
-            _store.SaveBatch(connectionsToSave, groupsToSave);
-
-            // Notify tree and other subscribers of bulk data change
+            // 6. Single SaveBatch (D-02)
+            _store.SaveBatch(result.ConnectionsToSave, result.GroupsToSave);
             _bus.Publish(new ConnectionDataChangedEvent());
-            _bus.Publish(new ConnectionImportedEvent(imported, SelectedImporter.SourceName));
+            _bus.Publish(new ConnectionImportedEvent(ImportedCount, SelectedImporter.SourceName));
 
             await _audit.LogAsync(new AuditRecord(
                 Ts: DateTime.UtcNow.ToString("O"),
                 Type: AuditAction.ConnectionsImported.ToString(),
                 ConnectionId: null,
                 User: Environment.UserName,
-                Outcome: $"success: {imported} imported, {skipped} skipped, {renamed} renamed"));
+                Outcome: $"success: {ImportedCount} imported, {SkippedCount} skipped, {RenamedCount} renamed, {FailedCount} failed"));
 
             CurrentStep = 4;
         }
         catch (Exception ex)
         {
+            // D-07: fatal throw → SaveBatch NOT called; user returns to prior step
             ErrorMessage = $"Import failed: {ex.Message}";
+            // Do NOT advance CurrentStep — user stays on Step 3 with InfoBar.
         }
         finally
         {
+            IsImportWriteInProgress = false;
             IsProcessing = false;
         }
     }
 
-    private static ConnectionModel CreateConnectionModel(ImportTreeItemViewModel item, Guid? groupId)
+    /// <summary>
+    /// Counts CONNECTION-typed RDP-protocol leaves in the supplied tree. Used to
+    /// set the determinate progress denominator (<c>TotalToImport</c>) — matches
+    /// the executor's "non-RDP rows are filtered before processed++" behaviour.
+    /// </summary>
+    private static int CountConnections(IReadOnlyList<ImportedNode> nodes)
     {
-        return new ConnectionModel
+        int n = 0;
+        foreach (var node in nodes)
         {
-            Id = Guid.NewGuid(),
-            Name = item.Name,
-            Hostname = item.Hostname ?? string.Empty,
-            Port = item.Port,
-            Username = item.Username,
-            Domain = item.Domain,
-            Protocol = item.Protocol.ToProtocol(),
-            GroupId = groupId,
-            // MIG-03: passwords never imported. Default to Own — user fills via editor or quick properties.
-            CredentialMode = CredentialMode.Own,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+            if (node.Type == ImportNodeType.Connection && node.Protocol == Protocol.Rdp) n++;
+            n += CountConnections(node.Children);
+        }
+        return n;
     }
 
-    private List<(ImportTreeItemViewModel Item, Guid? GroupId)> FlattenCheckedItems(
-        IEnumerable<ImportTreeItemViewModel> items,
-        Guid? parentGroupId,
-        Dictionary<string, Guid> groupMap,
-        IReadOnlyList<ConnectionGroup> existingGroups,
-        List<ConnectionGroup> groupsToSave)
+    /// <summary>
+    /// Converts the checked subset of <see cref="PreviewItems"/> back into the
+    /// <see cref="ImportedNode"/> tree the executor consumes. Skips unchecked
+    /// nodes; preserves Container / Connection ordering.
+    /// </summary>
+    private static IReadOnlyList<ImportedNode> ToImportedNodes(IEnumerable<ImportTreeItemViewModel> items)
     {
-        var result = new List<(ImportTreeItemViewModel, Guid?)>();
-
+        var list = new List<ImportedNode>();
         foreach (var item in items)
         {
             if (!item.IsChecked) continue;
-
-            if (item.Type == ImportNodeType.Container)
-            {
-                // Create or reuse group
-                var groupId = EnsureGroup(item.Name, parentGroupId, groupMap, existingGroups, groupsToSave);
-                // Recurse into children
-                result.AddRange(FlattenCheckedItems(item.Children, groupId, groupMap, existingGroups, groupsToSave));
-            }
-            else
-            {
-                result.Add((item, parentGroupId));
-            }
+            var children = ToImportedNodes(item.Children);
+            list.Add(new ImportedNode(
+                item.Name,
+                item.Type,
+                item.Hostname,
+                item.Port,
+                item.Username,
+                item.Domain,
+                item.Protocol,
+                Description: null,
+                Children: children));
         }
-
-        return result;
-    }
-
-    private Guid EnsureGroup(
-        string name,
-        Guid? parentGroupId,
-        Dictionary<string, Guid> groupMap,
-        IReadOnlyList<ConnectionGroup> existingGroups,
-        List<ConnectionGroup> groupsToSave)
-    {
-        var key = $"{parentGroupId}|{name}";
-        if (groupMap.TryGetValue(key, out var existingId))
-            return existingId;
-
-        // Check if a group with this name already exists under the same parent
-        var existing = existingGroups.FirstOrDefault(g =>
-            g.Name == name && g.ParentGroupId == parentGroupId);
-        if (existing is not null)
-        {
-            groupMap[key] = existing.Id;
-            return existing.Id;
-        }
-
-        var group = new ConnectionGroup
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            ParentGroupId = parentGroupId,
-        };
-        groupsToSave.Add(group);
-        groupMap[key] = group.Id;
-        return group.Id;
+        return list;
     }
 
     // ---------------------------------------------------------------- helpers
@@ -480,8 +516,10 @@ public partial class ImportWizardViewModel : ObservableObject
 }
 
 // ---------------------------------------------------------------- duplicate handling
-
-public enum DuplicateAction { Skip, Overwrite, Rename }
+//
+// Phase 22 Plan 22-02: the view-tier `enum DuplicateAction` was removed —
+// `DuplicateItemViewModel.Action` now binds directly to the Core enum at
+// `Deskbridge.Core.Models.DuplicateAction`. Single source of truth.
 
 public partial class DuplicateItemViewModel : ObservableObject
 {

@@ -84,11 +84,16 @@ public class ImportWizardViewModelTests
         IConnectionImporter importer,
         IConnectionStore? store = null,
         IEventBus? bus = null,
-        IAuditLogger? audit = null)
+        IAuditLogger? audit = null,
+        IImportExecutor? executor = null)
     {
         store ??= Substitute.For<IConnectionStore>();
         bus ??= Substitute.For<IEventBus>();
         audit ??= Substitute.For<IAuditLogger>();
+        // Phase 22 Plan 22-02: VM now requires IImportExecutor. Use the real
+        // implementation by default so the existing semantic-equivalence tests
+        // (Skip / Rename / Overwrite / auto-rename) remain end-to-end.
+        executor ??= new Deskbridge.Core.Services.MRemoteNGImportExecutor();
 
         store.GetAll().Returns([]);
         store.GetGroups().Returns([]);
@@ -98,6 +103,7 @@ public class ImportWizardViewModelTests
             store: store,
             bus: bus,
             audit: audit,
+            executor: executor,
             fileBrowser: null);
     }
 
@@ -133,6 +139,7 @@ public class ImportWizardViewModelTests
             store: store,
             bus: Substitute.For<IEventBus>(),
             audit: Substitute.For<IAuditLogger>(),
+            executor: new Deskbridge.Core.Services.MRemoteNGImportExecutor(),
             fileBrowser: null);
 
         // Force no importer selected
@@ -431,6 +438,7 @@ public class ImportWizardViewModelTests
             store: store,
             bus: Substitute.For<IEventBus>(),
             audit: Substitute.For<IAuditLogger>(),
+            executor: new Deskbridge.Core.Services.MRemoteNGImportExecutor(),
             fileBrowser: null);
 
         using var stream = EmptyStream();

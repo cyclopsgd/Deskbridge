@@ -323,6 +323,11 @@ public partial class App : Application
         // Phase 7 ships MRemoteNGImporter only; future importers add registrations here.
         services.AddSingleton<IConnectionImporter, MRemoteNGImporter>();
 
+        // Phase 22 Plan 22-02 (D-03): IImportExecutor singleton — pure logic,
+        // no per-session state. Parser-agnostic prepare-loop service consumed
+        // by ImportWizardViewModel.ImportSelectedAsync.
+        services.AddSingleton<IImportExecutor, MRemoteNGImportExecutor>();
+
         // ImportWizardViewModel: transient — fresh per wizard session so
         // step state and preview items are clean each open.
         services.AddTransient<ImportWizardViewModel>(sp =>
@@ -330,7 +335,8 @@ public partial class App : Application
                 sp.GetServices<IConnectionImporter>().ToList(),
                 sp.GetRequiredService<IConnectionStore>(),
                 sp.GetRequiredService<IEventBus>(),
-                sp.GetRequiredService<IAuditLogger>()));
+                sp.GetRequiredService<IAuditLogger>(),
+                sp.GetRequiredService<IImportExecutor>()));
 
         // ImportWizardDialog: transient — one dialog per import session.
         services.AddTransient<ImportWizardDialog>(sp =>
