@@ -415,12 +415,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User sees a progress bar during mRemoteNG import that updates as connections are processed, not a spinner with no indication of progress
   2. Developer can run stress tests with 500+ and 1000+ connection XML fixtures that validate import correctness and measure performance against baselines
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
-- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
-- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
+- [x] 22-01-PLAN.md -- IImportExecutor + MRemoteNGImportExecutor (parser-agnostic prepare loop with IProgress<int> reporting and continue-and-collect failure semantics)
+- [ ] 22-02-PLAN.md -- ImportWizardViewModel wiring + UI ProgressBar + close-button suppression
+- [ ] 22-03-PLAN.md -- MRemoteNGXmlSerializer reverse-mapper for stress fixtures
+- [ ] 22-04-PLAN.md -- Stress + pathological tests (500/1000/5000 generated + 4 committed pathological)
 
 ### Phase 23: Bulk Operations UX
 **Goal**: Users can perform group-level and multi-select operations efficiently -- connecting all servers in a group, disconnecting a group, or editing shared fields across multiple connections in one action
@@ -485,7 +486,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 19. SaveBatch API | v1.3 | 2/2 | Complete    | 2026-04-26 |
 | 20. Performance Baselines | v1.3 | 3/3 | Complete    | 2026-04-27 |
 | 21. Performance Optimizations | v1.3 | 4/4 | Complete    | 2026-05-02 |
-| 22. Large Import Handling | v1.3 | 0/0 | Not started | - |
+| 22. Large Import Handling | v1.3 | 1/4 | In Progress | - |
 | 23. Bulk Operations UX | v1.3 | 0/0 | Not started | - |
 | 24. Uninstall Cleanup | v1.3 | 0/0 | Not started | - |
 

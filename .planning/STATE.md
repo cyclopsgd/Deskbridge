@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
-status: ready_to_plan
-stopped_at: "Plan 21-04 complete: BuildTree GO + UAT ALL PASS; Phase 21 ready for verification"
-last_updated: "2026-05-02T12:17:21.451Z"
-last_activity: 2026-05-02
+status: executing
+stopped_at: Plan 22-01 complete (IImportExecutor + MRemoteNGImportExecutor)
+last_updated: "2026-05-03T07:42:00Z"
+last_activity: 2026-05-03 -- Phase 22 Plan 22-01 complete (3 commits, 19 tests, 706/706 suite)
 progress:
   total_phases: 25
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
-  percent: 20
+  completed_phases: 4
+  total_plans: 16
+  completed_plans: 13
+  percent: 81
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 21 — performance-optimizations
+**Current focus:** Phase 22 — large-import-handling
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-02
+Phase: 22 (large-import-handling) — EXECUTING
+Plan: 2 of 4 (22-01 complete)
+Status: Executing Phase 22
+Last activity: 2026-05-03 -- Plan 22-01 complete (IImportExecutor + MRemoteNGImportExecutor)
 
-Progress: [██████████] 100%
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
@@ -104,6 +104,7 @@ Progress: [██████████] 100%
 | Phase 21 P02 | 7min | 2 tasks tasks | 12 files files |
 | Phase 21 P03 | 4min | 2 tasks tasks | 5 files files |
 | Phase 21 P04 | 30min | 2 tasks | 2 files |
+| Phase 22 P01 | 8min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,10 @@ Recent decisions affecting current work:
 - IConnectionStore DI factory simplified to sp => new JsonConnectionStore() — load moves entirely out of DI graph construction
 - Phase 21 BuildTree NO-GO resolved via fresh same-day same-machine A/B re-baseline (env drift, not regression); GO verdict on commit 3ac0c08 supersedes fc52632
 - Phase 21 manual UAT: ALL PASS (10/11 dimensions PASS, D3.2 SKIP) on 500-conn deterministic dataset; operator approved 2026-05-02
+- Plan 22-01: domain types co-located in ImportModels.cs per PATTERNS.md correction #1 (no new FailedImport.cs); executor as separate IImportExecutor service rather than method on IConnectionImporter (RESEARCH Open Q#5); executor returns Task.FromResult — no Task.Run inside the library, thread-pool dispatch is the VM caller's responsibility
+- Plan 22-01: compile-time guarantee that the executor cannot reach SaveBatch — parameterless ctor + reflection test enforce that no IConnectionStore can leak in (D-02)
+- Plan 22-01: IProgress<int>.Report lives in finally block so failures count toward the progress denominator (D-03); non-RDP rows filtered before being processed so they do NOT contribute to progress
+- Plan 22-01: defensive null-Name guard added to executor prepare loop (Rule 2 missing critical) — classified as ImportFailureType.Unknown when caught in the per-row try/catch
 
 ### Pending Todos
 
@@ -163,8 +168,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-02T12:17:21.444Z
-Stopped at: Plan 21-04 complete: BuildTree GO + UAT ALL PASS; Phase 21 ready for verification
-Resume file: None
+Last session: 2026-05-03T07:42:00Z
+Stopped at: Plan 22-01 complete — ready for Plan 22-02 (VM wiring)
+Resume file: .planning/phases/22-large-import-handling/22-02-PLAN.md
 
-**Planned Phase:** 21 (performance-optimizations) — 4 plans — 2026-05-02T07:09:33.678Z
+**Planned Phase:** 22 (large-import-handling) — 4 plans — 2026-05-03T07:42:00Z
