@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
 status: executing
-stopped_at: Plan 22-03 complete (MRemoteNGXmlSerializer + 4 pathological fixtures)
-last_updated: "2026-05-03T07:54:00Z"
-last_activity: 2026-05-03 -- Phase 22 Plan 22-03 complete (2 commits, 17 new tests, 723/726 suite)
+stopped_at: Phase 22 complete (verified PASS; UAT skipped at developer request, deferred to v1.4)
+last_updated: "2026-05-03T13:54:00Z"
+last_activity: 2026-05-03 -- Phase 22 verified PASS (8 commits across 22-02 + 22-04; 753/754 suite, sole failure is pre-existing env-dependent RDP smoke)
 progress:
   total_phases: 25
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 14
-  percent: 88
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 18
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** Phase 22 — large-import-handling
+**Current focus:** v1.3 milestone — next phase TBD (Phase 22 complete)
 
 ## Current Position
 
-Phase: 22 (large-import-handling) — EXECUTING
-Plan: 3 of 4 complete (22-01 + 22-03; 22-02 still pending)
-Status: Executing Phase 22
-Last activity: 2026-05-03 -- Plan 22-03 complete (MRemoteNGXmlSerializer + 4 pathological fixtures)
+Phase: 22 (large-import-handling) — COMPLETE (verified PASS 2026-05-03)
+Plan: 4 of 4 complete (22-01, 22-02, 22-03, 22-04)
+Status: Awaiting next-phase selection
+Last activity: 2026-05-03 -- Phase 22 verified PASS; manual UAT skipped at developer request (deferred to v1.4); 753/754 suite
 
-Progress: [████████▊░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -172,8 +172,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-03T07:54:00Z
-Stopped at: Plan 22-03 complete — ready for Plan 22-02 (VM wiring) or 22-04 (stress + pathological tests)
-Resume file: .planning/phases/22-large-import-handling/22-02-PLAN.md
+Last session: 2026-05-03T13:54:00Z
+Stopped at: Phase 22 complete (verified PASS) — ready for next-phase selection in v1.3
+Resume file: .planning/ROADMAP.md (pick the next pending v1.3 phase)
 
-**Planned Phase:** 22 (large-import-handling) — 4 plans — 2026-05-03T07:42:00Z
+**Phase 22 deferred to v1.4:** manual UAT skipped at developer request — `.planning/phases/22-large-import-handling/22-UAT.md` carries `status: skipped`; v1.4 follow-ups recorded in 22-04-SUMMARY.md.

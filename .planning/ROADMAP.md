@@ -56,7 +56,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 19: SaveBatch API** - Single-persist batch write for IConnectionStore, unblocking import and bulk edit at scale
 - [x] **Phase 20: Performance Baselines** - BenchmarkDotNet project with regression baselines for tree, search, and serialization
 - [ ] **Phase 21: Performance Optimizations** - Smooth 500+ connection tree, debounced search, async JSON load, group connection counts
-- [ ] **Phase 22: Large Import Handling** - Progress bar during import, stress test fixtures for 500+ and 1000+ connections
+- [x] **Phase 22: Large Import Handling** - Progress bar during import, stress test fixtures for 500+ and 1000+ connections
 - [ ] **Phase 23: Bulk Operations UX** - Group connect all, group disconnect all, multi-select bulk edit dialog
 - [ ] **Phase 24: Uninstall Cleanup** - Fix unconditional data delete in Velopack hook, respect user preference from settings
 
