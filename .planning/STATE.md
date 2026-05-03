@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
 status: executing
-stopped_at: Plan 22-01 complete (IImportExecutor + MRemoteNGImportExecutor)
-last_updated: "2026-05-03T07:42:00Z"
-last_activity: 2026-05-03 -- Phase 22 Plan 22-01 complete (3 commits, 19 tests, 706/706 suite)
+stopped_at: Plan 22-03 complete (MRemoteNGXmlSerializer + 4 pathological fixtures)
+last_updated: "2026-05-03T07:54:00Z"
+last_activity: 2026-05-03 -- Phase 22 Plan 22-03 complete (2 commits, 17 new tests, 723/726 suite)
 progress:
   total_phases: 25
   completed_phases: 4
   total_plans: 16
-  completed_plans: 13
-  percent: 81
+  completed_plans: 14
+  percent: 88
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 ## Current Position
 
 Phase: 22 (large-import-handling) — EXECUTING
-Plan: 2 of 4 (22-01 complete)
+Plan: 3 of 4 complete (22-01 + 22-03; 22-02 still pending)
 Status: Executing Phase 22
-Last activity: 2026-05-03 -- Plan 22-01 complete (IImportExecutor + MRemoteNGImportExecutor)
+Last activity: 2026-05-03 -- Plan 22-03 complete (MRemoteNGXmlSerializer + 4 pathological fixtures)
 
-Progress: [████████░░] 81%
+Progress: [████████▊░] 88%
 
 ## Performance Metrics
 
@@ -105,6 +105,7 @@ Progress: [████████░░] 81%
 | Phase 21 P03 | 4min | 2 tasks tasks | 5 files files |
 | Phase 21 P04 | 30min | 2 tasks | 2 files |
 | Phase 22 P01 | 8min | 3 tasks | 6 files |
+| Phase 22 P03 | 6min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,9 @@ Recent decisions affecting current work:
 - Plan 22-01: compile-time guarantee that the executor cannot reach SaveBatch — parameterless ctor + reflection test enforce that no IConnectionStore can leak in (D-02)
 - Plan 22-01: IProgress<int>.Report lives in finally block so failures count toward the progress denominator (D-03); non-RDP rows filtered before being processed so they do NOT contribute to progress
 - Plan 22-01: defensive null-Name guard added to executor prepare loop (Rule 2 missing critical) — classified as ImportFailureType.Unknown when caught in the per-row try/catch
+- Plan 22-03: malformed-single-row.xml uses Port="abc" (semantically invalid, structurally valid XML) per PATTERNS.md correction #3 — parser tolerates via int.TryParse fallback to 3389; 22-04 will layer executor failure-collection on top
+- Plan 22-03: MRemoteNGXmlSerializer is a static reverse-mapper (mirrors ConnectionExporter shape) — XmlWriter + UTF8Encoding(emitBom: false), root FullFileEncryption="false" (lowercase) hardcoded to avoid parser rejection
+- Plan 22-03: Port serialized via InvariantCulture so locale (en-US/de-DE) doesn't affect byte output; round-trip verified at N=500/1000/5000 in <5s suite total
 
 ### Pending Todos
 
@@ -168,8 +172,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-03T07:42:00Z
-Stopped at: Plan 22-01 complete — ready for Plan 22-02 (VM wiring)
+Last session: 2026-05-03T07:54:00Z
+Stopped at: Plan 22-03 complete — ready for Plan 22-02 (VM wiring) or 22-04 (stress + pathological tests)
 Resume file: .planning/phases/22-large-import-handling/22-02-PLAN.md
 
 **Planned Phase:** 22 (large-import-handling) — 4 plans — 2026-05-03T07:42:00Z
