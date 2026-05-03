@@ -66,29 +66,109 @@
                             <CheckBox IsChecked="{Binding IsChecked}" Margin="0,0,4,0" />
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                             <TextBlock Text="{Binding Protocol}" Margin="8,0,0,0"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       FontSize="11" VerticalAlignment="Center" />
+                                       Style="{StaticResource SectionLabelStyle}"
+                                       VerticalAlignment="Center" />
                         </StackPanel>
                     </HierarchicalDataTemplate>
                 </TreeView.ItemTemplate>
             </TreeView>
         </Grid>
 
-        <!-- Step 4: Confirmation/Summary -->
+        <!-- Step 4: Confirmation/Summary
+             Phase 22 Plan 22-02 (UI-SPEC §"Severity Selection Rule" + §"InfoBar copy"):
+             Severity + Title bind to VM computed properties driven by FailedCount /
+             ImportedCount. Failure-list section visible iff FailedCount > 0; overflow
+             footer visible iff FailedCount > 50. -->
         <StackPanel Visibility="{Binding IsStep4, Converter={StaticResource BoolToVisibility}}">
-            <ui:InfoBar IsOpen="True" IsClosable="False" Severity="Success"
-                        Title="Import Complete"
+            <ui:InfoBar IsOpen="True"
+                        IsClosable="False"
+                        Severity="{Binding ImportSeverity}"
+                        Title="{Binding ImportTitleText}"
                         Message="{Binding ImportSummary}" />
+
+            <!-- Failure-list section heading — visible iff FailedCount > 0 -->
+            <TextBlock Text="Failed Connections"
+                       Style="{StaticResource CardTitleStyle}"
+                       Margin="0,16,0,8"
+                       Visibility="{Binding FailedCount, Converter={StaticResource IntToVisibility}}" />
+
+            <!-- Failure list — visible iff FailedCount > 0; capped at MaxHeight=180 -->
+            <ItemsControl ItemsSource="{Binding Failures}"
+                          MaxHeight="180"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding FailedCount, Converter={StaticResource IntToVisibility}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                            <TextBlock Text="{Binding ConnectionName}"
+                                       Style="{StaticResource CaptionStyle}" />
+                            <TextBlock Text=": "
+                                       Style="{StaticResource CaptionStyle}" />
+                            <TextBlock Text="{Binding Detail}"
+                                       Style="{StaticResource ErrorTextStyle}"
+                                       TextWrapping="Wrap"
+                                       Margin="4,0,0,0" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Overflow footer — visible iff FailedCount > 50 -->
+            <TextBlock Style="{StaticResource HintStyle}"
+                       Margin="0,4,0,0">
+                <TextBlock.Text>
+                    <Binding Path="FailedCount"
+                             Converter="{StaticResource OverflowMoreText}"
+                             ConverterParameter="50" />
+                </TextBlock.Text>
+                <TextBlock.Visibility>
+                    <Binding Path="FailedCount"
+                             Converter="{StaticResource IntGreaterThanToVisibility}"
+                             ConverterParameter="50" />
+                </TextBlock.Visibility>
+            </TextBlock>
         </StackPanel>
 
-        <!-- Processing overlay -->
+        <!-- Processing overlay
+             Phase 22 Plan 22-02 (IMP-03 / UI-SPEC §"Progress Surface — Layout"):
+             forked branches by IsImportWriteInProgress.
+              - Parse phase (existing): indeterminate ProgressRing + "Processing..."
+              - Write phase (Phase 22 new): determinate ProgressBar + "{N} of {Total}" caption -->
         <Grid Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
             <Border Background="{DynamicResource ApplicationBackgroundBrush}" Opacity="0.7" />
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+
+            <!-- Parse-phase indicator (preserved verbatim per UI-SPEC §"Parse-phase indicator").
+                 Visible only during parse, NOT during write. -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding IsImportWriteInProgress, Converter={StaticResource InverseBoolToVisibility}}">
                 <ui:ProgressRing IsIndeterminate="True" Width="32" Height="32" />
                 <TextBlock Text="Processing..." Margin="0,8,0,0"
                            HorizontalAlignment="Center"
                            Style="{StaticResource BodyMutedStyle}" />
+            </StackPanel>
+
+            <!-- Phase 22 (IMP-03): determinate write-phase progress -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding IsImportWriteInProgress, Converter={StaticResource BoolToVisibility}}">
+                <!-- Standard WPF ProgressBar — WPF-UI 4.2 does not ship a
+                     ui:ProgressBar control (only ui:ProgressRing). The control
+                     auto-restyles via WPF-UI's ControlsDictionary. -->
+                <ProgressBar Minimum="0"
+                             Maximum="{Binding TotalToImport}"
+                             Value="{Binding ImportedCount}"
+                             IsIndeterminate="False"
+                             MinWidth="320"
+                             Height="4" />
+                <TextBlock Margin="0,8,0,0"
+                           HorizontalAlignment="Center"
+                           Style="{StaticResource BodyMutedStyle}">
+                    <TextBlock.Text>
+                        <MultiBinding StringFormat="{}{0} of {1}">
+                            <Binding Path="ImportedCount" />
+                            <Binding Path="TotalToImport" />
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
             </StackPanel>
         </Grid>
     </Grid>

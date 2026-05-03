@@ -31,6 +31,12 @@
             <converters:EnumToVisibilityConverter x:Key="EnumToVisibility" />
             <converters:NullToCollapsedConverter x:Key="NullToCollapsed" />
             <converters:NullToBoolConverter x:Key="NullToBool" />
+
+            <!-- Phase 22 Plan 22-02 (UI-SPEC §"Failure List Layout"): converters
+                 for the determinate progress overlay + failure-list section. -->
+            <converters:IntToVisibilityConverter x:Key="IntToVisibility" />
+            <converters:IntGreaterThanToVisibilityConverter x:Key="IntGreaterThanToVisibility" />
+            <converters:OverflowMoreTextConverter x:Key="OverflowMoreText" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
