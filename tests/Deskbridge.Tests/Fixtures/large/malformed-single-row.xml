@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Connections Name="Connections"
+             Export="false"
+             EncryptionEngine="AES"
+             BlockCipherMode="GCM"
+             KdfIterations="1000"
+             FullFileEncryption="false"
+             Protected="GiIJi/PiCE4="
+             ConfVersion="2.6">
+    <Node Name="Container" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General">
+        <Node Name="Server-001" Type="Connection"
+              Protocol="RDP" Hostname="server001.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-002" Type="Connection"
+              Protocol="RDP" Hostname="server002.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-003" Type="Connection"
+              Protocol="RDP" Hostname="server003.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-004" Type="Connection"
+              Protocol="RDP" Hostname="server004.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-005" Type="Connection"
+              Protocol="RDP" Hostname="server005.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-006" Type="Connection"
+              Protocol="RDP" Hostname="server006.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-007" Type="Connection"
+              Protocol="RDP" Hostname="server007.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-008" Type="Connection"
+              Protocol="RDP" Hostname="server008.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-009" Type="Connection"
+              Protocol="RDP" Hostname="server009.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-010" Type="Connection"
+              Protocol="RDP" Hostname="server010.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-011" Type="Connection"
+              Protocol="RDP" Hostname="server011.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-012" Type="Connection"
+              Protocol="RDP" Hostname="server012.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-013" Type="Connection"
+              Protocol="RDP" Hostname="server013.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-014" Type="Connection"
+              Protocol="RDP" Hostname="server014.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-015" Type="Connection"
+              Protocol="RDP" Hostname="server015.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-016" Type="Connection"
+              Protocol="RDP" Hostname="server016.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-017" Type="Connection"
+              Protocol="RDP" Hostname="server017.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-018" Type="Connection"
+              Protocol="RDP" Hostname="server018.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-019" Type="Connection"
+              Protocol="RDP" Hostname="server019.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-020" Type="Connection"
+              Protocol="RDP" Hostname="server020.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-021" Type="Connection"
+              Protocol="RDP" Hostname="server021.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-022" Type="Connection"
+              Protocol="RDP" Hostname="server022.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-023" Type="Connection"
+              Protocol="RDP" Hostname="server023.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-024" Type="Connection"
+              Protocol="RDP" Hostname="server024.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-025" Type="Connection"
+              Protocol="RDP" Hostname="server025.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-026" Type="Connection"
+              Protocol="RDP" Hostname="server026.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-027" Type="Connection"
+              Protocol="RDP" Hostname="server027.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-028" Type="Connection"
+              Protocol="RDP" Hostname="server028.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-029" Type="Connection"
+              Protocol="RDP" Hostname="server029.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-030" Type="Connection"
+              Protocol="RDP" Hostname="server030.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-031" Type="Connection"
+              Protocol="RDP" Hostname="server031.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-032" Type="Connection"
+              Protocol="RDP" Hostname="server032.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-033" Type="Connection"
+              Protocol="RDP" Hostname="server033.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-034" Type="Connection"
+              Protocol="RDP" Hostname="server034.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-035" Type="Connection"
+              Protocol="RDP" Hostname="server035.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-036" Type="Connection"
+              Protocol="RDP" Hostname="server036.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-037" Type="Connection"
+              Protocol="RDP" Hostname="server037.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-038" Type="Connection"
+              Protocol="RDP" Hostname="server038.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-039" Type="Connection"
+              Protocol="RDP" Hostname="server039.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-040" Type="Connection"
+              Protocol="RDP" Hostname="server040.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-041" Type="Connection"
+              Protocol="RDP" Hostname="server041.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-042" Type="Connection"
+              Protocol="RDP" Hostname="server042.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-043" Type="Connection"
+              Protocol="RDP" Hostname="server043.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-044" Type="Connection"
+              Protocol="RDP" Hostname="server044.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-045" Type="Connection"
+              Protocol="RDP" Hostname="server045.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-046" Type="Connection"
+              Protocol="RDP" Hostname="server046.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-047" Type="Connection"
+              Protocol="RDP" Hostname="server047.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-048" Type="Connection"
+              Protocol="RDP" Hostname="server048.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-049" Type="Connection"
+              Protocol="RDP" Hostname="server049.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-050" Type="Connection"
+              Protocol="RDP" Hostname="server050.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-051" Type="Connection"
+              Protocol="RDP" Hostname="server051.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-052" Type="Connection"
+              Protocol="RDP" Hostname="server052.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-053" Type="Connection"
+              Protocol="RDP" Hostname="server053.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-054" Type="Connection"
+              Protocol="RDP" Hostname="server054.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-055" Type="Connection"
+              Protocol="RDP" Hostname="server055.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-056" Type="Connection"
+              Protocol="RDP" Hostname="server056.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-057" Type="Connection"
+              Protocol="RDP" Hostname="server057.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-058" Type="Connection"
+              Protocol="RDP" Hostname="server058.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-059" Type="Connection"
+              Protocol="RDP" Hostname="server059.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-060" Type="Connection"
+              Protocol="RDP" Hostname="server060.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-061" Type="Connection"
+              Protocol="RDP" Hostname="server061.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-062" Type="Connection"
+              Protocol="RDP" Hostname="server062.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-063" Type="Connection"
+              Protocol="RDP" Hostname="server063.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-064" Type="Connection"
+              Protocol="RDP" Hostname="server064.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-065" Type="Connection"
+              Protocol="RDP" Hostname="server065.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-066" Type="Connection"
+              Protocol="RDP" Hostname="server066.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-067" Type="Connection"
+              Protocol="RDP" Hostname="server067.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-068" Type="Connection"
+              Protocol="RDP" Hostname="server068.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-069" Type="Connection"
+              Protocol="RDP" Hostname="server069.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-070" Type="Connection"
+              Protocol="RDP" Hostname="server070.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-071" Type="Connection"
+              Protocol="RDP" Hostname="server071.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-072" Type="Connection"
+              Protocol="RDP" Hostname="server072.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-073" Type="Connection"
+              Protocol="RDP" Hostname="server073.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-074" Type="Connection"
+              Protocol="RDP" Hostname="server074.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-075" Type="Connection"
+              Protocol="RDP" Hostname="server075.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-076" Type="Connection"
+              Protocol="RDP" Hostname="server076.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-077" Type="Connection"
+              Protocol="RDP" Hostname="server077.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-078" Type="Connection"
+              Protocol="RDP" Hostname="server078.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-079" Type="Connection"
+              Protocol="RDP" Hostname="server079.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-080" Type="Connection"
+              Protocol="RDP" Hostname="server080.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-081" Type="Connection"
+              Protocol="RDP" Hostname="server081.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-082" Type="Connection"
+              Protocol="RDP" Hostname="server082.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-083" Type="Connection"
+              Protocol="RDP" Hostname="server083.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-084" Type="Connection"
+              Protocol="RDP" Hostname="server084.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-085" Type="Connection"
+              Protocol="RDP" Hostname="server085.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-086" Type="Connection"
+              Protocol="RDP" Hostname="server086.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-087" Type="Connection"
+              Protocol="RDP" Hostname="server087.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-088" Type="Connection"
+              Protocol="RDP" Hostname="server088.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-089" Type="Connection"
+              Protocol="RDP" Hostname="server089.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-090" Type="Connection"
+              Protocol="RDP" Hostname="server090.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-091" Type="Connection"
+              Protocol="RDP" Hostname="server091.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-092" Type="Connection"
+              Protocol="RDP" Hostname="server092.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-093" Type="Connection"
+              Protocol="RDP" Hostname="server093.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-094" Type="Connection"
+              Protocol="RDP" Hostname="server094.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-095" Type="Connection"
+              Protocol="RDP" Hostname="server095.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-096" Type="Connection"
+              Protocol="RDP" Hostname="server096.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-097" Type="Connection"
+              Protocol="RDP" Hostname="server097.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-098" Type="Connection"
+              Protocol="RDP" Hostname="server098.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Server-099" Type="Connection"
+              Protocol="RDP" Hostname="server099.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="" Icon="mRemoteNG" Panel="General" />
+        <Node Name="BadRow" Type="Connection"
+              Protocol="RDP" Hostname="badrow.local" Port="abc"
+              Username="user" Domain="" Password=""
+              Description="Port attribute is not a valid integer" Icon="mRemoteNG" Panel="General" />
+    </Node>
+</Connections>

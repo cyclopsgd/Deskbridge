@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Connections Name="Connections"
+             Export="false"
+             EncryptionEngine="AES"
+             BlockCipherMode="GCM"
+             KdfIterations="1000"
+             FullFileEncryption="false"
+             Protected="GiIJi/PiCE4="
+             ConfVersion="2.6">
+    <Node Name="Производство" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General">
+        <Node Name="Тест-сервер" Type="Connection"
+              Protocol="RDP" Hostname="test.kremlin.local" Port="3389"
+              Username="админ" Domain="MOSCOW" Password=""
+              Description="Cyrillic test server" Icon="mRemoteNG" Panel="General" />
+        <Node Name="測試-サーバー" Type="Connection"
+              Protocol="RDP" Hostname="test.tokyo.local" Port="3389"
+              Username="管理者" Domain="" Password=""
+              Description="CJK mixed test" Icon="mRemoteNG" Panel="General" />
+        <Node Name="خادم-اختبار" Type="Connection"
+              Protocol="RDP" Hostname="test.dubai.local" Port="3389"
+              Username="مدير" Domain="" Password=""
+              Description="RTL Arabic test" Icon="mRemoteNG" Panel="General" />
+        <Node Name="🚀-prod-01" Type="Connection"
+              Protocol="RDP" Hostname="rocket.prod.local" Port="3389"
+              Username="ops" Domain="" Password=""
+              Description="Emoji name test" Icon="mRemoteNG" Panel="General" />
+        <Node Name="café" Type="Connection"
+              Protocol="RDP" Hostname="cafe.paris.local" Port="3389"
+              Username="garçon" Domain="" Password=""
+              Description="Combining diacritic test (é)" Icon="mRemoteNG" Panel="General" />
+        <Node Name="日本-本社" Type="Connection"
+              Protocol="RDP" Hostname="hq.tokyo.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Japanese kanji" Icon="mRemoteNG" Panel="General" />
+        <Node Name="北京-办公室" Type="Connection"
+              Protocol="RDP" Hostname="office.beijing.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Simplified Chinese" Icon="mRemoteNG" Panel="General" />
+        <Node Name="Ελληνικά-σέρβερ" Type="Connection"
+              Protocol="RDP" Hostname="server.athens.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Greek polytonic" Icon="mRemoteNG" Panel="General" />
+        <Node Name="🎯-target-server" Type="Connection"
+              Protocol="RDP" Hostname="target.prod.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Emoji prefix" Icon="mRemoteNG" Panel="General" />
+        <Node Name="server-with-naïve-name" Type="Connection"
+              Protocol="RDP" Hostname="naive.eu.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Latin diacritics ï" Icon="mRemoteNG" Panel="General" />
+        <Node Name="ascii-server-01" Type="Connection"
+              Protocol="RDP" Hostname="ascii01.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Plain ASCII control row" Icon="mRemoteNG" Panel="General" />
+        <Node Name="ascii-server-02" Type="Connection"
+              Protocol="SSH2" Hostname="ascii02.local" Port="22"
+              Username="user" Domain="" Password=""
+              Description="Plain ASCII SSH" Icon="mRemoteNG" Panel="General" />
+        <Node Name="ascii-server-03" Type="Connection"
+              Protocol="VNC" Hostname="ascii03.local" Port="5900"
+              Username="user" Domain="" Password=""
+              Description="Plain ASCII VNC" Icon="mRemoteNG" Panel="General" />
+        <Node Name="ascii-server-04" Type="Connection"
+              Protocol="RDP" Hostname="ascii04.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Plain ASCII RDP" Icon="mRemoteNG" Panel="General" />
+        <Node Name="ascii-server-05" Type="Connection"
+              Protocol="RDP" Hostname="ascii05.local" Port="3389"
+              Username="user" Domain="" Password=""
+              Description="Plain ASCII RDP" Icon="mRemoteNG" Panel="General" />
+    </Node>
+</Connections>

@@ -26,6 +26,9 @@
     <Content Include="Fixtures\sample-confcons.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Fixtures\large\*.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <!-- Classic aximp interop DLLs — <Reference> does not flow transitively through
        ProjectReference, so the test project re-references them directly. See

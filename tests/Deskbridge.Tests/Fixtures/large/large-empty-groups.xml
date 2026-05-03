@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Connections Name="Connections"
+             Export="false"
+             EncryptionEngine="AES"
+             BlockCipherMode="GCM"
+             KdfIterations="1000"
+             FullFileEncryption="false"
+             Protected="GiIJi/PiCE4="
+             ConfVersion="2.6">
+    <Node Name="Empty-001" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-002" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-003" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-004" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-005" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-006" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-007" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-008" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-009" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-010" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-011" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-012" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-013" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-014" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-015" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-016" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-017" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-018" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-019" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-020" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-021" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-022" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-023" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-024" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-025" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-026" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-027" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-028" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-029" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Empty-030" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General" />
+    <Node Name="Wrapper" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General">
+        <Node Name="Nested-001" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-002" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-003" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-004" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-005" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-006" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-007" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-008" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-009" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-010" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-011" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-012" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-013" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-014" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-015" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-016" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-017" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-018" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+        <Node Name="Nested-019" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General" />
+    </Node>
+</Connections>

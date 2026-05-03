@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Connections Name="Connections"
+             Export="false"
+             EncryptionEngine="AES"
+             BlockCipherMode="GCM"
+             KdfIterations="1000"
+             FullFileEncryption="false"
+             Protected="GiIJi/PiCE4="
+             ConfVersion="2.6">
+    <Node Name="L1" Type="Container" Expanded="True"
+          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+          Password="" Description="" Icon="Folder" Panel="General">
+        <Node Name="L2" Type="Container" Expanded="True"
+              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+              Password="" Description="" Icon="Folder" Panel="General">
+            <Node Name="L3" Type="Container" Expanded="True"
+                  Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+                  Password="" Description="" Icon="Folder" Panel="General">
+                <Node Name="L4" Type="Container" Expanded="True"
+                      Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+                      Password="" Description="" Icon="Folder" Panel="General">
+                    <Node Name="L5" Type="Container" Expanded="True"
+                          Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+                          Password="" Description="" Icon="Folder" Panel="General">
+                        <Node Name="L6" Type="Container" Expanded="True"
+                              Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+                              Password="" Description="" Icon="Folder" Panel="General">
+                            <Node Name="L7" Type="Container" Expanded="True"
+                                  Protocol="RDP" Hostname="" Port="3389" Username="" Domain=""
+                                  Password="" Description="" Icon="Folder" Panel="General">
+                                <Node Name="DeepLeaf" Type="Connection"
+                                      Protocol="RDP" Hostname="deepleaf.local" Port="3389"
+                                      Username="user" Domain="" Password=""
+                                      Description="7-level deep" Icon="mRemoteNG" Panel="General" />
+                            </Node>
+                        </Node>
+                    </Node>
+                </Node>
+            </Node>
+        </Node>
+    </Node>
+</Connections>
