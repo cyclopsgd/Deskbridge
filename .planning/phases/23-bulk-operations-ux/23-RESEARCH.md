@@ -397,7 +397,9 @@ catch (Exception ex)
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Resolved 2026-05-31: (1) Scope = UI-SPEC (Connect/Disconnect/Bulk-Edit; delete+move already ship); (2) Bulk Edit Group sets GroupId directly, no cycle check; (3) Connect All has no progress UI (threshold gate is the safety mechanism).
 
 1. **Which feature set does Phase 23 implement?** (See scope box.)
    - What we know: UI-SPEC + ROADMAP + REQUIREMENTS all say Connect/Disconnect/Bulk-Edit; orchestrator brief says delete/move/export; delete + move already ship.

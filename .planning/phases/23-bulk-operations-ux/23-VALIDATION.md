@@ -54,7 +54,6 @@ Fixture convention: per-file `<Content Include>` with `CopyToOutputDirectory=Pre
 | BULK-01 | Threshold boundary: `== threshold` does NOT warn; `threshold+1` warns (confirm against `TabHostManager.cs:368`) | unit (VM) | `~ConnectAll` | ❌ W0 |
 | BULK-02 | Disconnect All calls `CloseTabAsync` for every descendant with an active tab; none for inactive | unit (VM, fake tab mgr) | `~DisconnectAll` | ❌ W0 |
 | BULK-02 | Disconnect All enabled iff group has ≥1 active session (`GroupHasActiveSessions`) | unit (VM) | `~DisconnectAll` | ❌ W0 |
-| Cross | Bulk edit selection after Apply: cleared (default decision A3) | unit (VM) | `~BulkEditViewModel` | ❌ W0 |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky — all currently ❌ Wave 0 (not yet written).*
 
@@ -75,6 +74,7 @@ Fixture convention: per-file `<Content Include>` with `CopyToOutputDirectory=Pre
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
+| Bulk edit clears the multi-selection after Apply | BULK-03 | EditSelectedAsync is dialog-driven (opens BulkEditDialog, awaits Primary); covered by 23-03 must_haves truth + this manual check | Select ≥2 connections → Edit… → enable a field → Apply → confirm the tree selection clears |
 | GDI confirmation ContentDialog renders Warning InfoBar over an active RDP viewport without airspace bleed | BULK-01 | ContentDialog + WindowsFormsHost airspace is visual; not unit-testable | Open ≥1 RDP session, right-click a group exceeding threshold, choose Connect All, confirm the warning dialog z-orders correctly and the viewport is snapshot-hidden |
 | BulkEditDialog ComboBox (Credential mode / Group) shows correct ItemTemplate (no "- - -" glyph) | BULK-03 | WPF rendering trap | Select ≥2 connections → Edit… → inspect ComboBoxes render readable items |
 | Disconnect All menu item disabled when group has no active sessions (WPF-UI #1387 imperative enable) | BULK-02 | Menu enable-state set imperatively at build time; visual | Right-click a group with no sessions → Disconnect All greyed; with sessions → enabled |
@@ -91,6 +91,8 @@ Fixture convention: per-file `<Content Include>` with `CopyToOutputDirectory=Pre
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
+
+> After Wave 0 executes and the full suite is green, set `nyquist_compliant: true` and `wave_0_complete: true` in this file's frontmatter (handled by plan 23-03's output step).
 
 ---
 
