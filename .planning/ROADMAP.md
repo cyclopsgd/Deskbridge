@@ -435,7 +435,7 @@ Plans:
 
 Plans:
 - [x] 23-01-PLAN.md -- Wave 0 Nyquist test scaffold (BulkEdit VM + persistence + ConnectAll + DisconnectAll test files)
-- [ ] 23-02-PLAN.md -- BulkEditViewModel + BulkEditDialog + BulkConnectConfirmDialog (new UI tier, BULK-03 VM tests green)
+- [x] 23-02-PLAN.md -- BulkEditViewModel + BulkEditDialog + BulkConnectConfirmDialog (new UI tier, BULK-03 VM tests green)
 - [ ] 23-03-PLAN.md -- ConnectionTreeViewModel commands + context-menu items + DI wiring (BULK-01/02/03 integration)
 **UI hint**: yes
 
@@ -487,7 +487,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 20. Performance Baselines | v1.3 | 3/3 | Complete    | 2026-04-27 |
 | 21. Performance Optimizations | v1.3 | 4/4 | Complete    | 2026-05-02 |
 | 22. Large Import Handling | v1.3 | 2/4 | In Progress | - |
-| 23. Bulk Operations UX | v1.3 | 1/3 | In progress | - |
+| 23. Bulk Operations UX | v1.3 | 2/3 | In progress | - |
 | 24. Uninstall Cleanup | v1.3 | 0/0 | Not started | - |
 
 ## Backlog
