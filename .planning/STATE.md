@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Performance & Customization
 status: executing
-stopped_at: Phase 22 complete (verified PASS; UAT skipped at developer request, deferred to v1.4)
-last_updated: "2026-05-03T13:54:00Z"
-last_activity: 2026-05-03 -- Phase 22 verified PASS (8 commits across 22-02 + 22-04; 753/754 suite, sole failure is pre-existing env-dependent RDP smoke)
+stopped_at: Completed 23-01-PLAN.md
+last_updated: "2026-05-31T10:54:01.258Z"
+last_activity: 2026-05-31
 progress:
   total_phases: 25
   completed_phases: 5
-  total_plans: 18
-  completed_plans: 18
-  percent: 100
+  total_plans: 19
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Reliable, flicker-free tabbed RDP sessions with proper ActiveX lifecycle management
-**Current focus:** v1.3 milestone — next phase TBD (Phase 22 complete)
+**Current focus:** Phase 23 — bulk-operations-ux
 
 ## Current Position
 
-Phase: 22 (large-import-handling) — COMPLETE (verified PASS 2026-05-03)
-Plan: 4 of 4 complete (22-01, 22-02, 22-03, 22-04)
-Status: Awaiting next-phase selection
-Last activity: 2026-05-03 -- Phase 22 verified PASS; manual UAT skipped at developer request (deferred to v1.4); 753/754 suite
+Phase: 23 (bulk-operations-ux) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-05-31
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -106,6 +106,7 @@ Progress: [██████████] 100%
 | Phase 21 P04 | 30min | 2 tasks | 2 files |
 | Phase 22 P01 | 8min | 3 tasks | 6 files |
 | Phase 22 P03 | 6min | 2 tasks | 7 files |
+| Phase 23 P01 | 12min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,8 @@ Recent decisions affecting current work:
 - Plan 22-03: malformed-single-row.xml uses Port="abc" (semantically invalid, structurally valid XML) per PATTERNS.md correction #3 — parser tolerates via int.TryParse fallback to 3389; 22-04 will layer executor failure-collection on top
 - Plan 22-03: MRemoteNGXmlSerializer is a static reverse-mapper (mirrors ConnectionExporter shape) — XmlWriter + UTF8Encoding(emitBom: false), root FullFileEncryption="false" (lowercase) hardcoded to avoid parser rejection
 - Plan 22-03: Port serialized via InvariantCulture so locale (en-US/de-DE) doesn't affect byte output; round-trip verified at N=500/1000/5000 in <5s suite total
+- Plan 23-01: MTP filter syntax is --filter-query "/*/*/ClassName/*" — VSTest --filter is silently ignored (MTP0001) and runs the full suite
+- Plan 23-01: ConnectAll/DisconnectAll BuildSut mirrors the CURRENT ConnectionTreeViewModel ctor; IWindowStateService param is added by 23-03 (documented in TODO blocks)
 
 ### Pending Todos
 
@@ -172,8 +175,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-03T13:54:00Z
-Stopped at: Phase 22 complete (verified PASS) — ready for next-phase selection in v1.3
-Resume file: .planning/ROADMAP.md (pick the next pending v1.3 phase)
+Last session: 2026-05-31T10:53:33.972Z
+Stopped at: Completed 23-01-PLAN.md
+Resume file: None
 
 **Phase 22 deferred to v1.4:** manual UAT skipped at developer request — `.planning/phases/22-large-import-handling/22-UAT.md` carries `status: skipped`; v1.4 follow-ups recorded in 22-04-SUMMARY.md.
