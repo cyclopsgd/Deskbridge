@@ -1,0 +1,162 @@
+<ui:ContentDialog x:Class="Deskbridge.Dialogs.BulkEditDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:local="clr-namespace:Deskbridge.Dialogs"
+    Title="{Binding DialogTitle}"
+    DialogMaxWidth="520"
+    PrimaryButtonText="Apply"
+    CloseButtonText="Cancel"
+    PrimaryButtonAppearance="Primary"
+    IsPrimaryButtonEnabled="{Binding CanApply}"
+    DefaultButton="Primary">
+
+    <!-- BasedOn style for WPF-UI theming -->
+    <ui:ContentDialog.Resources>
+        <Style BasedOn="{StaticResource {x:Type ui:ContentDialog}}"
+               TargetType="{x:Type local:BulkEditDialog}" />
+    </ui:ContentDialog.Resources>
+
+    <StackPanel Margin="{StaticResource DialogContentMargin}" MinWidth="440">
+
+        <!-- Section label -->
+        <TextBlock Text="FIELDS TO EDIT" Style="{StaticResource SectionLabelStyle}"
+            Margin="0,0,0,8" />
+
+        <!-- Per-field grid: Auto (checkbox) / 72 (label) / * (input).
+             Each row's checkbox two-way binds the per-field enable flag; the input is
+             IsEnabled-gated by the same flag. Divergent fields surface "Multiple values"
+             via PlaceholderText. NO Name row (bulk-renaming is excluded). -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="72" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Hostname -->
+            <CheckBox Grid.Row="0" Grid.Column="0"
+                IsChecked="{Binding IsHostnameEnabled, Mode=TwoWay}"
+                ToolTip="Apply this field to all selected connections"
+                VerticalAlignment="Center" Margin="0,0,4,8" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="Hostname"
+                Style="{StaticResource FieldLabelCompactStyle}"
+                VerticalAlignment="Center" Margin="0,0,0,8" />
+            <ui:TextBox Grid.Row="0" Grid.Column="2"
+                Text="{Binding HostnameField.Value, UpdateSourceTrigger=PropertyChanged}"
+                PlaceholderText="{Binding HostnameField.Placeholder}"
+                IsEnabled="{Binding IsHostnameEnabled}"
+                Margin="0,0,0,8" />
+
+            <!-- Port -->
+            <CheckBox Grid.Row="1" Grid.Column="0"
+                IsChecked="{Binding IsPortEnabled, Mode=TwoWay}"
+                ToolTip="Apply this field to all selected connections"
+                VerticalAlignment="Center" Margin="0,0,4,8" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="Port"
+                Style="{StaticResource FieldLabelCompactStyle}"
+                VerticalAlignment="Center" Margin="0,0,0,8" />
+            <ui:TextBox Grid.Row="1" Grid.Column="2"
+                Text="{Binding PortField.Value, UpdateSourceTrigger=PropertyChanged}"
+                PlaceholderText="{Binding PortField.Placeholder}"
+                IsEnabled="{Binding IsPortEnabled}"
+                Margin="0,0,0,8" />
+
+            <!-- Credential mode -->
+            <CheckBox Grid.Row="2" Grid.Column="0"
+                IsChecked="{Binding IsCredentialModeEnabled, Mode=TwoWay}"
+                ToolTip="Apply this field to all selected connections"
+                VerticalAlignment="Center" Margin="0,0,4,8" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="Credential"
+                Style="{StaticResource FieldLabelCompactStyle}"
+                VerticalAlignment="Center" Margin="0,0,0,8" />
+            <!-- Explicit ItemTemplate avoids the "- - -" SelectionBoxItem glyph trap -->
+            <ComboBox Grid.Row="2" Grid.Column="2"
+                ItemsSource="{Binding CredentialModes}"
+                SelectedValue="{Binding CredentialModeField.Value}"
+                SelectedValuePath="Value"
+                IsEnabled="{Binding IsCredentialModeEnabled}"
+                Margin="0,0,0,8">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <!-- Username -->
+            <CheckBox Grid.Row="3" Grid.Column="0"
+                IsChecked="{Binding IsUsernameEnabled, Mode=TwoWay}"
+                ToolTip="Apply this field to all selected connections"
+                VerticalAlignment="Center" Margin="0,0,4,8" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="Username"
+                Style="{StaticResource FieldLabelCompactStyle}"
+                VerticalAlignment="Center" Margin="0,0,0,8" />
+            <ui:TextBox Grid.Row="3" Grid.Column="2"
+                Text="{Binding UsernameField.Value, UpdateSourceTrigger=PropertyChanged}"
+                PlaceholderText="{Binding UsernameField.Placeholder}"
+                IsEnabled="{Binding IsUsernameEnabled}"
+                Margin="0,0,0,8" />
+
+            <!-- Domain -->
+            <CheckBox Grid.Row="4" Grid.Column="0"
+                IsChecked="{Binding IsDomainEnabled, Mode=TwoWay}"
+                ToolTip="Apply this field to all selected connections"
+                VerticalAlignment="Center" Margin="0,0,4,8" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="Domain"
+                Style="{StaticResource FieldLabelCompactStyle}"
+                VerticalAlignment="Center" Margin="0,0,0,8" />
+            <ui:TextBox Grid.Row="4" Grid.Column="2"
+                Text="{Binding DomainField.Value, UpdateSourceTrigger=PropertyChanged}"
+                PlaceholderText="{Binding DomainField.Placeholder}"
+                IsEnabled="{Binding IsDomainEnabled}"
+                Margin="0,0,0,8" />
+
+            <!-- Group -->
+            <CheckBox Grid.Row="5" Grid.Column="0"
+                IsChecked="{Binding IsGroupEnabled, Mode=TwoWay}"
+                ToolTip="Apply this field to all selected connections"
+                VerticalAlignment="Center" Margin="0,0,4,8" />
+            <TextBlock Grid.Row="5" Grid.Column="1" Text="Group"
+                Style="{StaticResource FieldLabelCompactStyle}"
+                VerticalAlignment="Center" Margin="0,0,0,8" />
+            <!-- Explicit ItemTemplate avoids the "- - -" SelectionBoxItem glyph trap -->
+            <ComboBox Grid.Row="5" Grid.Column="2"
+                ItemsSource="{Binding AvailableGroups}"
+                SelectedValue="{Binding GroupField.Value}"
+                SelectedValuePath="Id"
+                IsEnabled="{Binding IsGroupEnabled}"
+                Margin="0,0,0,8">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+
+        <!-- Validation message (shown imperatively by OnButtonClick on invalid Apply) -->
+        <TextBlock x:Name="ValidationMessage"
+            Style="{StaticResource ErrorTextStyle}"
+            Visibility="Collapsed"
+            TextWrapping="Wrap"
+            Margin="0,4,0,0" />
+
+        <!-- Save-failure error surface (toggled by the tree VM on SaveBatch failure in 23-03) -->
+        <ui:InfoBar x:Name="SaveErrorInfoBar"
+            Severity="Error"
+            Title="Couldn't apply changes"
+            IsOpen="False"
+            IsClosable="True"
+            Margin="0,8,0,0" />
+
+    </StackPanel>
+</ui:ContentDialog>
