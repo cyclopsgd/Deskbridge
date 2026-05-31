@@ -434,9 +434,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 20-01-PLAN.md -- Extract ConnectionTreeBuilder from ViewModel into Deskbridge.Core with pure tree-building logic
-- [ ] 20-02-PLAN.md -- Deterministic TestDataGenerator for enterprise-realistic connection datasets
-- [ ] 20-03-PLAN.md -- BenchmarkDotNet project with 7 parameterized benchmarks and committed baseline
+- [ ] 23-01-PLAN.md -- Wave 0 Nyquist test scaffold (BulkEdit VM + persistence + ConnectAll + DisconnectAll test files)
+- [ ] 23-02-PLAN.md -- BulkEditViewModel + BulkEditDialog + BulkConnectConfirmDialog (new UI tier, BULK-03 VM tests green)
+- [ ] 23-03-PLAN.md -- ConnectionTreeViewModel commands + context-menu items + DI wiring (BULK-01/02/03 integration)
 **UI hint**: yes
 
 ### Phase 24: Uninstall Cleanup
