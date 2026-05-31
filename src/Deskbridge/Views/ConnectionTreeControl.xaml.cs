@@ -265,16 +265,42 @@ public partial class ConnectionTreeControl : UserControl
             PopulateMoveToSubmenu(menu);
             treeViewItem.ContextMenu = menu;
         }
-        else if (item is GroupTreeItemViewModel)
+        else if (item is GroupTreeItemViewModel group)
         {
             var menu = (ContextMenu)FindResource("GroupContextMenu");
             menu.DataContext = _viewModel;
             PopulateMoveToSubmenu(menu);
+
+            // WPF-UI #1387: a MenuItem's IsEnabled is ignored once Command is bound, so the
+            // Disconnect All enable-state must be set imperatively at build time (same approach
+            // as PopulateMoveToSubmenu disables the current-parent group item). The menus are
+            // x:Shared="False" resources, so the named element does not register in the control
+            // NameScope — locate it on the fresh instance by name. The clicked group VM is the
+            // right-click hit-test target (PlacementTarget is not yet assigned at build time).
+            var disconnectAllItem = FindMenuItemByName(menu, "DisconnectAllMenuItem");
+            if (disconnectAllItem is not null)
+                disconnectAllItem.IsEnabled = _viewModel.GroupHasActiveSessions(group);
+
             treeViewItem.ContextMenu = menu;
         }
 
         treeViewItem.Focus();
         e.Handled = false; // Let WPF show the context menu
+    }
+
+    /// <summary>
+    /// Find a top-level <see cref="MenuItem"/> in a freshly-created (x:Shared="False") context menu
+    /// by its <c>x:Name</c>. Named elements inside x:Shared="False" resources do not register in the
+    /// control NameScope, so a direct field reference would be null/stale — search the instance items.
+    /// </summary>
+    private static MenuItem? FindMenuItemByName(ContextMenu menu, string name)
+    {
+        foreach (var obj in menu.Items)
+        {
+            if (obj is MenuItem mi && mi.Name == name)
+                return mi;
+        }
+        return null;
     }
 
     /// <summary>

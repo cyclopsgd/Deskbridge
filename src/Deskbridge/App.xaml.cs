@@ -449,6 +449,15 @@ public partial class App : Application
         services.AddSingleton<Views.ConnectionTreeControl>();
         services.AddTransient<Dialogs.ConnectionEditorDialog>();
         services.AddTransient<Dialogs.GroupEditorDialog>();
+
+        // Phase 23 (BULK-01/03): bulk-operation dialogs. The ConnectionTreeViewModel constructs
+        // these inline against IContentDialogService.GetDialogHostEx() and a per-invocation
+        // BulkEditViewModel / runtime session counts (research recommends dependency-light inline
+        // construction — 23-02). These registrations document the surface and allow the dialogs to
+        // be resolved via DI in tests/tooling. BulkConnectConfirmDialog's session-count/threshold
+        // are runtime values, so it is constructed inline by the VM, not resolved from DI.
+        // IWindowStateService (the new ConnectionTreeViewModel ctor dependency) is already
+        // registered above; the by-type ConnectionTreeViewModel registration resolves it.
         services.AddSingleton<MainWindow>(sp => new MainWindow(
             sp.GetRequiredService<ViewModels.MainWindowViewModel>(),
             sp.GetRequiredService<ISnackbarService>(),
