@@ -36,7 +36,8 @@ public sealed class SwitchToExistingTabTests
 
         var sut = new ConnectionTreeViewModel(
             store, query, creds, dialogs, snackbar, provider, bus, tab,
-            new AirspaceSwapper(), new FakeDebouncer());
+            new AirspaceSwapper(), new FakeDebouncer(),
+            Substitute.For<IWindowStateService>());
 
         return (sut, bus, tab, store);
     }

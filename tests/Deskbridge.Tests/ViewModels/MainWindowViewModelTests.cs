@@ -32,7 +32,8 @@ public class MainWindowViewModelTests
         var treeVm = new ConnectionTreeViewModel(
             _connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider, _bus, _tabHostManager,
-            new AirspaceSwapper(), new FakeDebouncer());
+            new AirspaceSwapper(), new FakeDebouncer(),
+            Substitute.For<IWindowStateService>());
 
         _sut = new MainWindowViewModel(treeVm, _tabHostManager, _bus, _connectionStore, new ToastStackViewModel());
     }

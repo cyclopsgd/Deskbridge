@@ -201,7 +201,8 @@ public sealed class ConnectionTreeContextMenuParentContextTests
         var sut = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider,
-            bus, tabHostManager, new AirspaceSwapper(), new FakeDebouncer());
+            bus, tabHostManager, new AirspaceSwapper(), new FakeDebouncer(),
+            Substitute.For<IWindowStateService>());
 
         sut.NewGroupCommand.Should().BeAssignableTo<IRelayCommand<Guid?>>(
             "NewGroupAsync must accept Guid? parentGroupId so the source-generated " +

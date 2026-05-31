@@ -51,7 +51,8 @@ public sealed class KeyboardShortcutTests
         var tree = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider, bus, tabHostManager,
-            new AirspaceSwapper(), new FakeDebouncer());
+            new AirspaceSwapper(), new FakeDebouncer(),
+            Substitute.For<IWindowStateService>());
 
         var ids = Enumerable.Range(0, initialTabs).Select(_ => Guid.NewGuid()).ToArray();
         var models = Enumerable.Range(0, initialTabs)

@@ -38,7 +38,8 @@ public class ConnectionTreeSearchDebounceTests
         _sut = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider,
-            bus, tabHostManager, new AirspaceSwapper(), _debouncer);
+            bus, tabHostManager, new AirspaceSwapper(), _debouncer,
+            Substitute.For<IWindowStateService>());
     }
 
     [Fact]

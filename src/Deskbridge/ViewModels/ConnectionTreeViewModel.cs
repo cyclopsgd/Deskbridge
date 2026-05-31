@@ -31,6 +31,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
     private readonly IEventBus _eventBus;
     private readonly ITabHostManager _tabHostManager;
     private readonly AirspaceSwapper _airspace;
+    private readonly IWindowStateService _windowState;
 
     /// <summary>
     /// Phase 21 (PERF-02): debouncer for SearchText filtering. Production uses
@@ -54,7 +55,8 @@ public partial class ConnectionTreeViewModel : ObservableObject
         IEventBus eventBus,
         ITabHostManager tabHostManager,
         AirspaceSwapper airspace,
-        IDebouncer debouncer)
+        IDebouncer debouncer,
+        IWindowStateService windowState)
     {
         _connectionStore = connectionStore;
         _connectionQuery = connectionQuery;
@@ -66,6 +68,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _tabHostManager = tabHostManager;
         _airspace = airspace;
         _searchDebouncer = debouncer;
+        _windowState = windowState;
 
         // Phase 9 (PROP-02): subscribe to connection state events for status dot
         _eventBus.Subscribe<TabStateChangedEvent>(this, OnTabStateChanged);
@@ -1046,6 +1049,209 @@ public partial class ConnectionTreeViewModel : ObservableObject
             {
                 await CloseTabsForGroupDescendants(nestedGroup);
             }
+        }
+    }
+
+    // --- Phase 23 bulk operations (BULK-01 / BULK-02 / BULK-03) ---
+
+    /// <summary>
+    /// BULK-01/02: recursively collect every <see cref="ConnectionTreeItemViewModel"/> under
+    /// <paramref name="group"/> (nested sub-groups included). Mirrors the recursion shape of
+    /// <see cref="CloseTabsForGroupDescendants"/> but returns the connection VMs rather than
+    /// closing their tabs.
+    /// </summary>
+    private List<ConnectionTreeItemViewModel> CollectDescendantConnections(GroupTreeItemViewModel group)
+    {
+        var result = new List<ConnectionTreeItemViewModel>();
+        Walk(group);
+        return result;
+
+        void Walk(GroupTreeItemViewModel g)
+        {
+            foreach (var child in g.Children)
+            {
+                if (child is ConnectionTreeItemViewModel connItem)
+                    result.Add(connItem);
+                else if (child is GroupTreeItemViewModel nestedGroup)
+                    Walk(nestedGroup);
+            }
+        }
+    }
+
+    /// <summary>
+    /// BULK-02: true iff any descendant connection of <paramref name="group"/> currently has an
+    /// active tab. Drives the imperative Disconnect All enable-gate in the context menu
+    /// (WPF-UI #1387: IsEnabled is ignored when Command is bound, so the menu sets it at build time).
+    /// </summary>
+    public bool GroupHasActiveSessions(GroupTreeItemViewModel group) =>
+        CollectDescendantConnections(group).Any(c => _tabHostManager.TryGetExistingTab(c.Id, out _));
+
+    /// <summary>
+    /// BULK-01: Connect every connection in the group. Projected GDI cost is
+    /// <c>ActiveCount + group.ConnectionCount</c>; when confirmation is enabled and the projection
+    /// exceeds the user-configured threshold, the GDI warning dialog is shown first (airspace-wrapped).
+    /// Already-open tabs are switched to (SwitchTo) rather than re-opened. Connections are opened by
+    /// publishing <see cref="ConnectionRequestedEvent"/> (RDP-05: never call the pipeline directly).
+    /// </summary>
+    [RelayCommand]
+    private async Task ConnectAllAsync(GroupTreeItemViewModel? group)
+    {
+        if (group is null || _isDialogOpen) return;
+
+        var conns = CollectDescendantConnections(group);
+        if (conns.Count == 0) return;
+
+        // Projected GDI cost = currently-open tabs + every connection in this group (recursive).
+        var projected = _tabHostManager.ActiveCount + group.ConnectionCount;
+
+        var settings = await _windowState.LoadAsync();
+        var bulk = settings?.BulkOperations ?? BulkOperationsRecord.Default;
+
+        // Boundary: projected == threshold does NOT warn; projected == threshold + 1 warns.
+        if (bulk.ConfirmBeforeBulkOperations && projected > bulk.GdiWarningThreshold)
+        {
+            var host = _contentDialogService.GetDialogHostEx();
+            if (host is null)
+            {
+                Serilog.Log.Error("ContentDialogHost is null; cannot show Connect All confirmation dialog");
+                return;
+            }
+
+            ContentDialogResult result;
+            _isDialogOpen = true;
+            try
+            {
+                _airspace.SnapshotAndHideAll();
+                try
+                {
+                    var dialog = new BulkConnectConfirmDialog(host, conns.Count, bulk.GdiWarningThreshold);
+                    result = await dialog.ShowAsync();
+                }
+                finally
+                {
+                    _airspace.RestoreAll();
+                }
+            }
+            finally
+            {
+                _isDialogOpen = false;
+            }
+
+            if (result != ContentDialogResult.Primary) return;
+        }
+
+        foreach (var conn in conns)
+        {
+            var model = _connectionStore.GetById(conn.Id);
+            if (model is null) continue;
+
+            // D-02: switch to an already-open tab instead of opening a duplicate (bounds GDI growth).
+            if (_tabHostManager.TryGetExistingTab(model.Id, out _))
+            {
+                _tabHostManager.SwitchTo(model.Id);
+                continue;
+            }
+
+            // RDP-05: publish; ConnectionCoordinator marshals to STA and runs the pipeline.
+            _eventBus.Publish(new ConnectionRequestedEvent(model));
+        }
+    }
+
+    /// <summary>
+    /// BULK-02: Close every active session in the group. Non-destructive — no confirmation, no
+    /// persistence, no tree refresh. Only descendants with an active tab are closed.
+    /// </summary>
+    [RelayCommand]
+    private async Task DisconnectAllAsync(GroupTreeItemViewModel? group)
+    {
+        if (group is null) return;
+
+        foreach (var conn in CollectDescendantConnections(group))
+        {
+            if (_tabHostManager.TryGetExistingTab(conn.Id, out _))
+                await _tabHostManager.CloseTabAsync(conn.Id);
+        }
+    }
+
+    /// <summary>
+    /// BULK-03: Open the bulk-edit dialog for the current multi-selection (≥2 connections) and, on
+    /// Apply, write only the enabled fields via a single atomic <see cref="IConnectionStore.SaveBatch"/>,
+    /// publish <see cref="ConnectionDataChangedEvent"/> (→ tree refresh), and clear the selection.
+    /// On persistence failure nothing is saved and the dialog's error InfoBar is shown (all-or-nothing).
+    /// </summary>
+    [RelayCommand]
+    private async Task EditSelectedAsync()
+    {
+        if (_isDialogOpen) return;
+
+        // Snapshot the selected connections (Pitfall 7: collection may change during async).
+        var selectedConnections = SelectedItems
+            .OfType<ConnectionTreeItemViewModel>()
+            .ToList();
+        if (selectedConnections.Count < 2) return;
+
+        // Resolve the live ConnectionModels for the selection.
+        var models = new List<ConnectionModel>(selectedConnections.Count);
+        foreach (var connVm in selectedConnections)
+        {
+            var model = _connectionStore.GetById(connVm.Id);
+            if (model is not null) models.Add(model);
+        }
+        if (models.Count < 2) return;
+
+        var host = _contentDialogService.GetDialogHostEx();
+        if (host is null)
+        {
+            Serilog.Log.Error("ContentDialogHost is null; cannot show Bulk Edit dialog");
+            return;
+        }
+
+        // Build the available-group list (Id/DisplayName/Depth) for the Group ComboBox.
+        var availableGroups = GetAvailableGroupsForMove()
+            .Select(g => new GroupDisplayItem(g.Id, g.DisplayName, g.Depth))
+            .ToList();
+
+        var vm = new BulkEditViewModel(models, availableGroups);
+        var dialog = new BulkEditDialog(host, vm);
+
+        _isDialogOpen = true;
+        try
+        {
+            _airspace.SnapshotAndHideAll();
+            try
+            {
+                var result = await dialog.ShowAsync();
+                if (result != ContentDialogResult.Primary) return;
+
+                var edited = vm.ApplyToModels();
+                try
+                {
+                    // IMP-04: single atomic write — never a per-item Save loop.
+                    _connectionStore.SaveBatch(edited, Array.Empty<ConnectionGroup>());
+                    _eventBus.Publish(new ConnectionDataChangedEvent());
+                    SelectedItems.Clear();
+                    PrimarySelectedItem = null;
+                }
+                catch (Exception ex)
+                {
+                    // T-23-07: log IDs/counts only — never field values (Info-Disclosure).
+                    Serilog.Log.Error(ex, "Bulk edit failed for {Count} connections", edited.Count);
+                    // T-23-08: all-or-nothing — nothing persisted; surface the error InfoBar.
+                    dialog.ShowSaveError(edited.Count, edited.Count);
+                }
+            }
+            finally
+            {
+                _airspace.RestoreAll();
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to show Bulk Edit dialog");
+        }
+        finally
+        {
+            _isDialogOpen = false;
         }
     }
 

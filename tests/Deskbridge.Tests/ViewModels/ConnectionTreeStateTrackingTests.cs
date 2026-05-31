@@ -30,7 +30,8 @@ public class ConnectionTreeStateTrackingTests
         _sut = new ConnectionTreeViewModel(
             connectionStore, connectionQuery, credentialService,
             contentDialogService, snackbarService, serviceProvider,
-            _bus, tabHostManager, new AirspaceSwapper(), new FakeDebouncer());
+            _bus, tabHostManager, new AirspaceSwapper(), new FakeDebouncer(),
+            Substitute.For<IWindowStateService>());
     }
 
     // --- SelectedConnectionState tracking ---
