@@ -373,9 +373,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-05 | Phase 21 | Complete |
 | IMP-03 | Phase 22 | Pending |
 | IMP-05 | Phase 22 | Pending |
-| BULK-01 | Phase 23 | Pending |
-| BULK-02 | Phase 23 | Pending |
-| BULK-03 | Phase 23 | Pending |
+| BULK-01 | Phase 23 | Complete |
+| BULK-02 | Phase 23 | Complete |
+| BULK-03 | Phase 23 | Complete |
 | UNINST-01 | Phase 24 | Pending |
 
 **Coverage:**
