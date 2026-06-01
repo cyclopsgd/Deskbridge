@@ -21,7 +21,8 @@ findings:
   warning: 4
   info: 5
   total: 9
-status: issues_found
+status: resolved
+resolved_note: "WR-01..WR-04 + IN-03/IN-04/IN-05 fixed in commits ab92f0d, 9e6f334, 39a0ae9, 9c43475 (2026-06-01). IN-01/IN-02 no change required. Build clean, 22 bulk tests green. WR-01 veto-on-save-failure behavior to confirm in human UAT."
 ---
 
 # Phase 23: Code Review Report
