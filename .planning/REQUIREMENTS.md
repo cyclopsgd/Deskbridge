@@ -214,7 +214,8 @@ Deferred to future releases. Tracked but not in current roadmap.
 #### Bulk Operations
 - [x] **BULK-01
 **: User can right-click a group and select "Connect All" to open RDP sessions for all connections, with a warning if the count exceeds the GDI limit
-- [ ] **BULK-02**: User can right-click a group or use a command to disconnect all active sessions in the group
+- [x] **BULK-02
+**: User can right-click a group or use a command to disconnect all active sessions in the group
 - [x] **BULK-03
 **: User can select multiple connections and open a bulk edit dialog that shows shared/divergent fields with per-field enable checkboxes
 

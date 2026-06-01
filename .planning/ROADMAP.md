@@ -57,7 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 20: Performance Baselines** - BenchmarkDotNet project with regression baselines for tree, search, and serialization
 - [ ] **Phase 21: Performance Optimizations** - Smooth 500+ connection tree, debounced search, async JSON load, group connection counts
 - [x] **Phase 22: Large Import Handling** - Progress bar during import, stress test fixtures for 500+ and 1000+ connections
-- [ ] **Phase 23: Bulk Operations UX** - Group connect all, group disconnect all, multi-select bulk edit dialog
+- [x] **Phase 23: Bulk Operations UX** - Group connect all, group disconnect all, multi-select bulk edit dialog
 - [ ] **Phase 24: Uninstall Cleanup** - Fix unconditional data delete in Velopack hook, respect user preference from settings
 
 ## Phase Details
@@ -436,7 +436,7 @@ Plans:
 Plans:
 - [x] 23-01-PLAN.md -- Wave 0 Nyquist test scaffold (BulkEdit VM + persistence + ConnectAll + DisconnectAll test files)
 - [x] 23-02-PLAN.md -- BulkEditViewModel + BulkEditDialog + BulkConnectConfirmDialog (new UI tier, BULK-03 VM tests green)
-- [ ] 23-03-PLAN.md -- ConnectionTreeViewModel commands + context-menu items + DI wiring (BULK-01/02/03 integration)
+- [x] 23-03-PLAN.md -- ConnectionTreeViewModel commands + context-menu items + DI wiring (BULK-01/02/03 integration)
 **UI hint**: yes
 
 ### Phase 24: Uninstall Cleanup
@@ -487,7 +487,7 @@ Phases 19 and 20 can run in parallel after Phase 18. Phase 21 depends on 20. Pha
 | 20. Performance Baselines | v1.3 | 3/3 | Complete    | 2026-04-27 |
 | 21. Performance Optimizations | v1.3 | 4/4 | Complete    | 2026-05-02 |
 | 22. Large Import Handling | v1.3 | 2/4 | In Progress | - |
-| 23. Bulk Operations UX | v1.3 | 2/3 | In progress | - |
+| 23. Bulk Operations UX | v1.3 | 3/3 | Complete | - |
 | 24. Uninstall Cleanup | v1.3 | 0/0 | Not started | - |
 
 ## Backlog
