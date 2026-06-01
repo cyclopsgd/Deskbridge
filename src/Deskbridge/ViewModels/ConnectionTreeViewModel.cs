@@ -1212,7 +1212,31 @@ public partial class ConnectionTreeViewModel : ObservableObject
             .ToList();
 
         var vm = new BulkEditViewModel(models, availableGroups);
-        var dialog = new BulkEditDialog(host, vm);
+
+        // WR-01: the save runs INSIDE the dialog's Primary handler so a SaveBatch failure vetoes
+        // the close and the error InfoBar renders on the still-open dialog. Returns false on
+        // failure (dialog stays open); true on success (dialog closes, Primary result returned).
+        bool SaveCallback()
+        {
+            var edited = vm.ApplyToModels();
+            try
+            {
+                // IMP-04: single atomic write — never a per-item Save loop.
+                _connectionStore.SaveBatch(edited, Array.Empty<ConnectionGroup>());
+                // T-23-08: atomic all-or-nothing succeeded → notify the tree to refresh.
+                _eventBus.Publish(new ConnectionDataChangedEvent());
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // T-23-07: log IDs/counts only — never field values (Info-Disclosure).
+                Serilog.Log.Error(ex, "Bulk edit failed for {Count} connections", edited.Count);
+                // T-23-08: all-or-nothing — nothing persisted; dialog surfaces the error InfoBar.
+                return false;
+            }
+        }
+
+        var dialog = new BulkEditDialog(host, vm, SaveCallback);
 
         _isDialogOpen = true;
         try
@@ -1221,24 +1245,11 @@ public partial class ConnectionTreeViewModel : ObservableObject
             try
             {
                 var result = await dialog.ShowAsync();
+                // Primary only returns when SaveCallback succeeded (failure vetoes the close).
                 if (result != ContentDialogResult.Primary) return;
 
-                var edited = vm.ApplyToModels();
-                try
-                {
-                    // IMP-04: single atomic write — never a per-item Save loop.
-                    _connectionStore.SaveBatch(edited, Array.Empty<ConnectionGroup>());
-                    _eventBus.Publish(new ConnectionDataChangedEvent());
-                    SelectedItems.Clear();
-                    PrimarySelectedItem = null;
-                }
-                catch (Exception ex)
-                {
-                    // T-23-07: log IDs/counts only — never field values (Info-Disclosure).
-                    Serilog.Log.Error(ex, "Bulk edit failed for {Count} connections", edited.Count);
-                    // T-23-08: all-or-nothing — nothing persisted; surface the error InfoBar.
-                    dialog.ShowSaveError(edited.Count, edited.Count);
-                }
+                SelectedItems.Clear();
+                PrimarySelectedItem = null;
             }
             finally
             {

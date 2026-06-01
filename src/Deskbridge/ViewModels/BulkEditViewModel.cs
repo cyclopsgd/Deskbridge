@@ -111,6 +111,9 @@ public partial class BulkEditViewModel : ObservableObject
     public string DialogTitle =>
         _selected.Count == 1 ? "Edit 1 connection" : $"Edit {_selected.Count} connections";
 
+    /// <summary>Number of connections in the current multi-selection being edited.</summary>
+    public int SelectedCount => _selected.Count;
+
     // --- Editable fields (Name EXCLUDED; no password) ---
 
     public BulkEditField<string> HostnameField { get; }
