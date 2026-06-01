@@ -1101,59 +1101,66 @@ public partial class ConnectionTreeViewModel : ObservableObject
         var conns = CollectDescendantConnections(group);
         if (conns.Count == 0) return;
 
-        // Projected GDI cost = currently-open tabs + every connection in this group (recursive).
-        var projected = _tabHostManager.ActiveCount + group.ConnectionCount;
-
-        var settings = await _windowState.LoadAsync();
-        var bulk = settings?.BulkOperations ?? BulkOperationsRecord.Default;
-
-        // Boundary: projected == threshold does NOT warn; projected == threshold + 1 warns.
-        if (bulk.ConfirmBeforeBulkOperations && projected > bulk.GdiWarningThreshold)
+        // WR-03: guard the WHOLE connect operation (confirm + connect loop), not just the
+        // confirmation sub-block. A single outer finally clears it so a second rapid Connect All
+        // cannot pass the entry guard and double the projected GDI load while this one runs.
+        _isDialogOpen = true;
+        try
         {
-            var host = _contentDialogService.GetDialogHostEx();
-            if (host is null)
-            {
-                Serilog.Log.Error("ContentDialogHost is null; cannot show Connect All confirmation dialog");
-                return;
-            }
+            // Projected GDI cost = currently-open tabs + every connection in this group (recursive).
+            var projected = _tabHostManager.ActiveCount + group.ConnectionCount;
 
-            ContentDialogResult result;
-            _isDialogOpen = true;
-            try
+            var settings = await _windowState.LoadAsync();
+            var bulk = settings?.BulkOperations ?? BulkOperationsRecord.Default;
+
+            // Boundary: projected == threshold does NOT warn; projected == threshold + 1 warns.
+            if (bulk.ConfirmBeforeBulkOperations && projected > bulk.GdiWarningThreshold)
             {
+                var host = _contentDialogService.GetDialogHostEx();
+                if (host is null)
+                {
+                    Serilog.Log.Error("ContentDialogHost is null; cannot show Connect All confirmation dialog");
+                    return;
+                }
+
+                // WR-02: report the count that will actually be NEWLY opened (already-open tabs
+                // are switched to, not re-opened) so the warning doesn't overstate the new GDI cost.
+                var toOpen = conns.Count(c => !_tabHostManager.TryGetExistingTab(c.Id, out _));
+
+                ContentDialogResult result;
                 _airspace.SnapshotAndHideAll();
                 try
                 {
-                    var dialog = new BulkConnectConfirmDialog(host, conns.Count, bulk.GdiWarningThreshold);
+                    var dialog = new BulkConnectConfirmDialog(host, toOpen, bulk.GdiWarningThreshold);
                     result = await dialog.ShowAsync();
                 }
                 finally
                 {
                     _airspace.RestoreAll();
                 }
-            }
-            finally
-            {
-                _isDialogOpen = false;
+
+                if (result != ContentDialogResult.Primary) return;
             }
 
-            if (result != ContentDialogResult.Primary) return;
+            foreach (var conn in conns)
+            {
+                var model = _connectionStore.GetById(conn.Id);
+                if (model is null) continue;
+
+                // D-02: switch to an already-open tab instead of opening a duplicate (bounds GDI growth).
+                if (_tabHostManager.TryGetExistingTab(model.Id, out _))
+                {
+                    _tabHostManager.SwitchTo(model.Id);
+                    continue;
+                }
+
+                // RDP-05: publish; ConnectionCoordinator marshals to STA and runs the pipeline.
+                _eventBus.Publish(new ConnectionRequestedEvent(model));
+            }
         }
-
-        foreach (var conn in conns)
+        finally
         {
-            var model = _connectionStore.GetById(conn.Id);
-            if (model is null) continue;
-
-            // D-02: switch to an already-open tab instead of opening a duplicate (bounds GDI growth).
-            if (_tabHostManager.TryGetExistingTab(model.Id, out _))
-            {
-                _tabHostManager.SwitchTo(model.Id);
-                continue;
-            }
-
-            // RDP-05: publish; ConnectionCoordinator marshals to STA and runs the pipeline.
-            _eventBus.Publish(new ConnectionRequestedEvent(model));
+            _isDialogOpen = false;
         }
     }
 
@@ -1207,6 +1214,9 @@ public partial class ConnectionTreeViewModel : ObservableObject
         }
 
         // Build the available-group list (Id/DisplayName/Depth) for the Group ComboBox.
+        // IN-03: bulk Group edit is assign-only by design — the list intentionally has no "(Root)"
+        // entry, so bulk edit can move connections INTO a group but cannot clear a group back to
+        // root (use the context-menu "Move to..." for that).
         var availableGroups = GetAvailableGroupsForMove()
             .Select(g => new GroupDisplayItem(g.Id, g.DisplayName, g.Depth))
             .ToList();
