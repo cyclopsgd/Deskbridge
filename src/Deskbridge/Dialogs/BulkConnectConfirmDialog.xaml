@@ -28,20 +28,15 @@
                 VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- Confirmation sentence (mirrors the shipped "may degrade performance" phrasing).
-             Set from ctor params via x:Name. -->
-        <TextBlock x:Name="BodyText"
-            Style="{StaticResource BodyStyle}"
-            TextWrapping="Wrap"
-            Margin="0,0,0,12" />
+        <!-- WR-04: the parameterized count+threshold sentence is the SINGLE source of warning
+             copy. It is injected from ctor params (x:Name) into the InfoBar's Message below so
+             there is exactly one visible copy (no static duplicate that can drift). -->
 
         <!-- GDI warning InfoBar (non-destructive operation: Warning severity, not Error/Danger).
-             Message carries the canonical "may degrade performance" phrasing verbatim;
-             the per-session count/threshold are injected into BodyText above. -->
+             Message is the dynamic count+threshold sentence set from the ctor. -->
         <ui:InfoBar x:Name="WarningInfoBar"
             Severity="Warning"
             Title="Many active sessions"
-            Message="Opening this many sessions may degrade performance."
             IsOpen="True"
             IsClosable="False" />
 

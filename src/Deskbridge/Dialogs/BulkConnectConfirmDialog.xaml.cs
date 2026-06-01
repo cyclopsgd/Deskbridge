@@ -18,8 +18,9 @@ public partial class BulkConnectConfirmDialog : ContentDialog
     {
         InitializeComponent();
 
-        // Mirror the shipped TabHostManager snackbar phrasing ("performance may degrade").
-        BodyText.Text =
+        // WR-04: ONE visible copy of the warning — the dynamic count+threshold sentence lives in
+        // the InfoBar Message (mirrors the shipped TabHostManager "performance may degrade" phrasing).
+        WarningInfoBar.Message =
             $"This will open {sessionCount} sessions. {threshold}+ active sessions may degrade performance. Continue?";
     }
 }
