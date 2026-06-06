@@ -11,7 +11,7 @@
     <!-- DI -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.*" />
     <!-- Auto-update -->
-    <PackageVersion Include="Velopack" Version="0.0.1298" />
+    <PackageVersion Include="Velopack" Version="1.2.0" />
     <!-- Logging -->
     <PackageVersion Include="Serilog" Version="4.3.*" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.*" />
