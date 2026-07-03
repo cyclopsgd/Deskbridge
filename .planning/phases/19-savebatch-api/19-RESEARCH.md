@@ -234,27 +234,27 @@ public record ConnectionDataChangedEvent();
 | A2 | ConnectionDataChangedEvent should be a marker event with no payload | Code Examples | If callers need changed IDs list, event shape needs redesign |
 | A3 | SaveBatch should accept both connections AND groups (not connections-only) | Architecture Patterns | If connections-only, import wizard still has per-group write amplification via SaveGroup calls |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should SaveBatch accept connections + groups, or connections only?**
    - What we know: The requirement text (IMP-04) says "single batch file write instead of one write per connection." The existing `DeleteBatch` accepts both connections and groups. The import wizard creates groups via `EnsureGroup` -> `_store.SaveGroup()` which also triggers per-group file writes.
    - What's unclear: Whether the phase scope extends to group batching.
-   - Recommendation: Accept both (connections + groups) for symmetry with `DeleteBatch` and to fully eliminate write amplification during import. The implementation cost is minimal (upsert loop for groups is identical pattern).
+   - RESOLVED: Accept both (connections + groups) for symmetry with `DeleteBatch` and to fully eliminate write amplification during import. The implementation cost is minimal (upsert loop for groups is identical pattern).
 
 2. **Where should ConnectionDataChangedEvent be published -- store or caller?**
    - What we know: The existing pattern is caller-publishes (`ImportWizardViewModel` publishes `ConnectionImportedEvent`; `JsonConnectionStore` has no IEventBus dependency). The success criteria says "a ConnectionDataChangedEvent is published after SaveBatch completes."
    - What's unclear: Whether "after SaveBatch completes" means inside SaveBatch or by the caller after calling SaveBatch.
-   - Recommendation: Caller-publishes to match existing patterns and avoid adding IEventBus dependency to the data layer. Document responsibility in SaveBatch's XML doc comment.
+   - RESOLVED: Caller-publishes to match existing patterns and avoid adding IEventBus dependency to the data layer. Document responsibility in SaveBatch's XML doc comment.
 
 3. **Should the import wizard be migrated in this phase?**
    - What we know: IMP-04's user-visible text says "User's 500+ connection import completes via a single batch file write." Without migrating the import wizard call site, the API exists but IMP-04 is not user-visible yet.
    - What's unclear: Whether this phase is API-only (plumbing for Phase 22) or should include the consumer migration.
-   - Recommendation: Migrate the import wizard in this phase. The SC says "Developer can call SaveBatch" (API exists) but IMP-04 requires the actual import to use it. Phase 22 adds progress bars and stress tests, not the SaveBatch call itself.
+   - RESOLVED: Migrate the import wizard in this phase. The SC says "Developer can call SaveBatch" (API exists) but IMP-04 requires the actual import to use it. Phase 22 adds progress bars and stress tests, not the SaveBatch call itself.
 
 4. **Should existing single-item Save/SaveGroup/Delete/DeleteGroup also publish ConnectionDataChangedEvent?**
    - What we know: Currently, after calling `_store.Save()` from the tree ViewModel, RefreshTree is called explicitly. The new event would be redundant for single-item operations where the caller already refreshes.
    - What's unclear: Whether a future refactor should standardize all data mutations through the event.
-   - Recommendation: Out of scope for this phase. Only SaveBatch callers publish the event. Existing single-item paths continue calling RefreshTree directly.
+   - RESOLVED: Out of scope for this phase. Only SaveBatch callers publish the event. Existing single-item paths continue calling RefreshTree directly.
 
 ## Validation Architecture
 
@@ -263,21 +263,21 @@ public record ConnectionDataChangedEvent();
 |----------|-------|
 | Framework | xunit.v3 + FluentAssertions + NSubstitute |
 | Config file | tests/Deskbridge.Tests/Deskbridge.Tests.csproj |
-| Quick run command | `dotnet test tests/Deskbridge.Tests --filter "Category=SaveBatch" -x` |
+| Quick run command | `dotnet test tests/Deskbridge.Tests --filter "Category=SaveBatch" --stop-on-fail` |
 | Full suite command | `dotnet test tests/Deskbridge.Tests` |
 
 ### Phase Requirements -> Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| IMP-04-a | SaveBatch upserts N connections in single file write | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" -x` | Wave 0 |
-| IMP-04-b | SaveBatch round-trips through load (persistence verified) | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" -x` | Wave 0 |
-| IMP-04-c | SaveBatch handles mixed insert/update (upsert-by-Id) | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" -x` | Wave 0 |
-| IMP-04-d | SaveBatch groups before connections ordering | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" -x` | Wave 0 |
-| IMP-04-e | ConnectionDataChangedEvent published after batch | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" -x` | Wave 0 |
-| IMP-04-f | Tree refreshes on ConnectionDataChangedEvent | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" -x` | Wave 0 |
+| IMP-04-a | SaveBatch upserts N connections in single file write | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" --stop-on-fail` | Wave 0 |
+| IMP-04-b | SaveBatch round-trips through load (persistence verified) | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" --stop-on-fail` | Wave 0 |
+| IMP-04-c | SaveBatch handles mixed insert/update (upsert-by-Id) | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" --stop-on-fail` | Wave 0 |
+| IMP-04-d | SaveBatch groups before connections ordering | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" --stop-on-fail` | Wave 0 |
+| IMP-04-e | ConnectionDataChangedEvent published after batch | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" --stop-on-fail` | Wave 0 |
+| IMP-04-f | Tree refreshes on ConnectionDataChangedEvent | unit | `dotnet test tests/Deskbridge.Tests --filter "FullyQualifiedName~SaveBatchTests" --stop-on-fail` | Wave 0 |
 
 ### Sampling Rate
-- **Per task commit:** `dotnet test tests/Deskbridge.Tests --filter "Category=SaveBatch" -x`
+- **Per task commit:** `dotnet test tests/Deskbridge.Tests --filter "Category=SaveBatch" --stop-on-fail`
 - **Per wave merge:** `dotnet test tests/Deskbridge.Tests`
 - **Phase gate:** Full suite green before `/gsd-verify-work`
 

@@ -642,17 +642,17 @@ BenchmarkDotNet.Artifacts/
 | A1 | BenchmarkDotNet 0.15.8 runs cleanly on `net10.0-windows` with `UseWPF=true` inherited from Directory.Build.props | Standard Stack | Build failure -- would need to override TFM or isolate from Directory.Build.props. Planner should add a verification step (build + dry-run a hello-world benchmark) as the first task. |
 | A2 | `Directory.Delete(_tempDir, recursive: true)` in GlobalCleanup is sufficient (no file locking from BDN forked processes) | Code Examples | Temp files leak on disk -- harmless but messy |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Benchmark class organization**
    - What we know: Seven operations across two services (store + query/tree)
    - What's unclear: Whether to group by component (StoreBenchmarks, QueryBenchmarks, TreeBenchmarks) or one class per operation
-   - Recommendation: Group by component -- 3-4 classes is manageable, reduces boilerplate. StoreBenchmarks (Load/Save/SaveBatch/DeleteBatch), SearchBenchmarks (Search), FilterBenchmarks (GetByFilter), TreeBuildBenchmarks (BuildTree).
+   - RESOLVED: Group by component -- 3-4 classes is manageable, reduces boilerplate. StoreBenchmarks (Load/Save/SaveBatch/DeleteBatch), SearchBenchmarks (Search), FilterBenchmarks (GetByFilter), TreeBuildBenchmarks (BuildTree).
 
 2. **Baseline comparison workflow**
    - What we know: Initial results committed to `baseline/` directory
    - What's unclear: Whether to build an automated comparison script or rely on manual diff
-   - Recommendation: Manual comparison for Phase 20 (developer reads the committed JSON, compares visually or with `diff`). Automated regression detection is a Phase 21 concern.
+   - RESOLVED: Manual comparison for Phase 20 (developer reads the committed JSON, compares visually or with `diff`). Automated regression detection is a Phase 21 concern.
 
 ## Environment Availability
 

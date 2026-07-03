@@ -39,3 +39,6 @@ CLAUDE.md
 # Secrets
 *.pfx
 *.snk
+
+# Local test fixture (mRemoteNG export with credential data — keep local)
+test-import.xml
