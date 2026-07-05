@@ -48,6 +48,19 @@ public sealed class ConnectStage : IConnectionPipelineStage
             var finished = await Task.WhenAny(connectTask, Task.Delay(Timeout.Infinite, cts.Token));
             if (finished != connectTask)
             {
+                // [CITED: audit C1 follow-up] Observe the abandoned connect task. The
+                // disconnect-before-dispose cleanup (DisposeHostSafelyAsync → DisconnectAsync →
+                // OnDisconnectedDuringConnect → _loginTcs.TrySetException) faults this task
+                // AFTER we abandon it here; without a continuation that fault surfaces as an
+                // UnobservedTaskException and a misleading CrashHandler log on every
+                // connect-timeout cleanup. Type name only (T-04-EXC).
+                _ = connectTask.ContinueWith(
+                    t => _logger.LogDebug(
+                        "Abandoned connect task faulted: {ExceptionType}",
+                        t.Exception?.GetBaseException().GetType().Name),
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
                 throw new TimeoutException($"RDP connect exceeded {_timeout.TotalSeconds}s timeout.");
             }
             await connectTask;  // Propagate exception if any

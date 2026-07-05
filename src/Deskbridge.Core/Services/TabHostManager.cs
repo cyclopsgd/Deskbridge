@@ -244,6 +244,18 @@ public sealed class TabHostManager : ITabHostManager, IDisposable
             _logger.LogWarning(
                 "RunDisconnectAsync: no ConnectionModel recorded for {ConnectionId}; skipping disconnect pipeline",
                 host.ConnectionId);
+            // [CITED: audit C1] The host may still be connected — dispose-without-disconnect
+            // is the forbidden sequence from RDP-ACTIVEX-PITFALLS §3. Best-effort disconnect
+            // (host-internal 30s bound) before the existing dispose.
+            try { await host.DisconnectAsync(); }
+            catch (Exception ex)
+            {
+                // Best-effort teardown — LogDebug matches the coordinator's equivalent
+                // disconnect-before-dispose path (DisposeHostSafelyAsync).
+                _logger.LogDebug(
+                    "Host disconnect (no-model fallback) threw: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
             try { host.Dispose(); }
             catch (Exception ex)
             {

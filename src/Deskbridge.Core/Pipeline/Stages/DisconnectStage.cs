@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace Deskbridge.Core.Pipeline.Stages;
 
 /// <summary>
-/// Awaits <see cref="IProtocolHost.DisconnectAsync"/> with a 30s timeout. Disconnect failure
+/// Awaits <see cref="IProtocolHost.DisconnectAsync"/> with a 35s timeout. Disconnect failure
 /// is non-fatal: the stage still returns success so <c>DisposeStage</c> always runs.
 /// </summary>
 public sealed class DisconnectStage : IDisconnectPipelineStage
@@ -15,7 +15,10 @@ public sealed class DisconnectStage : IDisconnectPipelineStage
     public DisconnectStage(ILogger<DisconnectStage> logger, TimeSpan? timeout = null)
     {
         _logger = logger;
-        _timeout = timeout ?? TimeSpan.FromSeconds(30);
+        // [CITED: audit C3] 35s staggers ABOVE RdpHostControl.DisconnectAsync's internal
+        // 30s polling deadline so the host's own timeout wins and its loop completes
+        // instead of being abandoned mid-poll by the stage timeout.
+        _timeout = timeout ?? TimeSpan.FromSeconds(35);
     }
 
     public string Name => "Disconnect";
@@ -38,6 +41,15 @@ public sealed class DisconnectStage : IDisconnectPipelineStage
             if (finished != disconnectTask)
             {
                 _logger.LogWarning("Disconnect timed out for {Hostname}", ctx.Connection.Hostname);
+                // [CITED: audit C3] Observe the abandoned polling task so a late fault
+                // doesn't surface as an unobserved-task exception in CrashHandler.
+                _ = disconnectTask.ContinueWith(
+                    t => _logger.LogDebug(
+                        "Abandoned disconnect task faulted: {ExceptionType}",
+                        t.Exception?.GetBaseException().GetType().Name),
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
             }
             else
             {

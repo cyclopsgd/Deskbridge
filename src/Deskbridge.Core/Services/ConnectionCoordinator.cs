@@ -332,13 +332,41 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             // THEN dispose (frees COM resources + nulls _host). Reverse order throws
             // ObjectDisposedException in MainWindow.OnHostUnmounted's rdp.Host access.
             HostUnmounted?.Invoke(this, host);
-            try { host.Dispose(); }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(
-                    "Dispose after failed connect threw: {ExceptionType} HResult={HResult:X8}",
-                    ex.GetType().Name, ex.HResult);
-            }
+            // [CITED: audit C1] ConnectStage timeout can leave the host mid-handshake
+            // with Connected != 0 — a direct Dispose without disconnect is the forbidden
+            // sequence from RDP-ACTIVEX-PITFALLS §3. Disconnect first (host-internal 30s
+            // bound), then dispose; fire-and-forget keeps this handler non-blocking.
+            _ = DisposeHostSafelyAsync(host);
+        }
+    }
+
+    /// <summary>
+    /// [CITED: audit C1] Disconnect-before-dispose for hosts that may still be connected
+    /// (e.g. ConnectStage timeout mid-handshake). Both steps are best-effort; COM-family
+    /// errors are logged as type + HResult only (T-04-EXC). Runs on the dispatcher —
+    /// <c>DisconnectAsync</c>'s plain awaits keep continuations on the STA (D-11).
+    /// </summary>
+    private async Task DisposeHostSafelyAsync(IProtocolHost host)
+    {
+        try
+        {
+            await host.DisconnectAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(
+                "Disconnect before dispose threw: {ExceptionType} HResult={HResult:X8}",
+                ex.GetType().Name, ex.HResult);
+        }
+        try
+        {
+            host.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(
+                "Dispose after disconnect threw: {ExceptionType} HResult={HResult:X8}",
+                ex.GetType().Name, ex.HResult);
         }
     }
 
@@ -423,13 +451,25 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             catch { /* disposed host may throw */ }
             HostUnmounted?.Invoke(this, host);
             _coordinatorHosts.Remove(host.ConnectionId);
-            try { host.Dispose(); }
-            catch (Exception ex)
+            // [CITED: audit C2 + RDP-ACTIVEX-PITFALLS §3] This handler runs synchronously
+            // inside the mstscax OnDisconnected event-dispatch frame (AxHost sink is on the
+            // native stack). Disposing here destroys the OCX while its own event frame is
+            // live — use-after-free/AV. Defer ONLY the Dispose out of the event frame;
+            // dict removal, unsubscribe, and HostUnmounted stay synchronous. OnDisconnected
+            // has already fired, so Connected==0 when the deferred Dispose runs and
+            // RdpHostControl's pumping fallback (audit C1) stays idle.
+            // Accepted edge: if the dispatcher shuts down before this queued dispose runs,
+            // the host is reclaimed at process exit (session already disconnected here).
+            _dispatcher.BeginInvoke(new Action(() =>
             {
-                _logger.LogDebug(
-                    "Host dispose during logoff threw: {ExceptionType} HResult={HResult:X8}",
-                    ex.GetType().Name, ex.HResult);
-            }
+                try { host.Dispose(); }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        "Deferred host dispose threw: {ExceptionType} HResult={HResult:X8}",
+                        ex.GetType().Name, ex.HResult);
+                }
+            }));
             _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.RemoteDisconnect));
             return;
         }
@@ -443,13 +483,22 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
         catch { /* disposed host may throw */ }
 
-        try { host.Dispose(); }
-        catch (Exception ex)
+        // [CITED: audit C2 + RDP-ACTIVEX-PITFALLS §3] Same event-frame hazard as the
+        // Logoff branch above: defer ONLY the Dispose out of the mstscax OnDisconnected
+        // dispatch frame. Overlay request stays synchronous and in current order.
+        // Connected==0 already (OnDisconnected fired), so C1's pumping fallback stays idle.
+        // Accepted edge: if the dispatcher shuts down before this queued dispose runs,
+        // the host is reclaimed at process exit (session already disconnected here).
+        _dispatcher.BeginInvoke(new Action(() =>
         {
-            _logger.LogError(
-                "Host dispose during reconnect threw: {ExceptionType} HResult={HResult:X8}",
-                ex.GetType().Name, ex.HResult);
-        }
+            try { host.Dispose(); }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    "Deferred host dispose threw: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
+        }));
 
         var handle = new ReconnectOverlayHandle();
         ReconnectOverlayRequested?.Invoke(this, new ReconnectUiRequest(model, handle));

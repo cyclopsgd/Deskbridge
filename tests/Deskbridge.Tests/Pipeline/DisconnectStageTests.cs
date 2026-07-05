@@ -28,11 +28,10 @@ public sealed class DisconnectStageTests
     }
 
     [Fact]
-    public async Task TimesOutAfter30Seconds_StillReturnsSuccess_WithWarning()
+    public async Task TimesOut_StillReturnsSuccess_WithWarning()
     {
-        // Use a stage with a small test-only timeout via ctor; if the prod stage hardcodes 30s,
-        // rely on behavior: never-completing task should still short-circuit. We simulate by
-        // giving a task that is NEVER completing and a short test timeout.
+        // Injects a small test-only timeout via ctor; a never-completing disconnect task
+        // must still short-circuit and return success (DisposeStage always runs).
         var host = Substitute.For<IProtocolHost>();
         host.DisconnectAsync().Returns(new TaskCompletionSource<bool>().Task);
         var stage = new DisconnectStage(NullLogger<DisconnectStage>.Instance, TimeSpan.FromMilliseconds(100));
@@ -47,6 +46,19 @@ public sealed class DisconnectStageTests
 
         // Disconnect failure is non-fatal — DisposeStage runs anyway
         result.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DefaultTimeout_Is35Seconds_StaggeredAboveHostInternal30s()
+    {
+        // Audit C3: the stage default must stay ABOVE RdpHostControl.DisconnectAsync's
+        // internal 30s polling deadline so the host's own timeout wins. Pinned via the
+        // private field — no public seam exists and a behavioral test would take 35s.
+        var stage = new DisconnectStage(NullLogger<DisconnectStage>.Instance);
+        var timeout = (TimeSpan?)typeof(DisconnectStage)
+            .GetField("_timeout", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(stage);
+        timeout.Should().Be(TimeSpan.FromSeconds(35));
     }
 
     [Fact]

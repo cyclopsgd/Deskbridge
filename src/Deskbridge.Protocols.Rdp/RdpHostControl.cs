@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms.Integration;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using AxMSTSCLib;
 using Deskbridge.Core.Exceptions;
 using Deskbridge.Core.Interfaces;
@@ -190,16 +191,24 @@ public sealed class RdpHostControl : IProtocolHost
                 var ocx = GetOcxForPasswordSet(_rdp) as IMsTscNonScriptable
                     ?? throw new InvalidOperationException("GetOcx() did not return IMsTscNonScriptable.");
                 ocx.ClearTextPassword = context.ResolvedPassword;
-                // Defense in depth (T-04-CRED): clear from context immediately after write.
-                context.ResolvedPassword = null;
             }
-            catch (Exception ex) when (ex is COMException or InvalidCastException or NullReferenceException)
+            // [CITED: audit C4] InvalidOperationException included so the cast-failure IOE
+            // above (doc §4 failure modes) hits the sanitized log + ErrorOccurred before
+            // rethrowing, instead of bypassing both.
+            catch (Exception ex) when (ex is COMException or InvalidCastException
+                                        or NullReferenceException or InvalidOperationException)
             {
                 ErrorOccurred?.Invoke(this, $"Password set failed: {ex.GetType().Name}");
                 _logger.LogWarning(
                     "Password set failed during connect to {Hostname}: {ExceptionType} HResult={HResult:X8}",
                     context.Connection.Hostname, ex.GetType().Name, ex.HResult);
                 throw;
+            }
+            finally
+            {
+                // Defense in depth (T-04-CRED, audit C4): clear from context on EVERY exit
+                // path — success and throw alike — so the password never outlives this block.
+                context.ResolvedPassword = null;
             }
         }
 
@@ -242,9 +251,13 @@ public sealed class RdpHostControl : IProtocolHost
         // that TabHostManager.DoVisualClose has already removed from the UI.
         _userInitiatedClose = true;
 
-        if (_rdp.Connected != 0)
+        // [CITED: audit C3] Snapshot the field — Dispose() can null _rdp while the polling
+        // loop below is awaiting, and the abandoned continuation would NRE on the field.
+        var rdp = _rdp;
+
+        if (ReadConnectedSafely(rdp))
         {
-            try { _rdp.Disconnect(); }
+            try { rdp.Disconnect(); }
             catch (Exception ex) when (ex is COMException)
             {
                 _logger.LogDebug(
@@ -253,17 +266,31 @@ public sealed class RdpHostControl : IProtocolHost
             }
 
             var deadline = DateTime.UtcNow.AddSeconds(30);
-            while (_rdp.Connected != 0 && DateTime.UtcNow < deadline)
+            // [CITED: audit C3] Exit when _disposed flips — Dispose() has taken over
+            // teardown and the control may be mid-release.
+            while (!_disposed && ReadConnectedSafely(rdp) && DateTime.UtcNow < deadline)
             {
                 // Plain await — stays on STA per D-11
                 await Task.Delay(100);
             }
 
-            if (_rdp.Connected != 0)
+            if (!_disposed && ReadConnectedSafely(rdp))
             {
                 _logger.LogWarning("RDP disconnect timed out after 30s — force disposing");
             }
         }
+    }
+
+    /// <summary>
+    /// [CITED: audit C3] Guarded Connected read matching the <see cref="IsConnected"/>
+    /// defensive pattern — a disposing/unsited control throws instead of reporting state;
+    /// treat that as disconnected so polling loops exit instead of faulting.
+    /// </summary>
+    private static bool ReadConnectedSafely(AxMsRdpClient9NotSafeForScripting rdp)
+    {
+        try { return rdp.Connected != 0; }
+        catch (AxHost.InvalidActiveXStateException) { return false; }
+        catch (COMException) { return false; }
     }
 
     public void Dispose()
@@ -276,13 +303,31 @@ public sealed class RdpHostControl : IProtocolHost
 
         AssertSta();
 
-        // Synchronous disposal is OK on STA — the message pump is active.
-        try { DisconnectAsync().GetAwaiter().GetResult(); }
-        catch (Exception ex)
+        // Ownership model (audit C1): disconnect is owned by the pipeline
+        // (DisconnectStage / coordinator cleanup helpers) — never by Dispose. Dispose
+        // expects Connected==0; reaching this fallback means a caller skipped disconnect.
+        // A blocking GetResult() wait is forbidden here — it would starve the dispatcher
+        // queue and deadlock the Task.Delay polling continuations. Instead, pump messages
+        // for a bounded window so COM events keep flowing and OnDisconnected can fire
+        // (RDP-ACTIVEX-PITFALLS §3: "must pump messages").
+        if (IsConnected)
         {
-            _logger.LogDebug(
-                "DisconnectAsync during Dispose threw: {ExceptionType} HResult={HResult:X8}",
-                ex.GetType().Name, ex.HResult);
+            _logger.LogError(
+                "Dispose called while still connected for {ConnectionId} — callers must disconnect first. " +
+                "Entering bounded message-pumping fallback.", ConnectionId);
+            _userInitiatedClose = true;
+            try { _rdp!.Disconnect(); }
+            catch (Exception ex) when (ex is COMException or AxHost.InvalidActiveXStateException)
+            {
+                _logger.LogDebug("Fallback Disconnect threw: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
+            }
+            PumpUntilDisconnected(TimeSpan.FromSeconds(10));
+            if (IsConnected)
+            {
+                _logger.LogWarning(
+                    "Pumped-wait fallback timed out after 10s — force disposing {ConnectionId}", ConnectionId);
+            }
         }
 
         // --- Event unsubscribe ---
@@ -359,8 +404,9 @@ public sealed class RdpHostControl : IProtocolHost
                 }
                 _rdp.Dispose();
             }
-            catch (Exception ex) when (ex is AccessViolationException
-                                        or InvalidComObjectException or COMException)
+            // [CITED: audit C5] No AccessViolationException arm — corrupted-state exceptions
+            // are uncatchable on .NET Core+; an AV here crashes the process by design.
+            catch (Exception ex) when (ex is InvalidComObjectException or COMException)
             {
                 _logger.LogError(
                     "AxHost dispose threw — continuing teardown: {ExceptionType} HResult={HResult:X8}",
@@ -398,6 +444,8 @@ public sealed class RdpHostControl : IProtocolHost
 
     private void OnDisconnectedDuringConnect(object? sender, IMsTscAxEvents_OnDisconnectedEvent e)
     {
+        // [CITED: audit C6] Close the UpdateResolution gate — no session, no dynamic resize.
+        _loginComplete = false;
         var extended = 0;
         Func<uint, uint, string>? describe = null;
         if (_rdp is not null)
@@ -414,6 +462,10 @@ public sealed class RdpHostControl : IProtocolHost
 
     private void OnDisconnectedAfterConnectHandler(object? sender, IMsTscAxEvents_OnDisconnectedEvent e)
     {
+        // [CITED: audit C6] Close the UpdateResolution gate after disconnect — the session
+        // is gone, so dynamic resize must stop until a future OnLoginComplete re-opens it.
+        // Set BEFORE the user-initiated suppression below: the gate must close either way.
+        _loginComplete = false;
         // Plan 04-03 subscribes here for reconnect logic. Phase 5 hotfix
         // (2026-04-14): suppress for user-initiated closes so the reconnect
         // overlay doesn't fire for a tab the user just dismissed. Network
@@ -476,10 +528,22 @@ public sealed class RdpHostControl : IProtocolHost
             // Server does not support dynamic resolution — fall back to SmartSizing.
             // T-16-03: _dynamicResizeFailed prevents repeated COMException spam.
             _dynamicResizeFailed = true;
-            _rdp.AdvancedSettings9.SmartSizing = true;
             _logger.LogWarning(
                 "UpdateSessionDisplaySettings not supported for {ConnectionId}: {ExceptionType} HResult=0x{HResult:X8} -- falling back to SmartSizing",
                 ConnectionId, ex.GetType().Name, ex.HResult);
+            // [CITED: audit C6] The fallback is itself an unguarded COM call inside a catch
+            // block — sibling catch arms do NOT apply here, so a throw would escape to
+            // OnResizeSettled (no try/catch) and hit the CrashDialog. Guard it in the same
+            // defensive style as IsConnected.
+            try { _rdp.AdvancedSettings9.SmartSizing = true; }
+            catch (Exception fallbackEx) when (fallbackEx is COMException
+                                                or AxHost.InvalidActiveXStateException
+                                                or NullReferenceException)
+            {
+                _logger.LogWarning(
+                    "SmartSizing fallback failed for {ConnectionId}: {ExceptionType} HResult={HResult:X8}",
+                    ConnectionId, fallbackEx.GetType().Name, fallbackEx.HResult);
+            }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
@@ -492,6 +556,33 @@ public sealed class RdpHostControl : IProtocolHost
     }
 
     // --- Helpers -------------------------------------------------------------
+
+    /// <summary>
+    /// Audit C1 fallback: bounded message-pumping wait for OnDisconnected during a
+    /// dispose-while-connected. Pushes a nested dispatcher frame so COM events keep
+    /// flowing (RDP-ACTIVEX-PITFALLS §3 — OnDisconnected only arrives while the STA
+    /// pumps); a 100 ms <see cref="DispatcherTimer"/> ends the frame when the control
+    /// reports disconnected or the deadline passes. Teardown proceeds regardless.
+    /// </summary>
+    private void PumpUntilDisconnected(TimeSpan timeout)
+    {
+        var frame = new DispatcherFrame();
+        var deadline = DateTime.UtcNow + timeout;
+        var timer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(100),
+            DispatcherPriority.Normal,
+            (_, _) =>
+            {
+                if (!IsConnected || DateTime.UtcNow >= deadline)
+                {
+                    frame.Continue = false;
+                }
+            },
+            Dispatcher.CurrentDispatcher);
+        // Note: this DispatcherTimer ctor overload auto-starts — no explicit Start() needed.
+        try { Dispatcher.PushFrame(frame); }
+        finally { timer.Stop(); }
+    }
 
     private static void AssertSta()
     {

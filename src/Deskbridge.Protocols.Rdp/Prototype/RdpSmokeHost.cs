@@ -276,8 +276,9 @@ public sealed class RdpSmokeHost : IDisposable
                 catch { /* OCX may already be released mid-teardown */ }
                 _rdp.Dispose();
             }
-            catch (Exception ex) when (ex is AccessViolationException
-                                        or InvalidComObjectException
+            // [CITED: audit C5] No AccessViolationException arm — corrupted-state exceptions
+            // are uncatchable on .NET Core+; an AV here crashes the process by design.
+            catch (Exception ex) when (ex is InvalidComObjectException
                                         or COMException)
             {
                 DebugTrace("AxHost dispose threw — continuing teardown: " + ex.GetType().Name);
