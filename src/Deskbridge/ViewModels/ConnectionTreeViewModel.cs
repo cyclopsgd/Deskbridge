@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Deskbridge.Core.Events;
 using Deskbridge.Core.Interfaces;
 using Deskbridge.Core.Models;
@@ -77,6 +78,23 @@ public partial class ConnectionTreeViewModel : ObservableObject
 
         // Phase 19 (IMP-04): refresh tree after bulk data mutations (SaveBatch, DeleteBatch)
         _eventBus.Subscribe<ConnectionDataChangedEvent>(this, OnDataChanged);
+
+        // W3 (audit): the multi-select "Edit…" command's CanExecute depends on the selection.
+        // The multi-select behavior mutates SelectedItems in place (Add/Remove/Clear), so re-evaluate
+        // CanExecute whenever the collection changes (and whenever the collection itself is swapped).
+        SelectedItems.CollectionChanged += OnSelectedItemsCollectionChanged;
+    }
+
+    private void OnSelectedItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        EditSelectedCommand.NotifyCanExecuteChanged();
+
+    partial void OnSelectedItemsChanged(
+        ObservableCollection<TreeItemViewModel> oldValue,
+        ObservableCollection<TreeItemViewModel> newValue)
+    {
+        oldValue.CollectionChanged -= OnSelectedItemsCollectionChanged;
+        newValue.CollectionChanged += OnSelectedItemsCollectionChanged;
+        EditSelectedCommand.NotifyCanExecuteChanged();
     }
 
     // Data
@@ -1087,11 +1105,14 @@ public partial class ConnectionTreeViewModel : ObservableObject
         CollectDescendantConnections(group).Any(c => _tabHostManager.TryGetExistingTab(c.Id, out _));
 
     /// <summary>
-    /// BULK-01: Connect every connection in the group. Projected GDI cost is
-    /// <c>ActiveCount + group.ConnectionCount</c>; when confirmation is enabled and the projection
-    /// exceeds the user-configured threshold, the GDI warning dialog is shown first (airspace-wrapped).
-    /// Already-open tabs are switched to (SwitchTo) rather than re-opened. Connections are opened by
-    /// publishing <see cref="ConnectionRequestedEvent"/> (RDP-05: never call the pipeline directly).
+    /// BULK-01: Connect every connection in the group. Only connections that are not already open
+    /// are counted as newly opening (<c>toOpen</c>); the projected GDI cost is
+    /// <c>ActiveCount + toOpen</c>, so already-open group members are switched to (SwitchTo) rather
+    /// than re-opened and are never double-counted. When <c>toOpen</c> is 0 (every member is already
+    /// open) the confirmation dialog is skipped entirely; otherwise, when confirmation is enabled and
+    /// the projection exceeds the user-configured threshold, the GDI warning dialog is shown first
+    /// (airspace-wrapped). Connections are opened by publishing <see cref="ConnectionRequestedEvent"/>
+    /// (RDP-05: never call the pipeline directly).
     /// </summary>
     [RelayCommand]
     private async Task ConnectAllAsync(GroupTreeItemViewModel? group)
@@ -1107,14 +1128,22 @@ public partial class ConnectionTreeViewModel : ObservableObject
         _isDialogOpen = true;
         try
         {
-            // Projected GDI cost = currently-open tabs + every connection in this group (recursive).
-            var projected = _tabHostManager.ActiveCount + group.ConnectionCount;
+            // WR-02 / W2 (audit): count only the connections that will actually be NEWLY opened —
+            // already-open tabs are switched to, not re-opened. Hoisted above the dialog branch so
+            // the projection does not double-count open group members (the old
+            // ActiveCount + group.ConnectionCount counted them in both terms → "open 0 sessions").
+            var toOpen = conns.Count(c => !_tabHostManager.TryGetExistingTab(c.Id, out _));
+
+            // Projected GDI cost = currently-open tabs + the sessions this operation will newly open.
+            var projected = _tabHostManager.ActiveCount + toOpen;
 
             var settings = await _windowState.LoadAsync();
             var bulk = settings?.BulkOperations ?? BulkOperationsRecord.Default;
 
             // Boundary: projected == threshold does NOT warn; projected == threshold + 1 warns.
-            if (bulk.ConfirmBeforeBulkOperations && projected > bulk.GdiWarningThreshold)
+            // Nothing new to open (all members already open) → skip the dialog entirely and just
+            // run the switch-to loop below.
+            if (toOpen > 0 && bulk.ConfirmBeforeBulkOperations && projected > bulk.GdiWarningThreshold)
             {
                 var host = _contentDialogService.GetDialogHostEx();
                 if (host is null)
@@ -1122,10 +1151,6 @@ public partial class ConnectionTreeViewModel : ObservableObject
                     Serilog.Log.Error("ContentDialogHost is null; cannot show Connect All confirmation dialog");
                     return;
                 }
-
-                // WR-02: report the count that will actually be NEWLY opened (already-open tabs
-                // are switched to, not re-opened) so the warning doesn't overstate the new GDI cost.
-                var toOpen = conns.Count(c => !_tabHostManager.TryGetExistingTab(c.Id, out _));
 
                 ContentDialogResult result;
                 _airspace.SnapshotAndHideAll();
@@ -1181,12 +1206,22 @@ public partial class ConnectionTreeViewModel : ObservableObject
     }
 
     /// <summary>
+    /// W3 (audit): bulk edit requires a multi-selection of ≥2 connections. A selection that contains
+    /// fewer than two connections (a group alone, a lone connection, or a single connection alongside
+    /// any number of groups) disables the menu item via this CanExecute rather than showing an enabled
+    /// item that silently no-ops. Any group entries in the selection are ignored — a selection with
+    /// ≥2 connections is enabled and only the connections are edited.
+    /// </summary>
+    private bool CanEditSelected() =>
+        SelectedItems.OfType<ConnectionTreeItemViewModel>().Count() >= 2;
+
+    /// <summary>
     /// BULK-03: Open the bulk-edit dialog for the current multi-selection (≥2 connections) and, on
     /// Apply, write only the enabled fields via a single atomic <see cref="IConnectionStore.SaveBatch"/>,
     /// publish <see cref="ConnectionDataChangedEvent"/> (→ tree refresh), and clear the selection.
     /// On persistence failure nothing is saved and the dialog's error InfoBar is shown (all-or-nothing).
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanEditSelected))]
     private async Task EditSelectedAsync()
     {
         if (_isDialogOpen) return;
@@ -1226,25 +1261,7 @@ public partial class ConnectionTreeViewModel : ObservableObject
         // WR-01: the save runs INSIDE the dialog's Primary handler so a SaveBatch failure vetoes
         // the close and the error InfoBar renders on the still-open dialog. Returns false on
         // failure (dialog stays open); true on success (dialog closes, Primary result returned).
-        bool SaveCallback()
-        {
-            var edited = vm.ApplyToModels();
-            try
-            {
-                // IMP-04: single atomic write — never a per-item Save loop.
-                _connectionStore.SaveBatch(edited, Array.Empty<ConnectionGroup>());
-                // T-23-08: atomic all-or-nothing succeeded → notify the tree to refresh.
-                _eventBus.Publish(new ConnectionDataChangedEvent());
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // T-23-07: log IDs/counts only — never field values (Info-Disclosure).
-                Serilog.Log.Error(ex, "Bulk edit failed for {Count} connections", edited.Count);
-                // T-23-08: all-or-nothing — nothing persisted; dialog surfaces the error InfoBar.
-                return false;
-            }
-        }
+        bool SaveCallback() => TryCommitBulkEdit(vm, models);
 
         var dialog = new BulkEditDialog(host, vm, SaveCallback);
 
@@ -1273,6 +1290,42 @@ public partial class ConnectionTreeViewModel : ObservableObject
         finally
         {
             _isDialogOpen = false;
+        }
+    }
+
+    /// <summary>
+    /// BULK-03 commit step (extracted for unit testing). Applies the dialog's enabled fields to
+    /// the selected connections and persists them via a single atomic
+    /// <see cref="IConnectionStore.SaveBatch"/>. Returns true on success (nothing thrown), false
+    /// on persistence failure (the dialog stays open and shows its error InfoBar).
+    /// </summary>
+    internal bool TryCommitBulkEdit(BulkEditViewModel vm, IReadOnlyList<ConnectionModel> liveModels)
+    {
+        // W1 (audit): clone-and-commit. GetById returns the store's LIVE backing references, so
+        // applying edits to them directly (the old bug) mutated in-memory state before persistence
+        // and left no rollback on failure. Instead we edit CLONES and hand those to SaveBatch: on
+        // success its upsert-by-Id swaps the clones into the store (same semantics as Save()); on
+        // failure the live models were never touched, so in-memory state matches the dialog's
+        // "No changes were saved" message.
+        try
+        {
+            // Apply the edits to CLONES inside the try: a hypothetical ApplyToModels throw returns
+            // false (→ error InfoBar) instead of escaping into BulkEditDialog.OnButtonClick.
+            var edited = vm.ApplyToModels(liveModels.Select(m => m.Clone()).ToList());
+            // IMP-04: single atomic write — never a per-item Save loop. SaveBatch is itself
+            // transactional (rolls back its in-memory state if the write throws).
+            _connectionStore.SaveBatch(edited, Array.Empty<ConnectionGroup>());
+            // T-23-08: atomic all-or-nothing succeeded → notify the tree to refresh.
+            _eventBus.Publish(new ConnectionDataChangedEvent());
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // T-23-07: log IDs/counts only — never field values (Info-Disclosure).
+            Serilog.Log.Error(ex, "Bulk edit failed for {Count} connections", liveModels.Count);
+            // T-23-08: all-or-nothing — nothing persisted and the live models are untouched
+            // (edits were applied to clones); the dialog surfaces the error InfoBar.
+            return false;
         }
     }
 

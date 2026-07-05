@@ -170,6 +170,55 @@ public sealed class ConnectAllTests
     }
 
     [Fact]
+    public async Task OpenGroupMembers_NotDoubleCounted_InProjection()
+    {
+        // W2 (audit): projection must be ActiveCount + toOpen, NOT ActiveCount + ConnectionCount.
+        // Group has 3 members, 2 already open. ActiveCount 0, confirm on, threshold 2.
+        // Old (buggy) projection: 0 + 3 = 3 > 2 → warn → headless gate blocks everything.
+        // Correct projection: 0 + toOpen(1) = 1 ≤ 2 → no warn → opens the 1, switches the 2.
+        var (sut, bus, tab, store, _) = BuildSut(new BulkOperationsRecord(true, 2));
+        tab.ActiveCount.Returns(0);
+
+        var open1 = Guid.NewGuid();
+        var open2 = Guid.NewGuid();
+        var closed = Guid.NewGuid();
+        var group = BuildGroup(store, open1, open2, closed);
+        tab.TryGetExistingTab(open1, out Arg.Any<IProtocolHost>()).Returns(true);
+        tab.TryGetExistingTab(open2, out Arg.Any<IProtocolHost>()).Returns(true);
+        tab.TryGetExistingTab(closed, out Arg.Any<IProtocolHost>()).Returns(false);
+
+        await sut.ConnectAllCommand.ExecuteAsync(group);
+
+        // The one closed connection is published; the two open are switched to (no double-count gate).
+        bus.Received(1).Publish(Arg.Any<ConnectionRequestedEvent>());
+        tab.Received(1).SwitchTo(open1);
+        tab.Received(1).SwitchTo(open2);
+    }
+
+    [Fact]
+    public async Task AllMembersAlreadyOpen_SkipsDialog_StillSwitchesTo()
+    {
+        // W2 (audit): toOpen == 0 → no dialog at all (even with confirm on + everything over
+        // threshold), but the switch-to loop still runs. Old behavior double-counted the open
+        // members into the projection, tried to show the dialog (null host headless) and returned.
+        var (sut, bus, tab, store, _) = BuildSut(new BulkOperationsRecord(true, 1));
+        tab.ActiveCount.Returns(50); // huge active count — would trip the old over-threshold gate
+
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        var group = BuildGroup(store, a, b);
+        tab.TryGetExistingTab(a, out Arg.Any<IProtocolHost>()).Returns(true);
+        tab.TryGetExistingTab(b, out Arg.Any<IProtocolHost>()).Returns(true);
+
+        await sut.ConnectAllCommand.ExecuteAsync(group);
+
+        // No new sessions opened; both existing tabs are switched to (dialog skipped, not blocked).
+        bus.DidNotReceive().Publish(Arg.Any<ConnectionRequestedEvent>());
+        tab.Received(1).SwitchTo(a);
+        tab.Received(1).SwitchTo(b);
+    }
+
+    [Fact]
     public async Task SkipsAlreadyOpenTabs_CallsSwitchTo()
     {
         var (sut, bus, tab, store, _) = BuildSut(new BulkOperationsRecord(true, 100));

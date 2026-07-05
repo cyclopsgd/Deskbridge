@@ -38,6 +38,28 @@ public class ConnectionModel
     /// to skip certificate prompts. Users can override per-connection if needed.
     /// </summary>
     public uint AuthenticationLevel { get; set; } = 0;
+
+    /// <summary>
+    /// Deep copy of this connection. Used by transactional bulk edit (audit W1): edits are applied
+    /// to clones so a persistence failure never leaves the store's live backing objects mutated.
+    /// Value-typed and string properties are copied by <see cref="object.MemberwiseClone"/>; the
+    /// mutable reference members (<see cref="Tags"/>, <see cref="DisplaySettings"/>) are deep-copied
+    /// so the clone shares no mutable state with the original.
+    /// </summary>
+    public ConnectionModel Clone()
+    {
+        var clone = (ConnectionModel)MemberwiseClone();
+        clone.Tags = [.. Tags];
+        clone.DisplaySettings = DisplaySettings is null
+            ? null
+            : new DisplaySettings
+            {
+                Width = DisplaySettings.Width,
+                Height = DisplaySettings.Height,
+                SmartSizing = DisplaySettings.SmartSizing,
+            };
+        return clone;
+    }
 }
 
 public class DisplaySettings

@@ -155,6 +155,43 @@ public sealed class SaveBatchTests : IDisposable
     }
 
     [Fact]
+    public void SaveBatch_WhenPersistFails_LeavesInMemoryStateUnchanged()
+    {
+        // W1 (audit): bulk edit is all-or-nothing. If the atomic file write fails, SaveBatch must
+        // leave the in-memory store exactly as it was — AND a later unrelated successful Save must
+        // NOT flush the failed batch's edits to disk.
+
+        // Arrange: seed one connection through a successful Save.
+        var id = Guid.NewGuid();
+        _store.Save(new ConnectionModel { Id = id, Name = "Original", Hostname = "orig.local", Port = 3389 });
+
+        // Force PersistAtomically to throw: occupy the ".tmp" path with a DIRECTORY so
+        // File.WriteAllText(tmpPath, ...) cannot create the temp file.
+        var tmpPath = _filePath + ".tmp";
+        Directory.CreateDirectory(tmpPath);
+
+        // Act: attempt a bulk edit of a CLONE-shaped object (mirrors the VM's clone-and-commit).
+        var edited = new ConnectionModel { Id = id, Name = "Original", Hostname = "edited.local", Port = 3389 };
+        var act = () => _store.SaveBatch([edited], Array.Empty<ConnectionGroup>());
+        act.Should().Throw<Exception>("the temp-file write is blocked by a directory at the .tmp path");
+
+        // Assert 1: in-memory state is unchanged (pre-edit hostname).
+        _store.GetById(id)!.Hostname.Should().Be("orig.local", "a failed SaveBatch must not mutate in-memory state");
+
+        // Clear the blocker and persist an UNRELATED connection via the normal Save path.
+        Directory.Delete(tmpPath);
+        var unrelated = new ConnectionModel { Id = Guid.NewGuid(), Name = "Unrelated", Hostname = "unrelated.local" };
+        _store.Save(unrelated);
+
+        // Assert 2: the on-disk file must NOT contain the failed batch's edit.
+        var reloaded = new JsonConnectionStore(_filePath);
+        reloaded.Load();
+        reloaded.GetById(id)!.Hostname.Should().Be("orig.local",
+            "a subsequent unrelated Save must not silently flush the failed batch's edits to disk");
+        reloaded.GetById(unrelated.Id).Should().NotBeNull("the unrelated Save must still succeed");
+    }
+
+    [Fact]
     public void SaveBatch_PersistsAtomically_NoTmpFileRemains()
     {
         // Arrange: build 10 connections

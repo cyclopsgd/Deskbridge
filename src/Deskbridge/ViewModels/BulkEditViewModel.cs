@@ -196,7 +196,10 @@ public partial class BulkEditViewModel : ObservableObject
     /// <b>Never writes Name. Never reads or writes any password/credential secret.</b> (T-23-04)
     /// </summary>
     /// <param name="models">
-    /// Optional explicit target list (used by tests). Defaults to the selection passed to the ctor.
+    /// Explicit target list to write into. Production passes the caller-owned CLONES that
+    /// transactional bulk edit (W1) hands to <c>SaveBatch</c>, so the live selection is never mutated
+    /// before persistence succeeds. When omitted, the no-arg default mutates the live selection passed
+    /// to the ctor IN PLACE — the W1 footgun callers must avoid on the commit path.
     /// </param>
     public List<ConnectionModel> ApplyToModels(IReadOnlyList<ConnectionModel>? models = null)
     {

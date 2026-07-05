@@ -137,38 +137,68 @@ public sealed class JsonConnectionStore : IConnectionStore
     /// Groups are processed before connections to prevent transient orphans.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// PRECONDITION: the incoming <paramref name="connections"/>/<paramref name="groups"/> MUST be
+    /// caller-owned clones or fresh objects — NEVER the live references returned by <see cref="GetById"/>
+    /// /<see cref="GetGroupById"/>. The rollback snapshots taken below are shallow (they copy the list
+    /// containers, not the elements), and the connection upsert stamps <c>UpdatedAt</c> on the incoming
+    /// objects. Passing mutated live references therefore defeats the all-or-nothing rollback guarantee:
+    /// a failed write would leave the live objects already mutated with no way to restore them.
+    /// </para>
+    /// <para>
     /// Callers MUST publish <see cref="Core.Events.ConnectionDataChangedEvent"/>
     /// after calling this method to notify the tree and other subscribers.
+    /// </para>
     /// </remarks>
     public void SaveBatch(IEnumerable<ConnectionModel> connections, IEnumerable<ConnectionGroup> groups)
     {
-        // Phase 1: Upsert groups FIRST (Pitfall 3 -- groups before connections)
-        foreach (var group in groups)
-        {
-            var existing = _data.Groups.FindIndex(g => g.Id == group.Id);
-            if (existing >= 0)
-                _data.Groups[existing] = group;
-            else
-                _data.Groups.Add(group);
-        }
+        // W1 (audit): commit-on-success. Snapshot both lists BEFORE mutating so a failed
+        // PersistAtomically leaves in-memory state exactly as it was (all-or-nothing, T-23-08).
+        // Without this, a persist failure left the edits in _data and the next unrelated Save
+        // silently flushed them to disk. The upserts below mutate the live lists in place; on
+        // failure we swap the untouched snapshots back in and rethrow so callers can surface the
+        // error. (Snapshots copy the list containers, not the elements — element identity is
+        // preserved for the rollback because the incoming items are the callers' own clones.)
+        var groupsSnapshot = new List<ConnectionGroup>(_data.Groups);
+        var connectionsSnapshot = new List<ConnectionModel>(_data.Connections);
 
-        // Phase 2: Upsert connections (Pitfall 1 -- UpdatedAt only on update path)
-        foreach (var connection in connections)
+        try
         {
-            var existing = _data.Connections.FindIndex(c => c.Id == connection.Id);
-            if (existing >= 0)
+            // Phase 1: Upsert groups FIRST (Pitfall 3 -- groups before connections)
+            foreach (var group in groups)
             {
-                connection.UpdatedAt = DateTime.UtcNow;
-                _data.Connections[existing] = connection;
+                var existing = _data.Groups.FindIndex(g => g.Id == group.Id);
+                if (existing >= 0)
+                    _data.Groups[existing] = group;
+                else
+                    _data.Groups.Add(group);
             }
-            else
-            {
-                _data.Connections.Add(connection);
-            }
-        }
 
-        // Phase 3: Single atomic file write
-        PersistAtomically();
+            // Phase 2: Upsert connections (Pitfall 1 -- UpdatedAt only on update path)
+            foreach (var connection in connections)
+            {
+                var existing = _data.Connections.FindIndex(c => c.Id == connection.Id);
+                if (existing >= 0)
+                {
+                    connection.UpdatedAt = DateTime.UtcNow;
+                    _data.Connections[existing] = connection;
+                }
+                else
+                {
+                    _data.Connections.Add(connection);
+                }
+            }
+
+            // Phase 3: Single atomic file write. Only after this succeeds is the batch committed.
+            PersistAtomically();
+        }
+        catch
+        {
+            // Roll back in-memory state so memory matches the still-untouched file on disk.
+            _data.Groups = groupsSnapshot;
+            _data.Connections = connectionsSnapshot;
+            throw;
+        }
     }
 
     public void DeleteBatch(IEnumerable<Guid> connectionIds, IEnumerable<Guid> groupIds)
