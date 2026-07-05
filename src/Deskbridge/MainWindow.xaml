@@ -636,17 +636,64 @@
         </Border>
 
         <!-- Overlay hosts (LAST children for correct Z-order per Pitfall 4) -->
-        <!-- Phase 5 SnackbarPresenter retained — ConnectionTreeViewModel line 686 raises
-             the 15-session warning through ISnackbarService. Phase 6 bus events route
-             through the new ToastStackControl instead (see Q1 Option B in 06-02). -->
-        <ui:SnackbarPresenter x:Name="SnackbarPresenter" Grid.Row="0" Grid.RowSpan="3" />
-        <!-- Phase 6 Plan 06-02 (NOTF-01): custom bottom-right toast stack (max 3 visible,
-             newest on top, 4th evicts oldest, hover-pause). DataContext is bound to the
-             MainWindowViewModel.ToastStack singleton so ToastSubscriptionService and
-             the XAML template share the same ObservableCollection. -->
-        <controls:ToastStackControl x:Name="ToastStack"
-                                    Grid.Row="0" Grid.RowSpan="3"
-                                    DataContext="{Binding ToastStack}" />
         <ui:ContentDialogHost x:Name="RootContentDialog" Grid.Row="0" Grid.RowSpan="3" />
+
+        <!-- Audit A1 (pre-phase24-audit) + WINFORMS-HOST-AIRSPACE §Popups:
+             the toast stack and the SnackbarPresenter used to be in-window WPF
+             visuals spanning rows 0-2 — the live RDP viewport (a WinForms/ActiveX
+             child HWND) always paints on top of in-window WPF, so every toast and
+             the 15-session GDI snackbar were invisible whenever a session was on
+             screen (the app's dominant runtime state). A WPF Popup creates its own
+             TOP-LEVEL HWND, which occupies its own airspace and renders above any
+             WindowsFormsHost (doc-sanctioned mechanism).
+
+             Placement: Relative to ViewportGrid at (0,0); code-behind sizes
+             OverlayPopupRoot to ViewportGrid's dimensions so the toast stack's
+             existing bottom-right alignment anchors to the viewport corner
+             (matching the previous visual placement). MainWindow.xaml.cs tracks
+             the window (LocationChanged/SizeChanged nudge, StateChanged +
+             Activated/Deactivated open/close — WPF popups are topmost HWNDs, so
+             they must be hidden when the app is minimized or in the background).
+
+             Focus: Focusable=False and WPF popup HWNDs are non-activating
+             (WS_EX_NOACTIVATE) — clicking a toast's dismiss button never steals
+             activation from the RDP session. OverlayPopupRoot deliberately has NO
+             Background: with AllowsTransparency=True the popup is a layered
+             window, and fully transparent (alpha 0) pixels pass mouse input
+             through to the RDP viewport beneath — only the opaque toast/snackbar
+             cards are hit-testable.
+
+             ACCEPTED TRADE-OFF: as a separate top-level HWND the popup renders
+             above in-window ContentDialog scrims (incl. the lock overlay dialog);
+             ContentDialogHost itself stays in-window because dialog flows already
+             use AirspaceSwapper.SnapshotAndHideAll. Also accepted: WPF force-fits
+             a Popup's HWND onto a single monitor, so dragging the window past a
+             screen edge (or spanning two monitors) shifts the popup and
+             de-anchors the toast stack until the window is back on one screen —
+             cosmetic and self-correcting, so no clamping code. -->
+        <Popup x:Name="OverlayPopup"
+               AllowsTransparency="True"
+               StaysOpen="True"
+               Focusable="False"
+               Placement="Relative"
+               PlacementTarget="{Binding ElementName=ViewportGrid}"
+               PopupAnimation="None">
+            <Grid x:Name="OverlayPopupRoot">
+                <!-- Phase 5 SnackbarPresenter retained — TabHostManager raises the
+                     15-session warning through ISnackbarService (registered against
+                     this x:Name in the MainWindow ctor; XAML namescope connection
+                     works for Popup children). Appearance-based snackbar backgrounds
+                     (Info/Caution) resolve to opaque system fill tokens — no
+                     acrylic/blur over the WFH (WINFORMS-HOST-AIRSPACE §Popups caveat). -->
+                <ui:SnackbarPresenter x:Name="SnackbarPresenter" />
+                <!-- Phase 6 Plan 06-02 (NOTF-01): custom bottom-right toast stack (max 3
+                     visible, newest on top, 4th evicts oldest, hover-pause). DataContext
+                     is bound to the MainWindowViewModel.ToastStack singleton (inherited
+                     through the Popup's logical tree) so ToastSubscriptionService and
+                     the XAML template share the same ObservableCollection. -->
+                <controls:ToastStackControl x:Name="ToastStack"
+                                            DataContext="{Binding ToastStack}" />
+            </Grid>
+        </Popup>
     </Grid>
 </ui:FluentWindow>

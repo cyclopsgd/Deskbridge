@@ -325,4 +325,60 @@ public sealed class ConnectionCoordinatorTests
             connect.Received(1).ConnectAsync(Arg.Is<ConnectionModel>(m => m == second));
         });
     }
+
+    /// <summary>
+    /// [CITED: audit A3 + C2] Ordering guard for the session-drop path. MainWindow's
+    /// <c>ReconnectOverlayRequested</c> handler purges the dead host's WFH from
+    /// HostContainer and unregisters it from the AirspaceSwapper — which requires
+    /// reading <c>rdp.Host</c>, whose getter throws once Dispose has run. The
+    /// coordinator must therefore raise <c>ReconnectOverlayRequested</c> synchronously
+    /// inside the drop-handler frame while <c>host.Dispose()</c> stays deferred via
+    /// <c>Dispatcher.BeginInvoke</c> (it may only run after the frame unwinds).
+    /// Also asserts <c>HostUnmounted</c> is NOT raised on this path — that suppression
+    /// is exactly why the MainWindow-side purge exists.
+    /// </summary>
+    [Fact]
+    public void DropPath_RaisesReconnectOverlayRequest_BeforeDeferredDispose()
+    {
+        _ = _fixture;
+        StaRunner.Run(() =>
+        {
+            Action<HostCreatedEvent>? hostCreatedHandler = null;
+            var bus = Substitute.For<IEventBus>();
+            bus.When(b => b.Subscribe(Arg.Any<object>(), Arg.Any<Action<HostCreatedEvent>>()))
+                .Do(ci => hostCreatedHandler = ci.Arg<Action<HostCreatedEvent>>());
+            var connect = Substitute.For<IConnectionPipeline>();
+            var disconnect = Substitute.For<IDisconnectPipeline>();
+            var dispatcher = Dispatcher.CurrentDispatcher;
+
+            using var coord = new ConnectionCoordinator(
+                bus, connect, disconnect, NullLogger<ConnectionCoordinator>.Instance, dispatcher);
+
+            var model = new ConnectionModel { Hostname = "h", Protocol = Protocol.Rdp };
+            var host = Substitute.For<IProtocolHost>();
+            host.ConnectionId.Returns(model.Id);
+
+            var order = new List<string>();
+            host.When(h => h.Dispose()).Do(_ => order.Add("Disposed"));
+            coord.ReconnectOverlayRequested += (_, _) => order.Add("OverlayRequested");
+            var hostUnmountedRaised = false;
+            coord.HostUnmounted += (_, _) => hostUnmountedRaised = true;
+
+            hostCreatedHandler.Should().NotBeNull();
+            hostCreatedHandler!(new HostCreatedEvent(model, host));
+
+            // discReason 2055 = Authentication — D-06 manual-overlay path, fully
+            // synchronous (no backoff loop), so ordering is deterministic.
+            coord.OnDisconnectedAfterConnect(host, 2055);
+
+            order.Should().Equal("OverlayRequested"); // dispose queued but NOT yet run
+            hostUnmountedRaised.Should().BeFalse(
+                "the drop path deliberately suppresses HostUnmounted — the overlay stays over the viewport");
+
+            // Drain the dispatcher queue so the BeginInvoke-deferred dispose runs.
+            dispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+
+            order.Should().Equal("OverlayRequested", "Disposed");
+        });
+    }
 }

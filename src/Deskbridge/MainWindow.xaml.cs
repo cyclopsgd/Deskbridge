@@ -87,7 +87,10 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     // entry is scoped to ONE tab; rapid-successive drops on the same tab replace the
     // entry (same pattern as Phase 4 CloseOverlay). Drops on different tabs do NOT
     // interfere — each gets its own entry inside HostContainer.
-    private readonly Dictionary<Guid, (ReconnectOverlay Control, ReconnectOverlayViewModel Vm, IDisposable? AirspaceToken)> _overlays = new();
+    // [CITED: audit A3] The AirspaceToken slot was removed: the dead host's WFH is
+    // now purged from HostContainer (and unregistered from the AirspaceSwapper) at
+    // overlay-request time, so there is no hidden-but-parented WFH left to restore.
+    private readonly Dictionary<Guid, (ReconnectOverlay Control, ReconnectOverlayViewModel Vm)> _overlays = new();
 
     public MainWindow(
         ViewModels.MainWindowViewModel viewModel,
@@ -107,8 +110,32 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         DataContext = viewModel;
         InitializeComponent();
 
+        // Audit A1: SnackbarPresenter now lives inside OverlayPopup (top-level HWND
+        // above the RDP viewport's airspace — see MainWindow.xaml comment). The
+        // x:Name field is still connected by InitializeComponent (XAML namescope
+        // registration covers Popup children), so this registration is unchanged.
         snackbarService.SetSnackbarPresenter(SnackbarPresenter);
         contentDialogService.SetDialogHost(RootContentDialog);
+
+        // Audit A1: overlay popup lifecycle + window tracking. A Popup's HWND does
+        // not follow its placement target automatically, so we nudge the offset on
+        // every window move/resize (standard WPF trick — the offset change forces a
+        // reposition pass). Activation tracking hides the popup when the app is
+        // minimized or in the background: WPF popup HWNDs are topmost, so a
+        // permanently-open popup would otherwise float above OTHER applications.
+        Loaded += (_, _) =>
+        {
+            // -=/+= pair keeps the subscription idempotent if Loaded fires more
+            // than once (same pattern as RestartResolutionDebounce).
+            ViewportGrid.SizeChanged -= OnViewportSizeChangedSyncOverlay;
+            ViewportGrid.SizeChanged += OnViewportSizeChangedSyncOverlay;
+            SyncOverlayPopupToViewport();
+            UpdateOverlayPopupVisibility();
+        };
+        LocationChanged += (_, _) => NudgeOverlayPopup();
+        SizeChanged += (_, _) => NudgeOverlayPopup();
+        Activated += (_, _) => UpdateOverlayPopupVisibility();
+        Deactivated += (_, _) => UpdateOverlayPopupVisibility();
 
         // Place the connection tree control into the Connections panel
         ConnectionsContent.Content = connectionTreeControl;
@@ -128,6 +155,38 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         _coordinator.HostMounted += OnHostMounted;
         _coordinator.HostUnmounted += OnHostUnmounted;
         _coordinator.ReconnectOverlayRequested += OnReconnectOverlayRequested;
+
+        // Audit A1 follow-up (lock-screen info leak): OverlayPopup is a top-level
+        // HWND that renders ABOVE in-window ContentDialog scrims — an accepted
+        // trade-off for ordinary dialogs (see the OverlayPopup comment in
+        // MainWindow.xaml), but the LOCK overlay is also a ContentDialog, so toast
+        // text (hostnames) would stay readable while the app is locked. Close the
+        // popup for the lock's duration and restore on unlock via the single
+        // visibility authority. Toast state lives in the VM, so pending toasts
+        // reappear when the popup re-opens. MainWindow and IAppLockState are both
+        // app-lifetime singletons — no unsubscribe needed.
+        _lockState.LockStateChanged += (_, _) =>
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                // Synchronous when already on the dispatcher (the lock flow is) so
+                // the popup is closed BEFORE the lock overlay dialog renders.
+                UpdateOverlayPopupVisibility();
+            }
+            else
+            {
+                // Defensive best-effort path: every current raiser is on the
+                // dispatcher (SessionLockService marshals via BeginInvoke, the
+                // idle timer is a DispatcherTimer, Ctrl+L/minimise are UI-thread
+                // flows), so this branch should never run. If a future raiser
+                // fires off-thread, InvokeAsync closes the popup as soon as the
+                // dispatcher pumps — NOT guaranteed to beat the lock dialog's
+                // render. A synchronous Invoke would restore that guarantee but
+                // risks deadlocking an unknown caller; best-effort is the safer
+                // trade.
+                Dispatcher.InvokeAsync(UpdateOverlayPopupVisibility);
+            }
+        };
 
         // Phase 6 Plan 06-03 (D-05): observe IsFullscreen changes so we can apply
         // WindowStyle.None + WindowState.Maximized (and restore) without moving the
@@ -248,11 +307,86 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
+
+        // Audit A1: hide the overlay popup while minimized, restore it otherwise
+        // (Activated/Deactivated handle the background-app case).
+        UpdateOverlayPopupVisibility();
+
         if (WindowState != System.Windows.WindowState.Minimized) return;
         if (DataContext is not ViewModels.MainWindowViewModel vm) return;
         if (!vm.LockOnMinimise) return;
 
         _eventBus.Publish(new AppLockedEvent(LockReason.Minimise));
+    }
+
+    // ----------------------------------------------------------- Audit A1: overlay popup tracking
+
+    /// <summary>
+    /// Audit A1 + WINFORMS-HOST-AIRSPACE §Popups: sizes the popup's root panel to
+    /// the viewport so the toast stack's bottom-right alignment anchors to the
+    /// viewport corner, then nudges the popup so its HWND follows the new layout.
+    /// Subscribed to <c>ViewportGrid.SizeChanged</c> (fires on window resize AND
+    /// side-panel toggle, both of which move the viewport's on-screen rectangle).
+    /// </summary>
+    private void OnViewportSizeChangedSyncOverlay(object sender, SizeChangedEventArgs e)
+    {
+        SyncOverlayPopupToViewport();
+        NudgeOverlayPopup();
+    }
+
+    /// <summary>
+    /// Audit A1: OverlayPopupRoot must match ViewportGrid's dimensions — the popup
+    /// is placed Relative at the viewport's top-left, and the toast stack /
+    /// snackbar anchor themselves via alignment inside this viewport-sized panel.
+    /// </summary>
+    private void SyncOverlayPopupToViewport()
+    {
+        OverlayPopupRoot.Width = ViewportGrid.ActualWidth;
+        OverlayPopupRoot.Height = ViewportGrid.ActualHeight;
+    }
+
+    /// <summary>
+    /// Audit A1: standard WPF reposition trick — a Popup's top-level HWND does not
+    /// track its placement target, but any offset change forces a placement pass.
+    /// The +1/-1 pair is net-zero so the visual position stays anchored.
+    /// </summary>
+    private void NudgeOverlayPopup()
+    {
+        if (!OverlayPopup.IsOpen) return;
+        OverlayPopup.HorizontalOffset += 1;
+        OverlayPopup.HorizontalOffset -= 1;
+    }
+
+    /// <summary>
+    /// Audit A1: single authority for the popup's open state. Open only while the
+    /// window is loaded, non-minimized, unlocked, and the foreground application —
+    /// WPF popup HWNDs are topmost, so leaving it open while another app has focus
+    /// would float toast cards above that application. Toast state is unaffected by
+    /// visibility (the VM owns timers/eviction), so sticky failure toasts are
+    /// still there when the popup re-opens on activation/restore/unlock.
+    ///
+    /// <para>Lock gate (A1 follow-up): the popup's top-level HWND renders above the
+    /// ContentDialog lock overlay's scrim (the documented A1 trade-off), so without
+    /// this check toast text — connection hostnames — would leak through the lock
+    /// screen. Driven by <see cref="IAppLockState.LockStateChanged"/> (ctor wiring).</para>
+    /// </summary>
+    private void UpdateOverlayPopupVisibility()
+    {
+        OverlayPopup.IsOpen = IsLoaded
+            && IsActive
+            && !_lockState.IsLocked
+            && WindowState != System.Windows.WindowState.Minimized;
+    }
+
+    /// <summary>
+    /// Audit A1: a StaysOpen popup is not force-closed with its owner window in
+    /// every teardown order — close it explicitly so no orphaned topmost HWND
+    /// outlives the main window.
+    /// </summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        OverlayPopup.IsOpen = false;
+        base.OnClosed(e);
     }
 
     private bool _shutdownInProgress;
@@ -410,11 +544,59 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
     /// </summary>
     private void OnViewportSizeChanged(object sender, SizeChangedEventArgs e)
     {
+        RestartResolutionDebounce();
+    }
+
+    /// <summary>
+    /// Shared debounce restart for the two dynamic-resolution triggers: viewport
+    /// SizeChanged (Phase 16 STAB-03) and window DPI change (audit A5). Both route
+    /// through <see cref="OnResizeSettled"/>, which re-measures the viewport's
+    /// physical pixels and DPI at fire time — so a DPI change needs no dedicated
+    /// measurement path.
+    /// </summary>
+    private void RestartResolutionDebounce()
+    {
         _resizeTimer?.Stop();
         _resizeTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _resizeTimer.Tick -= OnResizeSettled;
         _resizeTimer.Tick += OnResizeSettled;
         _resizeTimer.Start();
+    }
+
+    /// <summary>
+    /// [CITED: audit A5 + WINFORMS-HOST-AIRSPACE §PerMonitorV2] Manual DPI-change
+    /// handler. The app manifest declares PerMonitorV2, so WPF re-lays-out on a
+    /// cross-monitor drag keeping the LOGICAL size roughly constant — meaning
+    /// <c>ViewportGrid.SizeChanged</c> does not reliably fire and the remote session
+    /// kept the old monitor's resolution with SmartSizing off (viewport-matched
+    /// connects set SmartSizing=false, so there was no bitmap-scaling fallback).
+    ///
+    /// <para>Route through the SAME debounce as the resize path: when the timer
+    /// settles, <see cref="OnResizeSettled"/> re-measures physical pixels + dpiPercent
+    /// from the CURRENT <c>TransformToDevice</c> (already updated for the new monitor)
+    /// and calls <c>UpdateResolution</c> on the active host, which itself falls back
+    /// to SmartSizing when the server rejects dynamic resize. Future connects need no
+    /// stored-state update — <c>SetViewportDimensions</c> is measured fresh in
+    /// <see cref="OnHostMounted"/> at each mount.</para>
+    ///
+    /// <para>Also invalidate any in-flight drag snapshot: a cross-monitor drag IS a
+    /// size-move, so the AirspaceSwapper may be showing a frozen bitmap captured at
+    /// the old DPI, which would render stretched until WM_EXITSIZEMOVE.</para>
+    /// </summary>
+    protected override void OnDpiChanged(System.Windows.DpiScale oldDpi, System.Windows.DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+
+        try
+        {
+            _airspace.InvalidateSnapshots();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Failed to invalidate drag snapshots on DPI change");
+        }
+
+        RestartResolutionDebounce();
     }
 
     /// <summary>
@@ -450,12 +632,30 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             // tab. Other tabs' overlays stay open (D-14 per-tab isolation).
             CloseOverlayFor(host.ConnectionId);
 
+            // [CITED: audit A3] Defense in depth: purge any pre-existing WFH with
+            // this connection's Tag before parenting the fresh one. The primary
+            // cleanup is in OnReconnectOverlayRequested (dead host removed at
+            // overlay-request time); this backstop covers any path where that
+            // purge failed (e.g. the Host getter threw because the host was
+            // already disposed). Only SAME-Tag children are touched — the Phase 4
+            // WR-02 remove-ALL loop stays deleted (it contradicted "never
+            // re-parent" for other tabs' LIVE hosts). A same-Tag leftover is by
+            // construction a dead prior generation of this connection: the
+            // coordinator's OnHostCreated duplicate guard means a live host for
+            // this id would have prevented this mount entirely.
+            for (var i = HostContainer.Children.Count - 1; i >= 0; i--)
+            {
+                if (HostContainer.Children[i] is WindowsFormsHost stale &&
+                    stale.Tag is Guid staleId && staleId == host.ConnectionId)
+                {
+                    _airspace.UnregisterHost(stale);
+                    HostContainer.Children.RemoveAt(i);
+                }
+            }
+
             // D-04 persistent container: add WFH to HostContainer ONCE. Tag
             // correlates back to ConnectionId for tab switching and overlay
-            // routing. The Phase 4 WR-02 defense-in-depth loop that removed all
-            // existing WFH children before mounting a new host is DELETED — it
-            // was valid for single-host but contradicts "never re-parent" and
-            // would force a re-realize of HwndSource on every new tab.
+            // routing.
             rdp.Host.Tag = host.ConnectionId;
             HostContainer.Children.Add(rdp.Host);
 
@@ -611,6 +811,13 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
                 var child = HostContainer.Children[i];
                 if (child is WindowsFormsHost wfh && wfh.Tag is Guid id && id == evt.ConnectionId)
                 {
+                    // [CITED: audit A3] Also drop the AirspaceSwapper registration —
+                    // this removal path runs seconds before OnHostUnmounted's
+                    // bookkeeping (fire-and-forget disconnect pipeline), and any
+                    // phantom duplicate removed here would never see HostUnmounted
+                    // at all. UnregisterHost is idempotent, so the later
+                    // OnHostUnmounted call for the primary host is harmless.
+                    _airspace.UnregisterHost(wfh);
                     HostContainer.Children.RemoveAt(i);
                 }
             }
@@ -658,18 +865,43 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             vm.ReconnectRequested += (_, _) => req.Handle.RaiseManualReconnect();
             vm.CloseRequested += (_, _) => req.Handle.RaiseManualClose();
 
-            // Hide the WFH behind the overlay (D-07) — session is already gone
-            // so no snapshot is meaningful; just collapse Visibility. Token
-            // restores the captured previous value on dispose.
-            IDisposable? token = null;
+            // [CITED: audit A3] Purge the dead session's WFH instead of merely
+            // hiding it (the previous D-07 HideWithoutSnapshot token). The
+            // coordinator's drop path deliberately never raises HostUnmounted for
+            // this host (the overlay must stay visible over the viewport), so
+            // without this purge the dead WFH stayed parented in HostContainer and
+            // registered in the AirspaceSwapper forever: one stale _hosts entry per
+            // drop (iterated on every drag), and after a successful reconnect a
+            // disposed orphan WFH sharing the fresh host's Tag — which broke the
+            // single-visible-WFH invariant because SetActiveHostVisibility sets ALL
+            // Tag matches Visible.
+            //
+            // ORDERING (verified against ConnectionCoordinator.OnDisconnectedAfterConnect):
+            // since audit C2 the coordinator defers host.Dispose() via
+            // _dispatcher.BeginInvoke, and it raises ReconnectOverlayRequested
+            // synchronously from the same dispatcher frame AFTER queueing that
+            // dispose. This handler's Dispatcher.Invoke therefore runs inline on
+            // the dispatcher thread before the frame unwinds — the queued dispose
+            // cannot have run yet, so rdp.Host is still valid here. Capture the
+            // WFH reference synchronously.
+            //
+            // Removing a DEAD host's WFH from the visual tree is NOT the forbidden
+            // re-parenting of RDP-ACTIVEX-PITFALLS §1 — it is never re-added; a
+            // successful reconnect mounts a brand-new host/WFH pair.
             var host = _tabHostManager.GetHost(id);
             if (host is RdpHostControl rdp)
             {
-                try { token = _airspace.HideWithoutSnapshot(rdp.Host); }
+                try
+                {
+                    var deadWfh = rdp.Host;
+                    _airspace.UnregisterHost(deadWfh);
+                    HostContainer.Children.Remove(deadWfh);
+                }
                 catch
                 {
-                    // Best-effort: if the host is already disposed the airspace
-                    // hide fails; the overlay still renders regardless.
+                    // Best-effort: if the host is already disposed the Host getter
+                    // throws ObjectDisposedException; OnHostMounted's same-Tag purge
+                    // is the defense-in-depth backstop. The overlay renders regardless.
                 }
             }
 
@@ -682,21 +914,20 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
             // overlay starts Collapsed and becomes Visible on tab switch.
             ctrl.Visibility = (_tabHostManager.ActiveId == id) ? Visibility.Visible : Visibility.Collapsed;
 
-            _overlays[id] = (ctrl, vm, token);
+            _overlays[id] = (ctrl, vm);
         });
     }
 
     /// <summary>
     /// Remove the overlay for a specific tab. No-op if no overlay is open for
-    /// <paramref name="id"/>. Dispose the airspace token first (restores WFH
-    /// Visibility), then remove the control from HostContainer. Best-effort
-    /// try/catch protects against a race where the token is already disposed.
+    /// <paramref name="id"/>. [CITED: audit A3] The airspace token disposal is
+    /// gone — the dead WFH is removed outright at overlay-request time, so there
+    /// is no captured visibility left to restore here.
     /// </summary>
     private void CloseOverlayFor(Guid id)
     {
         if (!_overlays.TryGetValue(id, out var entry)) return;
         _overlays.Remove(id);
-        try { entry.AirspaceToken?.Dispose(); } catch { /* best-effort */ }
         if (HostContainer.Children.Contains(entry.Control))
         {
             HostContainer.Children.Remove(entry.Control);

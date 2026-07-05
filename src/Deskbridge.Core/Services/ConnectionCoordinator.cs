@@ -44,7 +44,6 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
     // earliest point where duplicate requests can be seen and rejected.
     private readonly HashSet<Guid> _pendingConnects = new();
     private Guid? _activeId;
-    private IProtocolHost? _suppressedHost;
     private CancellationTokenSource? _reconnectCts;
     private bool _disposed;
 
@@ -474,10 +473,15 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             return;
         }
 
-        // Suppress the HostUnmounted/Dispose that the normal failure / closed pipeline
-        // would trigger — we want the overlay to stay visible over the viewport until
-        // either a fresh host mounts (success) or the user closes the overlay.
-        _suppressedHost = host;
+        // Session-drop path: deliberately do NOT raise HostUnmounted — the overlay
+        // must stay visible over the viewport until either a fresh host mounts
+        // (success) or the user closes the overlay. [CITED: audit A3] Because
+        // HostUnmounted is skipped, MainWindow's ReconnectOverlayRequested handler
+        // owns the dead WFH's cleanup (HostContainer removal + AirspaceSwapper
+        // unregister); it runs synchronously below, BEFORE the BeginInvoke-deferred
+        // Dispose, so the Host reference is still valid there. The old write-only
+        // `_suppressedHost` field that used to mark this path was dead state and
+        // was removed.
         _coordinatorHosts.Remove(host.ConnectionId);
         if (_activeId == host.ConnectionId) _activeId = null;
         try { host.DisconnectedAfterConnect -= OnDisconnectedAfterConnect; }
@@ -592,10 +596,6 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
             handle.Close?.Invoke();
             _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.Error));
         }
-        finally
-        {
-            _suppressedHost = null;
-        }
     }
 
     private void WireManualHandlers(ReconnectOverlayHandle handle, ConnectionModel model)
@@ -603,7 +603,6 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         handle.ManualReconnectRequested += async (_, _) =>
         {
             handle.Close?.Invoke();
-            _suppressedHost = null;
             try
             {
                 await _connect.ConnectAsync(model);
@@ -619,7 +618,6 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         {
             handle.Close?.Invoke();
             _bus.Publish(new ConnectionClosedEvent(model, DisconnectReason.UserInitiated));
-            _suppressedHost = null;
         };
     }
 
@@ -668,6 +666,5 @@ public sealed class ConnectionCoordinator : IConnectionCoordinator, IDisposable
         }
         _coordinatorHosts.Clear();
         _activeId = null;
-        _suppressedHost = null;
     }
 }

@@ -16,35 +16,49 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
             <DataTemplate DataType="{x:Type vm:ToastItemViewModel}">
-                <Border Style="{StaticResource ToastContainerStyle}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:SymbolIcon Grid.Column="0"
-                                       Symbol="{Binding Icon}"
-                                       FontSize="24"
-                                       VerticalAlignment="Top"
-                                       Margin="0,0,12,0" />
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="{Binding Title}"
-                                       Style="{StaticResource CardTitleStyle}" />
-                            <TextBlock Text="{Binding Message}"
-                                       Style="{StaticResource CaptionStyle}"
-                                       TextWrapping="Wrap"
-                                       Margin="0,4,0,0" />
-                        </StackPanel>
-                        <ui:Button Grid.Column="2"
-                                   Appearance="Transparent"
-                                   Width="24"
-                                   Height="24"
-                                   Padding="0"
-                                   Command="{Binding DismissCommand}">
-                            <ui:SymbolIcon Symbol="Dismiss16" FontSize="16" />
-                        </ui:Button>
-                    </Grid>
+                <!-- Audit A1 + WINFORMS-HOST-AIRSPACE §Popups: this control now renders
+                     inside a top-level Popup directly over the live RDP viewport.
+                     ToastContainerStyle's DeskbridgeCardBackgroundBrush is a translucent
+                     system fill (ControlFillColorSecondary), so an opaque backing Border
+                     (ApplicationBackgroundBrush) sits behind each card — the composite
+                     matches cards elsewhere in the app (which sit over the window
+                     background) and keeps toast text readable over moving session
+                     content. No acrylic/blur — doc caveat: transparency effects cannot
+                     composite over a WinForms child HWND. The backing carries the
+                     stack margin; the styled card zeroes its own Margin setter. -->
+                <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                        CornerRadius="8"
+                        Margin="0,0,0,8">
+                    <Border Style="{StaticResource ToastContainerStyle}" Margin="0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Grid.Column="0"
+                                           Symbol="{Binding Icon}"
+                                           FontSize="24"
+                                           VerticalAlignment="Top"
+                                           Margin="0,0,12,0" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Title}"
+                                           Style="{StaticResource CardTitleStyle}" />
+                                <TextBlock Text="{Binding Message}"
+                                           Style="{StaticResource CaptionStyle}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0" />
+                            </StackPanel>
+                            <ui:Button Grid.Column="2"
+                                       Appearance="Transparent"
+                                       Width="24"
+                                       Height="24"
+                                       Padding="0"
+                                       Command="{Binding DismissCommand}">
+                                <ui:SymbolIcon Symbol="Dismiss16" FontSize="16" />
+                            </ui:Button>
+                        </Grid>
+                    </Border>
                 </Border>
             </DataTemplate>
         </ItemsControl.ItemTemplate>

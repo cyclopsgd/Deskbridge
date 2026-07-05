@@ -37,9 +37,26 @@ public sealed class AirspaceSwapper : IDisposable
     private readonly Dictionary<WindowsFormsHost, Image> _hosts = new();
     private readonly List<HwndSource> _hookedSources = new();
     private readonly ILogger<AirspaceSwapper> _logger;
+
+    // Audit A6: the dispatcher that owns this instance, captured at construction.
+    // AssertDispatcher checks against THIS dispatcher — checking
+    // Dispatcher.CurrentDispatcher.CheckAccess() would be a tautology (always true).
+    private readonly Dispatcher _dispatcher;
     private bool _inSizeMove;
-    private bool _inDialogMode;
     private bool _disposed;
+
+    // Audit A4: dialog-scope depth counter. SnapshotAndHideAll/RestoreAll must be
+    // called in balanced pairs; nesting is supported — only the OUTERMOST
+    // SnapshotAndHideAll captures/hides and only the matching outermost RestoreAll
+    // restores. Inner pairs are no-ops. Without this, a nested SnapshotAndHideAll
+    // would overwrite _preDialogVisibility with the all-Collapsed state and the
+    // outer RestoreAll's null-fallback would set EVERY host Visible (stacked live
+    // RDP surfaces).
+    private int _dialogDepth;
+
+    // Dialog mode is derived from the depth counter so WndProc's dialog-mode guard
+    // stays correct across nested dialog scopes.
+    private bool InDialogMode => _dialogDepth > 0;
 
     // WR-06 (Phase 5 / Pattern 4): pre-drag visibility snapshot taken on
     // WM_ENTERSIZEMOVE and restored on WM_EXITSIZEMOVE. Multi-host support
@@ -59,6 +76,10 @@ public sealed class AirspaceSwapper : IDisposable
     public AirspaceSwapper(ILogger<AirspaceSwapper> logger)
     {
         _logger = logger;
+        // Capture the owning dispatcher (the UI thread's) at construction so every
+        // public member can assert affinity against it (audit A6). The NullLogger
+        // convenience ctor chains here, so capture happens exactly once.
+        _dispatcher = Dispatcher.CurrentDispatcher;
     }
 
     public void AttachToWindow(Window window)
@@ -94,6 +115,13 @@ public sealed class AirspaceSwapper : IDisposable
     public void UnregisterHost(WindowsFormsHost host)
     {
         ArgumentNullException.ThrowIfNull(host);
+        // Dispose-tolerant cleanup API — deliberately NOT ObjectDisposedException.ThrowIf
+        // like its siblings: the audit-A3 teardown paths (OnTabClosedSync,
+        // OnHostUnmounted's late fire-and-forget bookkeeping, the overlay-request
+        // purge) can run during app shutdown after the DI container has disposed
+        // this singleton; throwing would turn best-effort cleanup into a crash.
+        // Dispose() already cleared _hosts, so returning is the correct no-op.
+        if (_disposed) return;
         AssertDispatcher();
         _hosts.Remove(host);
     }
@@ -104,15 +132,26 @@ public sealed class AirspaceSwapper : IDisposable
     /// and collapses the WFH. Call before <c>ContentDialog.ShowAsync()</c> so the
     /// dialog renders on top of the frozen bitmap instead of behind the live HWND.
     /// Pair with <see cref="RestoreAll"/> in a <c>finally</c> block.
+    ///
+    /// <para>Contract (audit A4): must be called in balanced pairs with
+    /// <see cref="RestoreAll"/>. Nesting is supported — only the outermost call
+    /// captures the pre-dialog visibility and hides the hosts; inner calls are
+    /// no-ops that merely increment the scope depth.</para>
     /// </summary>
     public void SnapshotAndHideAll()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         AssertDispatcher();
 
-        _preDialogVisibility = _hosts.Keys.ToDictionary(h => h, h => h.Visibility);
-        _inDialogMode = true;
+        if (++_dialogDepth > 1)
+        {
+            _logger.LogDebug("[airspace] Dialog: nested dialog scope (depth={Depth}) — snapshot already held", _dialogDepth);
+            return;
+        }
 
+        _preDialogVisibility = _hosts.Keys.ToDictionary(h => h, h => h.Visibility);
+
+        var captured = 0;
         foreach (var (host, overlay) in _hosts)
         {
             // Skip hosts that are already Collapsed (background tabs).
@@ -124,6 +163,7 @@ public sealed class AirspaceSwapper : IDisposable
             {
                 overlay.Source = snapshot;
                 overlay.Visibility = Visibility.Visible;
+                captured++;
             }
 
             // Use Collapsed (not Hidden) — Hidden has been observed to cause the
@@ -131,18 +171,36 @@ public sealed class AirspaceSwapper : IDisposable
             host.Visibility = Visibility.Collapsed;
         }
 
-        _logger.LogDebug("[airspace] Dialog: snapshot taken, WFH visibility -> Collapsed (hosts={Count})", _hosts.Count);
+        _logger.LogDebug("[airspace] Dialog: snapshot taken, WFH visibility -> Collapsed (hosts={Count})", captured);
     }
 
     /// <summary>
     /// Restores every registered WFH to its pre-dialog visibility captured by
     /// <see cref="SnapshotAndHideAll"/>. Hides the snapshot overlays and clears
     /// the dialog-mode flag so <c>WM_ENTERSIZEMOVE</c> resumes normal operation.
+    ///
+    /// <para>Contract (audit A4): must be called in balanced pairs with
+    /// <see cref="SnapshotAndHideAll"/>. Nesting is supported — only the outermost
+    /// RestoreAll (depth 1→0) performs the actual restore; inner calls merely
+    /// decrement the scope depth. An unbalanced call (depth already 0) logs a
+    /// warning and is a no-op.</para>
     /// </summary>
     public void RestoreAll()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         AssertDispatcher();
+
+        if (_dialogDepth == 0)
+        {
+            _logger.LogWarning("[airspace] Dialog: unbalanced RestoreAll — no matching SnapshotAndHideAll; ignoring");
+            return;
+        }
+
+        if (--_dialogDepth > 0)
+        {
+            _logger.LogDebug("[airspace] Dialog: inner dialog scope closed (depth={Depth}) — restore deferred to outermost scope", _dialogDepth);
+            return;
+        }
 
         foreach (var (host, overlay) in _hosts)
         {
@@ -156,7 +214,6 @@ public sealed class AirspaceSwapper : IDisposable
         }
 
         _preDialogVisibility = null;
-        _inDialogMode = false;
 
         _logger.LogDebug("[airspace] Dialog: snapshot hidden, WFH visibility restored (hosts={Count})", _hosts.Count);
     }
@@ -205,6 +262,53 @@ public sealed class AirspaceSwapper : IDisposable
     }
 
     /// <summary>
+    /// [CITED: audit A5] Invalidates in-flight drag snapshots after a DPI change.
+    /// A cross-monitor drag is a size-move, so while <c>_inSizeMove</c> is true the
+    /// overlay Images may hold bitmaps captured at the OLD monitor's DPI — with
+    /// <c>Stretch=Fill</c> those would render visibly mis-scaled until
+    /// WM_EXITSIZEMOVE. Recaptures each host that contributed a snapshot (pre-drag
+    /// Visible per <see cref="_preDragVisibility"/>; <c>PrintWindow</c> works on the
+    /// hidden HWND); if recapture fails, clears the overlay so nothing stale renders.
+    /// No-op outside a size-move.
+    /// </summary>
+    public void InvalidateSnapshots()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        AssertDispatcher();
+
+        // Dialog snapshots are owned by the SnapshotAndHideAll/RestoreAll scope; a
+        // DPI recapture mid-dialog would overwrite/clear the dialog snapshot.
+        if (InDialogMode) return;
+
+        if (!_inSizeMove || _preDragVisibility is null) return;
+
+        foreach (var (host, overlay) in _hosts)
+        {
+            // Only hosts that were Visible pre-drag were captured into an overlay
+            // in the WM_ENTERSIZEMOVE branch — recapture exactly those. (Multiple
+            // hosts may share one overlay Image; keying off the pre-drag snapshot
+            // dict keeps the recapture sourced from the host that owns the frame.)
+            if (!_preDragVisibility.TryGetValue(host, out var v) || v != Visibility.Visible)
+                continue;
+
+            var snapshot = CaptureHwnd(host);
+            if (snapshot is not null)
+            {
+                overlay.Source = snapshot;
+                overlay.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                // Better a blank viewport than a wrongly-scaled stale frame.
+                overlay.Source = null;
+                overlay.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        _logger.LogDebug("[airspace] DPI change during size-move: drag snapshots invalidated (hosts={Count})", _hosts.Count);
+    }
+
+    /// <summary>
     /// Hides the given WFH without capturing a bitmap snapshot. Returns an
     /// <see cref="IDisposable"/> whose <see cref="IDisposable.Dispose"/> restores
     /// <see cref="UIElement.Visibility"/> to <see cref="Visibility.Visible"/>.
@@ -235,13 +339,14 @@ public sealed class AirspaceSwapper : IDisposable
         _hosts.Clear();
         _preDragVisibility = null;
         _preDialogVisibility = null;
+        _dialogDepth = 0;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         // Dialog mode: hosts are already hidden by SnapshotAndHideAll; a drag
         // during dialog should not double-snapshot or interfere with restore.
-        if (_inDialogMode) return IntPtr.Zero;
+        if (InDialogMode) return IntPtr.Zero;
 
         if (msg == WM_ENTERSIZEMOVE && !_inSizeMove)
         {
@@ -251,13 +356,22 @@ public sealed class AirspaceSwapper : IDisposable
             // tab switch; restoring unconditionally to Visible on WM_EXITSIZEMOVE would
             // briefly expose every background host's live RDP surface.
             _preDragVisibility = _hosts.Keys.ToDictionary(h => h, h => h.Visibility);
+            var captured = 0;
             foreach (var (host, overlay) in _hosts)
             {
+                // Skip hosts that are already Collapsed (background tabs). Without this
+                // guard every background host would overwrite the shared snapshot overlay
+                // (last-enumerated wins), so the drag-freeze frame could show a background
+                // session instead of the active one (audit A2).
+                if (host.Visibility == Visibility.Collapsed)
+                    continue;
+
                 var snapshot = CaptureHwnd(host);
                 if (snapshot is not null)
                 {
                     overlay.Source = snapshot;
                     overlay.Visibility = Visibility.Visible;
+                    captured++;
                 }
                 // Use Collapsed (not Hidden) — Hidden has been observed to cause the
                 // hosted AxHost child HWND to be torn down on some servers (e.g. xrdp),
@@ -267,7 +381,7 @@ public sealed class AirspaceSwapper : IDisposable
                 // (and its keep-alive ping stream) survives the drag/resize gesture.
                 host.Visibility = Visibility.Collapsed;
             }
-            _logger.LogDebug("[airspace] ENTERSIZEMOVE: snapshot taken, WFH visibility -> Collapsed (hosts={Count})", _hosts.Count);
+            _logger.LogDebug("[airspace] ENTERSIZEMOVE: snapshot taken, WFH visibility -> Collapsed (hosts={Count})", captured);
         }
         else if (msg == WM_EXITSIZEMOVE && _inSizeMove)
         {
@@ -328,11 +442,14 @@ public sealed class AirspaceSwapper : IDisposable
         }
     }
 
-    private static void AssertDispatcher()
+    private void AssertDispatcher()
     {
-        if (!Dispatcher.CurrentDispatcher.CheckAccess())
+        // Audit A6: assert against the dispatcher captured in the ctor, not
+        // Dispatcher.CurrentDispatcher (which is created on demand for the calling
+        // thread, so CheckAccess() against it is always true).
+        if (!_dispatcher.CheckAccess())
         {
-            throw new InvalidOperationException("AirspaceSwapper must be invoked on the UI dispatcher thread.");
+            throw new InvalidOperationException("AirspaceSwapper must be invoked on the UI dispatcher thread that constructed it.");
         }
     }
 

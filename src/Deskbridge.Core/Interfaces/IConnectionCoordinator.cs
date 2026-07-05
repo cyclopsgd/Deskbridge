@@ -31,8 +31,14 @@ public interface IConnectionCoordinator
     /// <summary>
     /// Raised when a post-connect disconnect triggers a reconnect episode (Plan 04-03).
     /// MainWindow creates a <c>ReconnectOverlayViewModel</c>, bridges it to the
-    /// supplied <see cref="ReconnectOverlayHandle"/>, and mounts the overlay via
-    /// <see cref="Deskbridge.Protocols.Rdp.AirspaceSwapper.HideWithoutSnapshot"/>.
+    /// supplied <see cref="ReconnectOverlayHandle"/>, mounts the overlay, and
+    /// [CITED: audit A3] purges the dead host's WFH from the viewport (HostContainer
+    /// removal + AirspaceSwapper unregister) — <see cref="HostUnmounted"/> is
+    /// deliberately NOT raised on this path.
+    ///
+    /// <para>ORDERING CONTRACT: this event is raised synchronously on the dispatcher,
+    /// in the same frame that queues the deferred <c>host.Dispose()</c> (audit C2), so
+    /// synchronous subscribers may still safely access the host's view.</para>
     /// </summary>
     event EventHandler<ReconnectUiRequest>? ReconnectOverlayRequested;
 
