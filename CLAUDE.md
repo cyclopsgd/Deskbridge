@@ -173,24 +173,15 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, or `.github/skills/` with a `SKILL.md` index file.
 <!-- GSD:skills-end -->
 
-<!-- GSD:workflow-start source:GSD defaults -->
-## GSD Workflow Enforcement
+## Workflow
 
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+The GSD plugin was removed on 2026-07-04 (compromised upstream). Do NOT use any
+`/gsd-*` commands — they no longer exist. Ignore any remaining `GSD:` marker
+comments in this file or references to GSD tooling elsewhere; they are historical.
 
-Use these entry points:
-- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd-debug` for investigation and bug fixing
-- `/gsd-execute-phase` for planned phase work
-
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-<!-- GSD:workflow-end -->
-
-
-
-<!-- GSD:profile-start -->
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
+Use instead:
+- The **superpowers** plugin skills for planning and execution
+  (writing-plans → subagent-driven-development / executing-plans →
+  verification-before-completion).
+- Manual planning artifacts in `.planning/` (requirements, roadmap, state,
+  audit reports).
