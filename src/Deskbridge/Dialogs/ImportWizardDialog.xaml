@@ -17,10 +17,10 @@
                TargetType="{x:Type local:ImportWizardDialog}" />
     </ui:ContentDialog.Resources>
 
-    <Grid MinWidth="440" MinHeight="200">
+    <Grid Margin="{StaticResource DialogContentMargin}" MinWidth="440" MinHeight="200">
         <!-- Step 1: Source Selection -->
         <StackPanel Visibility="{Binding IsStep1, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="Import from:" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Text="Import from" Style="{StaticResource CardTitleStyle}" Margin="0,0,0,8" />
             <ComboBox ItemsSource="{Binding AvailableImporters}"
                       SelectedItem="{Binding SelectedImporter}"
                       DisplayMemberPath="SourceName"
@@ -32,14 +32,14 @@
 
         <!-- Step 2: File Picker -->
         <StackPanel Visibility="{Binding IsStep2, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="Select configuration file:" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Text="Select configuration file" Style="{StaticResource CardTitleStyle}" Margin="0,0,0,8" />
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBox Text="{Binding FilePath}" IsReadOnly="True" />
-                <ui:Button Grid.Column="1" Content="Browse..."
+                <ui:Button Grid.Column="1" Content="Browse…"
                            Command="{Binding BrowseFileCommand}" Margin="8,0,0,0" />
             </Grid>
             <!-- Error display for invalid/encrypted files -->
@@ -55,9 +55,8 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" FontWeight="SemiBold" Margin="0,0,0,8">
-                <Run Text="Select connections to import:" />
-            </TextBlock>
+            <TextBlock Grid.Row="0" Text="Select connections to import"
+                       Style="{StaticResource CardTitleStyle}" Margin="0,0,0,8" />
             <TreeView Grid.Row="1" ItemsSource="{Binding PreviewItems}"
                       MaxHeight="300" MinHeight="200">
                 <TreeView.ItemTemplate>
@@ -132,9 +131,11 @@
         <!-- Processing overlay
              Phase 22 Plan 22-02 (IMP-03 / UI-SPEC §"Progress Surface — Layout"):
              forked branches by IsImportWriteInProgress.
-              - Parse phase (existing): indeterminate ProgressRing + "Processing..."
+              - Parse phase (existing): indeterminate ProgressRing + "Processing…"
               - Write phase (Phase 22 new): determinate ProgressBar + "{N} of {Total}" caption -->
-        <Grid Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
+        <!-- Negative margin cancels the root Grid's DialogContentMargin (16,12) so the
+             dim scrim reaches the dialog edges instead of leaving an undimmed ring. -->
+        <Grid Margin="-16,-12" Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
             <Border Background="{DynamicResource ApplicationBackgroundBrush}" Opacity="0.7" />
 
             <!-- Parse-phase indicator (preserved verbatim per UI-SPEC §"Parse-phase indicator").
@@ -142,7 +143,7 @@
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                         Visibility="{Binding IsImportWriteInProgress, Converter={StaticResource InverseBoolToVisibility}}">
                 <ui:ProgressRing IsIndeterminate="True" Width="32" Height="32" />
-                <TextBlock Text="Processing..." Margin="0,8,0,0"
+                <TextBlock Text="Processing…" Margin="0,8,0,0"
                            HorizontalAlignment="Center"
                            Style="{StaticResource BodyMutedStyle}" />
             </StackPanel>

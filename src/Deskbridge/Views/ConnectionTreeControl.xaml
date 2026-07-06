@@ -37,7 +37,7 @@
                       Command="{Binding CopyHostnameCommand}"
                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
-            <MenuItem Header="Move to..."
+            <MenuItem Header="Move to…"
                       Icon="{ui:SymbolIcon ArrowMove24}" />
             <MenuItem Header="New Connection"
                       Icon="{ui:SymbolIcon Add24}"
@@ -82,7 +82,7 @@
                       Command="{Binding NewGroupCommand}"
                       CommandParameter="{Binding PlacementTarget.DataContext.Id, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
             <Separator />
-            <MenuItem Header="Move to..."
+            <MenuItem Header="Move to…"
                       Icon="{ui:SymbolIcon ArrowMove24}" />
             <Separator />
             <MenuItem Header="Delete"
@@ -99,7 +99,7 @@
             <MenuItem Header="Edit…"
                       Icon="{ui:SymbolIcon Edit24}"
                       Command="{Binding EditSelectedCommand}" />
-            <MenuItem Header="Move to..."
+            <MenuItem Header="Move to…"
                       Icon="{ui:SymbolIcon ArrowMove24}" />
             <MenuItem Header="Delete"
                       Icon="{ui:SymbolIcon Delete24}"
@@ -181,7 +181,7 @@
                             <!-- OUTER Border: no Grid.Column so it stretches to full row width -->
                             <Border x:Name="RowBorder"
                                     BorderThickness="0"
-                                    MinHeight="28"
+                                    MinHeight="{StaticResource RowHeight}"
                                     CornerRadius="{DynamicResource ControlCornerRadius}"
                                     Margin="0,0,0,1"
                                     SnapsToDevicePixels="True">
@@ -263,9 +263,32 @@
                             <Trigger Property="HasItems" Value="False">
                                 <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
                             </Trigger>
-                            <!-- TREE-02: Animated hover (150ms fade-in/out) -->
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
+                            <!-- TREE-02: Animated hover (150ms fade-in/out).
+                                 Audit U1: HoverExit carries FillBehavior="Stop" (matching
+                                 MainWindow's three hover-exit storyboards) so the finished
+                                 exit fade releases RowBrush.Color instead of holding
+                                 Transparent. The trigger is additionally gated on
+                                 IsSelected=False: hover storyboards share RowBrush.Color with
+                                 SelectEnter, and BeginStoryboard's default SnapshotAndReplace
+                                 handoff disconnects SelectEnter's holding clock — so a hover
+                                 exit on a selected row left the accent fill masked (the
+                                 brush's base value is Transparent). Gating keeps hover
+                                 animations off selected rows entirely; selection stays the
+                                 dominant visual per WPF-TREEVIEW-PATTERNS §2.4.
+                                 Ordering invariant: the selection DataTrigger below must stay
+                                 declared AFTER this hover MultiDataTrigger — the later-declared
+                                 trigger's BeginStoryboard wins the SnapshotAndReplace handoff on
+                                 the shared RowBrush.Color, so reordering reintroduces the
+                                 masked-accent bug.
+                                 Accepted gap: deselecting a hovered row holds Transparent until
+                                 the mouse re-enters (SelectExit's clock replaces HoverEnter);
+                                 accepted as a rare interleave. -->
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                                    <Condition Binding="{Binding IsSelected}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <MultiDataTrigger.EnterActions>
                                     <BeginStoryboard x:Name="HoverEnter">
                                         <Storyboard>
                                             <ColorAnimation
@@ -275,10 +298,10 @@
                                                 Duration="0:0:0.15" />
                                         </Storyboard>
                                     </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
+                                </MultiDataTrigger.EnterActions>
+                                <MultiDataTrigger.ExitActions>
                                     <BeginStoryboard x:Name="HoverExit">
-                                        <Storyboard>
+                                        <Storyboard FillBehavior="Stop">
                                             <ColorAnimation
                                                 Storyboard.TargetName="RowBrush"
                                                 Storyboard.TargetProperty="Color"
@@ -286,8 +309,8 @@
                                                 Duration="0:0:0.15" />
                                         </Storyboard>
                                     </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
+                                </MultiDataTrigger.ExitActions>
+                            </MultiDataTrigger>
 
                             <!--
                               Selection visual bound to the VM's IsSelected (not the
@@ -311,7 +334,7 @@
                                 </DataTrigger.EnterActions>
                                 <DataTrigger.ExitActions>
                                     <BeginStoryboard x:Name="SelectExit">
-                                        <Storyboard>
+                                        <Storyboard FillBehavior="Stop">
                                             <ColorAnimation
                                                 Storyboard.TargetName="RowBrush"
                                                 Storyboard.TargetProperty="Color"
@@ -335,15 +358,15 @@
             <RowDefinition Height="*" MinHeight="100" />      <!-- Row 1: TreeView -->
             <RowDefinition Height="Auto" />   <!-- Row 2: GridSplitter -->
             <!-- Row 3: Combined panel (header + body). GridSplitter resizes this row. -->
-            <RowDefinition x:Name="QuickPropertiesRow" Height="290" MinHeight="28" MaxHeight="500" />
+            <RowDefinition x:Name="QuickPropertiesRow" Height="290" MinHeight="{StaticResource RowHeight}" MaxHeight="500" />
         </Grid.RowDefinitions>
 
         <!-- Search filter (Row 0) -->
         <ui:TextBox Grid.Row="0"
             Icon="{ui:SymbolIcon Search16}"
-            PlaceholderText="Filter connections..."
+            PlaceholderText="Filter connections…"
             ClearButtonEnabled="True"
-            Height="28"
+            MinHeight="28"
             Margin="8,4,8,4"
             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
@@ -371,7 +394,7 @@
                     <!-- Group template (HierarchicalDataTemplate for nesting) -->
                     <HierarchicalDataTemplate DataType="{x:Type vm:GroupTreeItemViewModel}"
                                               ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" Height="28" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Height="{StaticResource RowHeight}" VerticalAlignment="Center">
                             <ui:SymbolIcon FontSize="16" Margin="0,0,4,0"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            VerticalAlignment="Center">
@@ -423,7 +446,7 @@
 
                     <!-- Connection template -->
                     <DataTemplate DataType="{x:Type vm:ConnectionTreeItemViewModel}">
-                        <StackPanel Orientation="Horizontal" Height="28" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Height="{StaticResource RowHeight}" VerticalAlignment="Center"
                                     ToolTip="{Binding Hostname}">
                             <!-- TREE-01: Status dot (8x8, colored by per-item ConnectionState) -->
                             <Ellipse x:Name="StatusDot" Width="8" Height="8"
@@ -510,8 +533,10 @@
                 BorderBrush="{StaticResource PanelEdgeGradientHorizontalSoft}"
                 BorderThickness="0,1,0,0">
             <DockPanel LastChildFill="True">
-                <!-- Header — always visible -->
-                <Border DockPanel.Dock="Top" Height="28">
+                <!-- Header — always visible. Height matches the RowHeight token; the
+                     code-behind HeaderHeight constant (28) mirrors this for the
+                     collapsed-row calculation. -->
+                <Border DockPanel.Dock="Top" Height="{StaticResource RowHeight}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -860,25 +885,30 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" MinHeight="28" />
-                                        <RowDefinition Height="Auto" MinHeight="28" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
+                                    <!-- Audit U2: mirrors the connection card's Name row
+                                         (ui:TextBox, FontSize 14, Margin 0,4 — no explicit
+                                         Height per WPF-UI-PITFALLS §8a). -->
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
-                                               Style="{StaticResource FieldLabelCompactStyle}" />
-                                    <TextBox Grid.Row="0" Grid.Column="1"
-                                             Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
-                                             Height="24" Padding="4,4" FontSize="14"
-                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                             x:Name="GroupNameTextBox"
-                                             LostFocus="GroupQuickProperty_LostFocus" />
+                                               Style="{StaticResource FieldLabelCompactStyle}"
+                                               Margin="0,4" />
+                                    <ui:TextBox Grid.Row="0" Grid.Column="1"
+                                                Text="{Binding PrimarySelectedItem.Name, UpdateSourceTrigger=LostFocus}"
+                                                FontSize="14" Margin="0,4"
+                                                x:Name="GroupNameTextBox"
+                                                LostFocus="GroupQuickProperty_LostFocus" />
 
                                     <!-- Connections count — read-only computed value (D-06) -->
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Connections"
-                                               Style="{StaticResource FieldLabelCompactStyle}" />
+                                               Style="{StaticResource FieldLabelCompactStyle}"
+                                               Margin="0,4" />
                                     <TextBlock Grid.Row="1" Grid.Column="1"
                                                Text="{Binding PrimarySelectedItem.ConnectionCount}"
-                                               Style="{StaticResource ReadOnlyFieldStyle}" />
+                                               Style="{StaticResource ReadOnlyFieldStyle}"
+                                               Margin="0,4" />
                                 </Grid>
                             </Border>
                         </Grid>

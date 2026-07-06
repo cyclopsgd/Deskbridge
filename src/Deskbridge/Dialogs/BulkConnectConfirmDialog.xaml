@@ -18,15 +18,8 @@
 
     <StackPanel Margin="{StaticResource DialogContentMargin}" MinWidth="340">
 
-        <!-- Title row: amber Warning24 glyph beside the heading. -->
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-            <ui:SymbolIcon Symbol="Warning24"
-                Foreground="{DynamicResource DeskbridgeWarningBrush}"
-                FontSize="20" VerticalAlignment="Center" Margin="0,0,8,0" />
-            <TextBlock Text="Many active sessions"
-                Style="{StaticResource BodyStyle}"
-                VerticalAlignment="Center" />
-        </StackPanel>
+        <!-- Audit U4: the InfoBar carries the warning icon + title + message itself —
+             no custom title row (a duplicate glyph/heading row was removed here). -->
 
         <!-- WR-04: the parameterized count+threshold sentence is the SINGLE source of warning
              copy. It is injected from ctor params (x:Name) into the InfoBar's Message below so

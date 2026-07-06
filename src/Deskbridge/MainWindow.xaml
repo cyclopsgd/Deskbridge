@@ -23,25 +23,29 @@
     </ui:FluentWindow.InputBindings>
 
     <Grid>
+        <!-- Audit U10: chrome sizes come from SpacingResources tokens; rows that
+             hold a fixed-height element are Auto so the element is the single
+             authority for its height. -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />  <!-- Row 0: TitleBar (32px) -->
+            <RowDefinition Height="Auto" />  <!-- Row 0: TitleBar (TitleBarHeight) -->
             <RowDefinition Height="*" />     <!-- Row 1: Main content area -->
-            <RowDefinition Height="22" />    <!-- Row 2: Status bar -->
+            <RowDefinition Height="Auto" />  <!-- Row 2: Status bar (StatusBarHeight) -->
         </Grid.RowDefinitions>
 
         <!-- Title Bar -->
-        <ui:TitleBar Grid.Row="0" Title="Deskbridge" Height="32" />
+        <ui:TitleBar Grid.Row="0" Title="Deskbridge" Height="{StaticResource TitleBarHeight}" />
 
         <!-- Main content area -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="36" />    <!-- Column 0: Icon rail -->
-                <ColumnDefinition Width="Auto" />  <!-- Column 1: Slide-out panel -->
+                <ColumnDefinition Width="Auto" />  <!-- Column 0: Icon rail (IconRailWidth) -->
+                <ColumnDefinition Width="Auto" />  <!-- Column 1: Slide-out panel (PanelWidth) -->
                 <ColumnDefinition Width="*" />     <!-- Column 2: Editor area -->
             </Grid.ColumnDefinitions>
 
             <!-- Icon Rail (Column 0) -->
             <Border Grid.Column="0"
+                Width="{StaticResource IconRailWidth}"
                 Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
                 BorderBrush="{StaticResource PanelEdgeGradientVertical}"
                 BorderThickness="0,0,1,0">
@@ -76,7 +80,8 @@
                         <ui:Button
                             Appearance="Transparent"
                             Icon="{ui:SymbolIcon Settings24}"
-                            Width="36" Height="36"
+                            Width="{StaticResource IconRailWidth}"
+                            Height="{StaticResource IconRailWidth}"
                             Padding="0"
                             Command="{Binding TogglePanelCommand}"
                             CommandParameter="{x:Static models:PanelMode.Settings}"
@@ -127,7 +132,8 @@
                             <ui:Button
                                 Appearance="Transparent"
                                 Icon="{ui:SymbolIcon PlugConnected24}"
-                                Width="36" Height="36"
+                                Width="{StaticResource IconRailWidth}"
+                                Height="{StaticResource IconRailWidth}"
                                 Padding="0"
                                 Command="{Binding TogglePanelCommand}"
                                 CommandParameter="{x:Static models:PanelMode.Connections}"
@@ -154,7 +160,7 @@
 
             <!-- Slide-out Panel (Column 1) -->
             <Border Grid.Column="1"
-                Width="240"
+                Width="{StaticResource PanelWidth}"
                 Visibility="{Binding IsPanelVisible, Converter={StaticResource BoolToVisibility}}"
                 Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
                 BorderBrush="{StaticResource PanelEdgeGradientVertical}"
@@ -242,7 +248,7 @@
 
                             <TextBlock Text="SECURITY"
                                        Style="{StaticResource SectionLabelStyle}"
-                                       Margin="0,16,0,4" />
+                                       Margin="{StaticResource SectionLabelMarginBetween}" />
                             <Border Style="{StaticResource CardContainerStyle}">
                                 <StackPanel>
                                     <!-- Require Password/PIN toggle -->
@@ -284,7 +290,7 @@
                             <!-- Phase 18 Plan 18-03: BULK OPERATIONS section (D-04/D-05) -->
                             <TextBlock Text="BULK OPERATIONS"
                                        Style="{StaticResource SectionLabelStyle}"
-                                       Margin="0,16,0,4" />
+                                       Margin="{StaticResource SectionLabelMarginBetween}" />
                             <Border Style="{StaticResource CardContainerStyle}">
                                 <StackPanel>
                                     <TextBlock Text="Confirm before bulk operations"
@@ -314,10 +320,10 @@
                             <!-- Phase 7 Plan 07-04: DATA section for import/export -->
                             <TextBlock Text="DATA"
                                        Style="{StaticResource SectionLabelStyle}"
-                                       Margin="0,16,0,4" />
+                                       Margin="{StaticResource SectionLabelMarginBetween}" />
                             <Border Style="{StaticResource CardContainerStyle}">
                                 <StackPanel>
-                                    <ui:Button Content="Import Connections..."
+                                    <ui:Button Content="Import Connections…"
                                                Icon="{ui:SymbolIcon ArrowImport24}"
                                                HorizontalAlignment="Stretch" Margin="0,0,0,8"
                                                Click="ImportConnectionsButton_Click" />
@@ -335,7 +341,7 @@
                             <!-- Phase 18 Plan 18-03: UNINSTALL section (D-07/D-08/D-09) -->
                             <TextBlock Text="UNINSTALL"
                                        Style="{StaticResource SectionLabelStyle}"
-                                       Margin="0,16,0,4" />
+                                       Margin="{StaticResource SectionLabelMarginBetween}" />
                             <Border Style="{StaticResource CardContainerStyle}">
                                 <StackPanel>
                                     <TextBlock Text="Clean up application data on uninstall"
@@ -357,13 +363,13 @@
             <!-- Editor Area (Column 2) -->
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="30" />  <!-- Row 0: Tab bar -->
-                    <RowDefinition Height="*" />   <!-- Row 1: Viewport -->
+                    <RowDefinition Height="Auto" />  <!-- Row 0: Tab bar (TabBarHeight) -->
+                    <RowDefinition Height="*" />     <!-- Row 1: Viewport -->
                 </Grid.RowDefinitions>
 
                 <!-- Tab Bar (Editor Row 0, D-06 custom, D-07 always visible) -->
                 <Border Grid.Row="0"
-                    Height="30"
+                    Height="{StaticResource TabBarHeight}"
                     Background="{DynamicResource DeskbridgePanelBackgroundBrush}"
                     BorderBrush="{StaticResource PanelEdgeGradientHorizontal}"
                     BorderThickness="0,0,0,1">
@@ -378,7 +384,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border x:Name="TabBorder" Height="30" Padding="8,0"
+                                    <Border x:Name="TabBorder" Height="{StaticResource TabBarHeight}" Padding="8,0"
                                         Margin="0,0,1,0"
                                         Cursor="Hand"
                                         BorderThickness="0,2,0,0"
@@ -589,6 +595,7 @@
 
         <!-- Status Bar (Root Grid Row 2) -->
         <Border Grid.Row="2"
+            Height="{StaticResource StatusBarHeight}"
             Background="{DynamicResource SystemAccentColorPrimaryBrush}">
             <DockPanel Margin="{StaticResource StatusBarContentMargin}">
                 <TextBlock DockPanel.Dock="Right"

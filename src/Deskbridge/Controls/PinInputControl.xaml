@@ -15,7 +15,8 @@
             <Setter Property="MaxLength" Value="1" />
             <Setter Property="TextAlignment" Value="Center" />
             <Setter Property="FontSize" Value="22" />
-            <Setter Property="FontFamily" Value="Segoe UI" />
+            <!-- Audit U16: no FontFamily — inherit the app default like every other
+                 control (design rule: FontFamily is never hardcoded). -->
             <Setter Property="CaretBrush" Value="{DynamicResource TextFillColorPrimaryBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -24,15 +25,36 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                        <Border x:Name="CellBorder"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 CornerRadius="4">
-                            <ScrollViewer x:Name="PART_ContentHost"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          Focusable="False" />
+                            <Grid>
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Focusable="False" />
+                                <!-- Audit U6: 2px accent underline marks the focused cell,
+                                     matching WPF-UI's Fluent text-input focus treatment
+                                     used by every other input in the app. -->
+                                <Border x:Name="FocusUnderline"
+                                        Height="2"
+                                        VerticalAlignment="Bottom"
+                                        CornerRadius="0,0,3,3"
+                                        Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                        Visibility="Collapsed"
+                                        IsHitTestVisible="False" />
+                            </Grid>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="FocusUnderline" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CellBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

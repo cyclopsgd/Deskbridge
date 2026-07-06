@@ -16,7 +16,7 @@
                TargetType="{x:Type local:UpdateConfirmDialog}" />
     </ui:ContentDialog.Resources>
 
-    <StackPanel Margin="0,8">
+    <StackPanel Margin="{StaticResource DialogContentMargin}">
         <TextBlock Style="{StaticResource BodyStyle}"
                    TextWrapping="Wrap">
             Update has been downloaded and is ready to install.

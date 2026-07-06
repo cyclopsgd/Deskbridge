@@ -199,7 +199,7 @@
             <ui:TextBox Text="{Binding Notes}" AcceptsReturn="True"
                 TextWrapping="Wrap" MinHeight="320" Margin="{StaticResource DialogContentMargin}"
                 VerticalScrollBarVisibility="Auto"
-                PlaceholderText="Add notes about this connection..." />
+                PlaceholderText="Add notes about this connection…" />
         </TabItem>
 
     </TabControl>

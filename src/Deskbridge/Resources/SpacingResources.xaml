@@ -15,13 +15,19 @@
     <Thickness x:Key="FormFieldSpacing">0,0,0,12</Thickness>
     <Thickness x:Key="SectionSpacing">0,0,0,16</Thickness>
     <Thickness x:Key="SectionLabelMargin">0,8,0,4</Thickness>
+    <!-- Section label preceded by another section (16px separation vs 8px lead-in) -->
+    <Thickness x:Key="SectionLabelMarginBetween">0,16,0,4</Thickness>
     <Thickness x:Key="CardPadding">12</Thickness>
     <Thickness x:Key="CardPaddingLarge">16</Thickness>
     <Thickness x:Key="PanelContentMargin">12,8,12,12</Thickness>
     <Thickness x:Key="DialogContentMargin">16,12</Thickness>
     <Thickness x:Key="StatusBarContentMargin">8,0</Thickness>
 
-    <!-- Numeric values for non-Thickness usage (Height, Width, FontSize) -->
+    <!-- Numeric values for non-Thickness usage (Height, Width, FontSize).
+         Chrome sizes (audit U10): consumed by MainWindow.xaml (TitleBarHeight,
+         TabBarHeight, IconRailWidth, PanelWidth, StatusBarHeight) and
+         ConnectionTreeControl.xaml (RowHeight). These are the single authority
+         for the fixed shell dimensions in the design skill (32/36/240/30/22/28). -->
     <sys:Double x:Key="SpacingUnit">4</sys:Double>
     <sys:Double x:Key="RowHeight">28</sys:Double>
     <sys:Double x:Key="TabBarHeight">30</sys:Double>

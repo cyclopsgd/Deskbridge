@@ -26,40 +26,77 @@
                      content. No acrylic/blur — doc caveat: transparency effects cannot
                      composite over a WinForms child HWND. The backing carries the
                      stack margin; the styled card zeroes its own Margin setter. -->
+                <!-- Audit U3: shadow lives on this opaque backing Border (design rule:
+                     toasts + dialogs get shadows) — on the translucent styled card the
+                     shadow would show through the fill. -->
                 <Border Background="{DynamicResource ApplicationBackgroundBrush}"
                         CornerRadius="8"
-                        Margin="0,0,0,8">
-                    <Border Style="{StaticResource ToastContainerStyle}" Margin="0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ui:SymbolIcon Grid.Column="0"
-                                           Symbol="{Binding Icon}"
-                                           FontSize="24"
-                                           VerticalAlignment="Top"
-                                           Margin="0,0,12,0" />
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="{Binding Title}"
-                                           Style="{StaticResource CardTitleStyle}" />
-                                <TextBlock Text="{Binding Message}"
-                                           Style="{StaticResource CaptionStyle}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,4,0,0" />
-                            </StackPanel>
-                            <ui:Button Grid.Column="2"
-                                       Appearance="Transparent"
-                                       Width="24"
-                                       Height="24"
-                                       Padding="0"
-                                       Command="{Binding DismissCommand}">
-                                <ui:SymbolIcon Symbol="Dismiss16" FontSize="16" />
-                            </ui:Button>
-                        </Grid>
-                    </Border>
+                        Margin="0,0,0,8"
+                        Effect="{StaticResource DeskbridgeToastShadow}">
+                    <Grid>
+                        <Border Style="{StaticResource ToastContainerStyle}" Margin="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon x:Name="SeverityIcon"
+                                               Grid.Column="0"
+                                               Symbol="{Binding Icon}"
+                                               FontSize="24"
+                                               VerticalAlignment="Top"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Margin="0,0,12,0" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Title}"
+                                               Style="{StaticResource CardTitleStyle}" />
+                                    <TextBlock Text="{Binding Message}"
+                                               Style="{StaticResource CaptionStyle}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                                <ui:Button Grid.Column="2"
+                                           Appearance="Transparent"
+                                           Width="24"
+                                           Height="24"
+                                           Padding="0"
+                                           Command="{Binding DismissCommand}">
+                                    <ui:SymbolIcon Symbol="Dismiss16" FontSize="16" />
+                                </ui:Button>
+                            </Grid>
+                        </Border>
+                        <!-- Audit U13: 3px severity accent at the card's left edge (design
+                             kit toast spec). Rendered as an inset rounded stripe — the
+                             app's accent-stripe idiom (tree rows) adapted to the card's
+                             8px corner radius. Transparent for Info; colored below via
+                             DataTemplate.Triggers. -->
+                        <Border x:Name="SeverityAccent"
+                                Width="3"
+                                HorizontalAlignment="Left"
+                                Margin="1,8,0,8"
+                                CornerRadius="1.5"
+                                Background="Transparent"
+                                IsHitTestVisible="False" />
+                    </Grid>
                 </Border>
+                <!-- Audit U13: severity icon colour + left accent from the toast's
+                     ControlAppearance (ToastItemViewModel.Appearance). Info keeps the
+                     neutral defaults set on the elements above. -->
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding Appearance}" Value="Success">
+                        <Setter TargetName="SeverityIcon" Property="Foreground" Value="{DynamicResource DeskbridgeSuccessBrush}" />
+                        <Setter TargetName="SeverityAccent" Property="Background" Value="{DynamicResource DeskbridgeSuccessBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Appearance}" Value="Caution">
+                        <Setter TargetName="SeverityIcon" Property="Foreground" Value="{DynamicResource DeskbridgeWarningBrush}" />
+                        <Setter TargetName="SeverityAccent" Property="Background" Value="{DynamicResource DeskbridgeWarningBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Appearance}" Value="Danger">
+                        <Setter TargetName="SeverityIcon" Property="Foreground" Value="{DynamicResource DeskbridgeErrorBrush}" />
+                        <Setter TargetName="SeverityAccent" Property="Background" Value="{DynamicResource DeskbridgeErrorBrush}" />
+                    </DataTrigger>
+                </DataTemplate.Triggers>
             </DataTemplate>
         </ItemsControl.ItemTemplate>
     </ItemsControl>

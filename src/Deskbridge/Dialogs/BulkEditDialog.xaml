@@ -19,8 +19,9 @@
 
     <StackPanel Margin="{StaticResource DialogContentMargin}" MinWidth="440">
 
-        <!-- Section label -->
-        <TextBlock Text="FIELDS TO EDIT" Style="{StaticResource SectionLabelStyle}"
+        <!-- Section header (audit U7: CardTitleStyle is the in-dialog convention;
+             UPPERCASE SectionLabelStyle is reserved for panel section labels) -->
+        <TextBlock Text="Fields to Edit" Style="{StaticResource CardTitleStyle}"
             Margin="0,0,0,8" />
 
         <!-- Per-field grid: Auto (checkbox) / 72 (label) / * (input).

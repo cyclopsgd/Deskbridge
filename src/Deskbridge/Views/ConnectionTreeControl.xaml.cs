@@ -304,15 +304,16 @@ public partial class ConnectionTreeControl : UserControl
     }
 
     /// <summary>
-    /// Populate the "Move to..." submenu with available groups.
+    /// Populate the "Move to…" submenu with available groups.
     /// </summary>
     private void PopulateMoveToSubmenu(ContextMenu menu)
     {
-        // Find the "Move to..." MenuItem in the context menu
+        // Find the "Move to…" MenuItem in the context menu. Header must match the
+        // XAML label exactly (U+2026 ellipsis — audit U8) or the submenu never fills.
         MenuItem? moveToItem = null;
         foreach (var obj in menu.Items)
         {
-            if (obj is MenuItem mi && mi.Header is string headerStr && headerStr == "Move to...")
+            if (obj is MenuItem mi && mi.Header is string headerStr && headerStr == "Move to…")
             {
                 moveToItem = mi;
                 break;

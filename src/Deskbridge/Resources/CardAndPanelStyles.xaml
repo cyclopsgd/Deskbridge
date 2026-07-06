@@ -1,5 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:PresentationOptions="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    mc:Ignorable="PresentationOptions">
 
     <!--
         Semantic fill hierarchy for layered depth (FOUND-03):
@@ -40,6 +43,23 @@
         <Setter Property="Background" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
         <Setter Property="Margin" Value="{StaticResource FormFieldSpacing}" />
     </Style>
+
+    <!-- Audit U14: shared modal/overlay scrim — Black at 40% per the design system
+         ("dim overlay (Black at 40%) behind the modal"). Never hardcode scrims. -->
+    <SolidColorBrush x:Key="DeskbridgeScrimBrush" Color="#66000000"
+                     PresentationOptions:Freeze="True" />
+
+    <!-- Audit U3: design-system elevation rule — toasts and dialogs get shadows,
+         everything else is flat on Mica. Applied to the OUTER opaque backing Border
+         in ToastStackControl (not the translucent styled card, where the shadow
+         would show through the fill). Keep this effect on small fixed-size toast
+         cards only — DropShadowEffect rasterizes its subtree (perf + ClearType). -->
+    <DropShadowEffect x:Key="DeskbridgeToastShadow"
+                      PresentationOptions:Freeze="True"
+                      BlurRadius="8"
+                      ShadowDepth="2"
+                      Direction="270"
+                      Opacity="0.2" />
 
     <!-- Toast container style -->
     <Style x:Key="ToastContainerStyle" TargetType="Border">

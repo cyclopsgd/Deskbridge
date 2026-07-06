@@ -7,7 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     d:DataContext="{d:DesignInstance Type=vm:ReconnectOverlayViewModel}"
-    Background="#99000000"
+    Background="{DynamicResource DeskbridgeScrimBrush}"
     HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
     <!--
         Plan 04-03 D-07 overlay. Rendered on top of a collapsed WindowsFormsHost

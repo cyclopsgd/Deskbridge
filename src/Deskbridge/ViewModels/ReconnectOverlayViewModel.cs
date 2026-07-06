@@ -39,7 +39,7 @@ public partial class ReconnectOverlayViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AttemptText))]
-    public partial string Message { get; set; } = "Reconnecting...";
+    public partial string Message { get; set; } = "Reconnecting…";
 
     [ObservableProperty]
     public partial string ConnectionName { get; set; } = "";
@@ -50,7 +50,7 @@ public partial class ReconnectOverlayViewModel : ObservableObject
     /// <see cref="Message"/> field ("Connection lost" after cap / auth skip).
     /// </summary>
     public string AttemptText => Mode == ReconnectMode.Auto
-        ? $"Reconnecting... attempt {Attempt}"
+        ? $"Reconnecting… attempt {Attempt}"
         : Message;
 
     // --- Wiring hooks the MainWindow bridge subscribes to ---
