@@ -5,7 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - Unreleased
+> **Note:** this changelog was not maintained between 1.0.0 and 1.2.4 — releases
+> v1.0.1 through v1.2.4 (see git tags) are not documented here. The `[Unreleased]`
+> section below tracks changes on top of v1.2.4.
+
+## [Unreleased]
+
+### Fixed
+
+Pre-Phase-24 audit remediation (30 findings; see `.planning/pre-phase24-audit.md` for the
+resolution map). Targets a v1.2.5 patch release. Highlights:
+
+- RDP disconnect/dispose ownership restructured — disconnect is owned by the pipeline, `Dispose`
+  no longer blocks the dispatcher, and host disposal is deferred out of the mstscax COM event
+  frame (fixes potential hangs and use-after-free on connection failure/teardown).
+- Bulk edit is now truly all-or-nothing — edits apply to clones and the store rolls back its
+  in-memory state on a persist failure, so a failed save leaves nothing changed on disk or in memory.
+- Toast notifications and the GDI-limit snackbar now render in a top-level popup above the live
+  RDP viewport (previously invisible behind the WindowsFormsHost in the app's dominant state).
+- DPI-change handling added for cross-monitor drags; airspace snapshot scopes made reentrant;
+  stale host registrations purged on session drop.
+- UI consistency pass: selected tree rows keep their accent after hover, dialog gutters and
+  section headers standardized on tokens, toasts regain the drop shadow and severity colours,
+  ellipsis glyphs normalized.
+
+## [1.0.0] - 2026-04-17
 
 ### Added
 
@@ -41,24 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - One-time migration from legacy TERMSRV/ credential targets to DESKBRIDGE/CONN/ format
 - Change password/PIN dialog for updating master password at runtime
 - CI/CD pipeline via GitHub Actions (build, test, publish, release with Velopack packaging)
-
-### Fixed
-
-Pre-Phase-24 audit remediation (30 findings; see `.planning/pre-phase24-audit.md` for the
-resolution map). Highlights:
-
-- RDP disconnect/dispose ownership restructured — disconnect is owned by the pipeline, `Dispose`
-  no longer blocks the dispatcher, and host disposal is deferred out of the mstscax COM event
-  frame (fixes potential hangs and use-after-free on connection failure/teardown).
-- Bulk edit is now truly all-or-nothing — edits apply to clones and the store rolls back its
-  in-memory state on a persist failure, so a failed save leaves nothing changed on disk or in memory.
-- Toast notifications and the GDI-limit snackbar now render in a top-level popup above the live
-  RDP viewport (previously invisible behind the WindowsFormsHost in the app's dominant state).
-- DPI-change handling added for cross-monitor drags; airspace snapshot scopes made reentrant;
-  stale host registrations purged on session drop.
-- UI consistency pass: selected tree rows keep their accent after hover, dialog gutters and
-  section headers standardized on tokens, toasts regain the drop shadow and severity colours,
-  ellipsis glyphs normalized.
 
 ### Security
 

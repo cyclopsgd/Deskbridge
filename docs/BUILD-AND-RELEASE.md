@@ -22,8 +22,11 @@ from these packages.
 
 - **No `<Version>` is set in any csproj.** The version is injected at build time from the
   git tag: `-p:Version=${TAG#v}` (see `.github/workflows/build.yml`).
-- `CHANGELOG.md` tracks the target version. As of this writing that is **1.0.0
-  (Unreleased)** — nothing has been published yet.
+- **Latest released version is `v1.2.4`** (2026-04-28; see `git tag`). The next release of the
+  pre-Phase-24 audit fixes would be **`v1.2.5`** (patch — bug fixes only, no new features).
+- `CHANGELOG.md` was **not maintained past 1.0.0** — v1.0.1 through v1.2.4 aren't documented in
+  it. The audit fixes are recorded under its `[Unreleased]` section. Bring the changelog current
+  when cutting the next release.
 - SemVer2 (required by Velopack). A tag **without** a prerelease suffix (`v1.0.0`) ships to
   the **stable** channel; a tag **with** a suffix (`v1.1.0-beta.1`) ships to **beta** as a
   GitHub pre-release. The channel split is driven purely by the presence of a `-` in the
