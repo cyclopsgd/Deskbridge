@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > v1.0.1 through v1.2.4 (see git tags) are not documented here. The `[Unreleased]`
 > section below tracks changes on top of v1.2.4.
 
-## [Unreleased]
+## [1.2.5] - 2026-07-07
 
 ### Fixed
 
 Pre-Phase-24 audit remediation (30 findings; see `.planning/pre-phase24-audit.md` for the
-resolution map). Targets a v1.2.5 patch release. Highlights:
+resolution map). Highlights:
 
 - RDP disconnect/dispose ownership restructured — disconnect is owned by the pipeline, `Dispose`
   no longer blocks the dispatcher, and host disposal is deferred out of the mstscax COM event
