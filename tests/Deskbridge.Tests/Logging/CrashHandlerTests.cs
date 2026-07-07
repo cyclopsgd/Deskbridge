@@ -6,10 +6,15 @@ namespace Deskbridge.Tests.Logging;
 
 /// <summary>
 /// LOG-04 / Pattern 4 / D-11 / A9-A11 coverage for <see cref="CrashHandler"/>.
-/// All tests in this collection run serially because <see cref="CrashHandler"/> mutates
-/// process-global hook state (AppDomain + TaskScheduler + Application events).
+/// Shares the "GlobalLoggerState" collection with <see cref="AuditLoggerTests"/> so the two
+/// classes never run concurrently: both mutate the process-global <c>Serilog.Log.Logger</c>
+/// (and this class also mutates process-global crash-hook state — AppDomain + TaskScheduler +
+/// Application events), which would otherwise stomp each other under xUnit's parallel runner.
+/// The logger-swapping tests below additionally filter the sink to the exact event they
+/// raised (by exception instance) so stray events from other parallel tests logging through
+/// the shared static logger cannot inflate the assertion.
 /// </summary>
-[Collection("CrashHandlerCollection")]
+[Collection("GlobalLoggerState")]
 public sealed class CrashHandlerTests
 {
     /// <summary>Reset hook flags + detach handlers between tests.</summary>
@@ -111,12 +116,13 @@ public sealed class CrashHandlerTests
             var ex = new InvalidOperationException("boom");
             CrashHandler.OnAppDomainUnhandled(this, new UnhandledExceptionEventArgs(ex, isTerminating: true));
 
-            sink.Events.Should().HaveCount(1);
-            var evt = sink.Events.Single();
+            // Filter to the event this test raised (unique exception instance). Other tests
+            // running in parallel may log through the shared global logger while it points at
+            // this sink, so a raw HaveCount(1) is racy.
+            var evt = sink.Events.Should().ContainSingle(e => ReferenceEquals(e.Exception, ex)).Subject;
             evt.Level.Should().Be(Serilog.Events.LogEventLevel.Fatal);
             evt.MessageTemplate.Text.Should().Contain("AppDomainUnhandledException");
             evt.Properties.Should().ContainKey("Terminating");
-            evt.Exception.Should().BeSameAs(ex);
         }
         finally
         {
@@ -157,9 +163,10 @@ public sealed class CrashHandlerTests
             // SetObserved was invoked — we trust the source. The Serilog assertion below
             // is the substantive one.)
             await Task.Yield();
-            sink.Events.Should().HaveCount(1);
-            sink.Events.Single().Level.Should().Be(Serilog.Events.LogEventLevel.Error);
-            sink.Events.Single().Exception.Should().BeSameAs(ag);
+            // Filter to this test's event (unique AggregateException instance) — stray events
+            // from parallel tests logging through the shared global logger would break a count.
+            var evt = sink.Events.Should().ContainSingle(e => ReferenceEquals(e.Exception, ag)).Subject;
+            evt.Level.Should().Be(Serilog.Events.LogEventLevel.Error);
         }
         finally
         {

@@ -11,7 +11,12 @@ namespace Deskbridge.Tests.Logging;
 /// LOG-02 / LOG-03 / D-10 / D-13 / Pitfall 2 / CONTEXT Q5 coverage for
 /// <see cref="AuditLogger"/>. Every test isolates to a fresh temp directory via
 /// <see cref="TempDirScope"/> so concurrent test runs cannot stomp on each other.
+///
+/// Shares the "GlobalLoggerState" collection with <see cref="CrashHandlerTests"/>: the
+/// IO-fallback test swaps the process-global <c>Serilog.Log.Logger</c>, and running that
+/// concurrently with CrashHandler's logger swap would cross-contaminate the sinks.
 /// </summary>
+[Collection("GlobalLoggerState")]
 public sealed class AuditLoggerTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
