@@ -1,5 +1,11 @@
 # Pre-Phase-24 Audit — Confirmed Findings (2026-07-04)
 
+> **STATUS: RESOLVED (2026-07-07).** All 30 findings fixed across four sequentially
+> reviewed batches. Each batch was spec-reviewed and quality-reviewed before commit; a
+> multi-agent `/code-review` over the full diff surfaced 5 follow-up findings, all fixed.
+> Plan: `docs/plans/2026-07-05-pre-phase24-audit-fixes.md`. See the resolution map at the
+> bottom of this file.
+
 Read-only audit, four lanes, every finding adversarially verified by an independent
 refuter agent before inclusion. 36 raised → 30 confirmed → listed here. Severities are
 the *verified* severities (several were revised down from the original claim).
@@ -280,3 +286,42 @@ TextFillColorSecondaryBrush for info); optionally the left border accent.
   drift note only).
 - Panel-edge gradient borders — POLISH-03 requirement, user-ratified (commit fc75d3c).
   Optional: update deskbridge-design README/SKILL to bless the gradient edges.
+
+---
+
+## Resolution map (2026-07-07)
+
+Base `063eb28`. Each batch: implement → independent spec review → code-quality review →
+fixups → build (0 warnings) + tests → commit. Then multi-agent `/code-review` over the full
+diff → 5 verified follow-up findings → fixed in the review commit.
+
+| Findings | Commit | Message |
+| --- | --- | --- |
+| C1–C6 (COM lifecycle) | `de1d91e` | `fix(rdp): restructure disconnect/dispose ownership; defer dispose out of COM event frames` |
+| W1–W3 (bulk-ops correctness) | `d4239c1` | `fix(bulk-ops): make bulk edit all-or-nothing; fix Connect All projection and Edit CanExecute` |
+| A1–A6 (airspace/DPI) | `898f480` | `fix(airspace): popup-hosted toasts, reentrant snapshot scopes, DPI-change handling, stale-host purge` |
+| U1–U16 (UI polish) | `0885f67` | `style(ui): audit consistency pass — tokens, dialog gutters, toast elevation, tree row visuals` |
+| Code-review follow-ups | `4085ace` | `fix(review): sanitize DPI-change COM log, dialog-scope host invariant, dispose hardening` |
+
+Plan doc committed at `457cc08`.
+
+**A1 placement decision:** toasts hosted in a top-level `Popup` HWND (option b), not
+region-constrained (option a) — no uncovered window region can hold the toast stack, and the
+side panel collapses in the app's dominant state. Doc-sanctioned per WINFORMS-HOST-AIRSPACE §Popups.
+
+**U16 (was unverified):** the `FontFamily="Segoe UI"` hardcode in PinInputControl was the app's
+only font-family declaration and redundant (TypographyStyles sets no face; WPF-UI default is
+already Segoe UI) → removed to inherit.
+
+### Deliberately deferred (not fixed; recorded so they aren't lost)
+
+- `PanelHeaderStyle` in `CardAndPanelStyles.xaml` — an unused style with a hardcoded `Height=28`
+  duplicating the new `RowHeight` token. Correct disposition is deletion, which is outside the
+  UI-consistency lane's scope. Follow-up: delete it.
+- `HeaderHeight = 28` C# constant in `ConnectionTreeControl.xaml.cs` mirrors the `RowHeight` XAML
+  token. A C# consumer reading a XAML resource is contortion; left with a clarifying comment.
+- `AppLockController.RestoreHostVisibility` — pre-existing "defensive skip" comment that doesn't
+  match its code. Noted during the A3 review; out of this audit's scope.
+- Live-RDP smoke tests (`RdpHostControlSmokeTests.Gate2…`) require a reachable RDP host; the test
+  VM has since been removed, so these are expected to fail locally until a host is available. Not
+  a code issue — the automated `Gate1` GDI-leak test does run and passed.
