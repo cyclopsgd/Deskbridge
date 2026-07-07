@@ -593,7 +593,13 @@ public partial class MainWindow : FluentWindow, IHostContainerProvider
         }
         catch (Exception ex)
         {
-            Serilog.Log.Warning(ex, "Failed to invalidate drag snapshots on DPI change");
+            // T-04-EXC: the invalidation path runs GDI/imaging interop
+            // (CaptureHwnd → CreateBitmapSourceFromHBitmap) that surfaces COM-family
+            // exceptions — log type + HResult only, never ex.Message, matching every
+            // other COM-adjacent catch in this codebase (review finding).
+            Serilog.Log.Warning(
+                "Failed to invalidate drag snapshots on DPI change: {ExceptionType} HResult={HResult:X8}",
+                ex.GetType().Name, ex.HResult);
         }
 
         RestartResolutionDebounce();

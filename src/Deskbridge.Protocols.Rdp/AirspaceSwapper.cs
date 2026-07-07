@@ -204,11 +204,16 @@ public sealed class AirspaceSwapper : IDisposable
 
         foreach (var (host, overlay) in _hosts)
         {
-            // Restore per-host captured visibility — background tabs (Collapsed
-            // by tab-switch) stay Collapsed after the dialog closes.
-            host.Visibility = _preDialogVisibility is not null && _preDialogVisibility.TryGetValue(host, out var v)
-                ? v
-                : Visibility.Visible;
+            // Restore ONLY hosts this scope actually hid (those present in the
+            // snapshot); background tabs (Collapsed by tab-switch) stay Collapsed.
+            // A host registered mid-dialog — e.g. an auto-reconnect that succeeds
+            // while a dialog is open and mounts a fresh WFH via OnHostMounted — is
+            // NOT in _preDialogVisibility and owns its own visibility (OnHostMounted
+            // / tab-switch). Forcing it Visible here would stack a second live RDP
+            // surface over the restored active host, breaking the single-visible-WFH
+            // invariant the A4 depth-counter fix protects (review finding).
+            if (_preDialogVisibility is not null && _preDialogVisibility.TryGetValue(host, out var v))
+                host.Visibility = v;
             overlay.Visibility = Visibility.Collapsed;
             overlay.Source = null;
         }
@@ -265,11 +270,17 @@ public sealed class AirspaceSwapper : IDisposable
     /// [CITED: audit A5] Invalidates in-flight drag snapshots after a DPI change.
     /// A cross-monitor drag is a size-move, so while <c>_inSizeMove</c> is true the
     /// overlay Images may hold bitmaps captured at the OLD monitor's DPI — with
-    /// <c>Stretch=Fill</c> those would render visibly mis-scaled until
-    /// WM_EXITSIZEMOVE. Recaptures each host that contributed a snapshot (pre-drag
-    /// Visible per <see cref="_preDragVisibility"/>; <c>PrintWindow</c> works on the
-    /// hidden HWND); if recapture fails, clears the overlay so nothing stale renders.
-    /// No-op outside a size-move.
+    /// <c>Stretch=Fill</c> those would render visibly mis-scaled until WM_EXITSIZEMOVE.
+    ///
+    /// <para>The captured hosts are <see cref="Visibility.Collapsed"/> for the duration
+    /// of the size-move (set in the WM_ENTERSIZEMOVE branch), so their child HWNDs are
+    /// hidden and cannot be re-captured — <c>PrintWindow</c> on a hidden window returns
+    /// a blank/black surface rather than a fresh frame. So rather than recapture, we
+    /// clear the stale overlays (per the pre-existing "better blank than wrongly-scaled"
+    /// principle): the viewport shows a plain frame for the remainder of the drag, and
+    /// WM_EXITSIZEMOVE restores the live surface when the drag ends. This only affects
+    /// the rare DPI-change-mid-drag window and self-corrects (review finding).
+    /// No-op outside a size-move.</para>
     /// </summary>
     public void InvalidateSnapshots()
     {
@@ -277,35 +288,23 @@ public sealed class AirspaceSwapper : IDisposable
         AssertDispatcher();
 
         // Dialog snapshots are owned by the SnapshotAndHideAll/RestoreAll scope; a
-        // DPI recapture mid-dialog would overwrite/clear the dialog snapshot.
+        // DPI invalidation mid-dialog would clear the dialog snapshot.
         if (InDialogMode) return;
 
         if (!_inSizeMove || _preDragVisibility is null) return;
 
         foreach (var (host, overlay) in _hosts)
         {
-            // Only hosts that were Visible pre-drag were captured into an overlay
-            // in the WM_ENTERSIZEMOVE branch — recapture exactly those. (Multiple
-            // hosts may share one overlay Image; keying off the pre-drag snapshot
-            // dict keeps the recapture sourced from the host that owns the frame.)
+            // Only hosts that were Visible pre-drag contributed a snapshot in the
+            // WM_ENTERSIZEMOVE branch — clear exactly those stale overlays.
             if (!_preDragVisibility.TryGetValue(host, out var v) || v != Visibility.Visible)
                 continue;
 
-            var snapshot = CaptureHwnd(host);
-            if (snapshot is not null)
-            {
-                overlay.Source = snapshot;
-                overlay.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                // Better a blank viewport than a wrongly-scaled stale frame.
-                overlay.Source = null;
-                overlay.Visibility = Visibility.Collapsed;
-            }
+            overlay.Source = null;
+            overlay.Visibility = Visibility.Collapsed;
         }
 
-        _logger.LogDebug("[airspace] DPI change during size-move: drag snapshots invalidated (hosts={Count})", _hosts.Count);
+        _logger.LogDebug("[airspace] DPI change during size-move: stale drag snapshots cleared (hosts={Count})", _hosts.Count);
     }
 
     /// <summary>

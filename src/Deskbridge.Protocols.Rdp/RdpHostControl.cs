@@ -315,18 +315,39 @@ public sealed class RdpHostControl : IProtocolHost
             _logger.LogError(
                 "Dispose called while still connected for {ConnectionId} — callers must disconnect first. " +
                 "Entering bounded message-pumping fallback.", ConnectionId);
-            _userInitiatedClose = true;
-            try { _rdp!.Disconnect(); }
-            catch (Exception ex) when (ex is COMException or AxHost.InvalidActiveXStateException)
+            // The whole fallback is wrapped so Dispose can NEVER throw from the disconnect
+            // step (review finding): _disposed is already latched true above, so if
+            // _rdp.Disconnect() throws a non-COM exception (e.g. NRE mid-teardown) or
+            // PushFrame throws InvalidOperationException once the dispatcher is shutting
+            // down, an escape here would skip event-unsubscribe + AxHost dispose + COM
+            // release below and leak the OCX with no way to re-run teardown.
+            try
             {
-                _logger.LogDebug("Fallback Disconnect threw: {ExceptionType} HResult={HResult:X8}",
-                    ex.GetType().Name, ex.HResult);
+                _userInitiatedClose = true;
+                try { _rdp!.Disconnect(); }
+                catch (Exception ex) when (ex is COMException or AxHost.InvalidActiveXStateException)
+                {
+                    _logger.LogDebug("Fallback Disconnect threw: {ExceptionType} HResult={HResult:X8}",
+                        ex.GetType().Name, ex.HResult);
+                }
+                // PushFrame throws once dispatcher shutdown has begun; pumping is also
+                // pointless then (no more COM events will be delivered) — skip straight
+                // to force-teardown.
+                if (!Dispatcher.CurrentDispatcher.HasShutdownStarted)
+                {
+                    PumpUntilDisconnected(TimeSpan.FromSeconds(10));
+                }
+                if (IsConnected)
+                {
+                    _logger.LogWarning(
+                        "Pumped-wait fallback timed out after 10s — force disposing {ConnectionId}", ConnectionId);
+                }
             }
-            PumpUntilDisconnected(TimeSpan.FromSeconds(10));
-            if (IsConnected)
+            catch (Exception ex)
             {
                 _logger.LogWarning(
-                    "Pumped-wait fallback timed out after 10s — force disposing {ConnectionId}", ConnectionId);
+                    "Dispose-while-connected fallback threw — continuing teardown: {ExceptionType} HResult={HResult:X8}",
+                    ex.GetType().Name, ex.HResult);
             }
         }
 
