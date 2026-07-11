@@ -13,7 +13,7 @@
     <!-- Auto-update -->
     <PackageVersion Include="Velopack" Version="0.0.1298" />
     <!-- Logging -->
-    <PackageVersion Include="Serilog" Version="4.3.*" />
+    <PackageVersion Include="Serilog" Version="4.4.*" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.*" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.*" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.*" />
