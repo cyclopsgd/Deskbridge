@@ -24,7 +24,7 @@
     <!-- Testing -->
     <PackageVersion Include="xunit.v3" Version="3.2.*" />
     <PackageVersion Include="FluentAssertions" Version="8.9.*" />
-    <PackageVersion Include="NSubstitute" Version="5.3.*" />
+    <PackageVersion Include="NSubstitute" Version="6.0.*" />
     <!-- Benchmarking -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
